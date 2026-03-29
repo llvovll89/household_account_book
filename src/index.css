@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+* {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  background-color: #0D0F14;
+  color: #F1F3F6;
+  overscroll-behavior: none;
+}
+
+::-webkit-scrollbar { display: none; }
+
+/* 탭 전환 애니메이션 */
+.tab-content {
+  animation: fadeUp 0.16s ease-out;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 숫자 정렬 */
+.num { font-variant-numeric: tabular-nums; }
+
+/* date input 스타일 */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
+/* select 스타일 */
+select option {
+  background: #1E2230;
+  color: #F1F3F6;
+}
