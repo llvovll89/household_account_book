@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown } from 'lucide-react'
+import { useRegisterSW } from 'virtual:pwa-register/react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction } from './types'
 import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring } from './lib/storage'
 import Dashboard from './components/Dashboard'
@@ -19,13 +20,18 @@ function getYearMonth(date: Date) {
 }
 
 const TABS = [
-  { id: 'home' as Tab,         label: '홈',   Icon: LayoutDashboard },
+  { id: 'home' as Tab, label: '홈', Icon: LayoutDashboard },
   { id: 'transactions' as Tab, label: '내역', Icon: List },
-  { id: 'analytics' as Tab,    label: '분석', Icon: BarChart2 },
-  { id: 'memos' as Tab,        label: '메모', Icon: StickyNote },
+  { id: 'analytics' as Tab, label: '분석', Icon: BarChart2 },
+  { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
 ]
 
 export default function App() {
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW()
+
   const [tab, setTab] = useState<Tab>('home')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -147,7 +153,22 @@ export default function App() {
   const showFAB = tab === 'home' || tab === 'transactions'
 
   return (
-    <div className="min-h-screen bg-[#0D0F14] pb-24">
+    <div className="min-h-screen bg-[#181818] pb-24">
+      {/* SW 업데이트 토스트 */}
+      {needRefresh && (
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
+          <div className="flex items-center gap-3 bg-[#252A3F] border border-[#3D8EF8]/30 rounded-2xl px-4 py-3.5 shadow-xl">
+            <RefreshCw size={16} className="text-[#3D8EF8] shrink-0 animate-spin" style={{ animationDuration: '2s' }} />
+            <p className="text-sm font-semibold text-white flex-1">새 버전이 있어요!</p>
+            <button
+              onClick={() => updateServiceWorker(true)}
+              className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0"
+            >
+              업데이트
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── 헤더 ── */}
       <header className="bg-[#0D0F14] sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-5 pt-5 pb-3">
@@ -169,11 +190,10 @@ export default function App() {
               <ChevronLeft size={16} className="text-[#8B95A1]" />
             </button>
             <button onClick={() => setCurrentDate(new Date())}
-              className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${
-                isCurrentMonth()
+              className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth()
                   ? 'bg-white text-[#0D0F14]'
                   : 'bg-[#1E2236] text-[#8B95A1] border border-white/[0.06]'
-              }`}>
+                }`}>
               {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
             </button>
             <button onClick={nextMonth}
@@ -239,7 +259,7 @@ export default function App() {
       {showFAB && (
         <button
           onClick={() => { setEditingTransaction(null); setShowModal(true) }}
-          className="fixed right-5 bottom-[84px] w-14 h-14 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
+          className="fixed right-5 bottom-21 w-10 h-10 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
         >
           <Plus size={26} />
         </button>
@@ -247,7 +267,7 @@ export default function App() {
 
       {/* ── 하단 탭 ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40">
-        <div className="max-w-lg mx-auto bg-[#0D0F14] border-t border-white/[0.06]">
+        <div className="max-w-lg mx-auto bg-[#0D0F14] border-t border-white/6">
           <div className="flex pb-safe">
             {TABS.map(({ id, label, Icon }) => (
               <button
