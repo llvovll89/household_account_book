@@ -27,6 +27,14 @@ function isNarrowColumn(header: string): boolean {
   return /^(순번|번호|no|index)$/i.test(header.trim())
 }
 
+function isWideTextColumn(header: string): boolean {
+  return /(거래내용|내용|적요|메모|비고|상호|가맹점|description|memo|note)/i.test(header.trim())
+}
+
+function isDateTimeColumn(header: string): boolean {
+  return /(거래일시|일시|날짜|시간|date|time)/i.test(header.trim())
+}
+
 function isMeaningfulDataRow(row: Record<string, string>): boolean {
   const values = Object.values(row)
     .map((v) => (v ?? '').trim())
@@ -249,7 +257,15 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                       {csvHeaders.map((h) => (
                         <th
                           key={h}
-                          className={`py-2 font-semibold text-[#4E5968] whitespace-nowrap ${isNarrowColumn(h) ? 'px-2 w-8 min-w-8 max-w-8 text-center' : 'px-3 text-left'}`}
+                          className={`py-2 font-semibold text-[#4E5968] ${
+                            isNarrowColumn(h)
+                              ? 'px-2 w-8 min-w-8 max-w-8 text-center whitespace-nowrap'
+                              : isWideTextColumn(h)
+                                ? 'px-3 text-left min-w-40 whitespace-normal wrap-break-word'
+                                : isDateTimeColumn(h)
+                                  ? 'px-3 text-left min-w-32 whitespace-nowrap'
+                                  : 'px-3 text-left whitespace-nowrap'
+                          }`}
                         >
                           {h}
                         </th>
@@ -268,7 +284,15 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                           <td
                             key={h}
                             title={row[h]}
-                            className={`py-2 text-[#8B95A1] whitespace-nowrap ${isNarrowColumn(h) ? 'px-2 w-8 min-w-8 max-w-8 text-center' : 'px-3'}`}
+                            className={`py-2 text-[#8B95A1] ${
+                              isNarrowColumn(h)
+                                ? 'px-2 w-8 min-w-8 max-w-8 text-center whitespace-nowrap'
+                                : isWideTextColumn(h)
+                                  ? 'px-3 min-w-40 max-w-60 whitespace-normal wrap-break-word leading-relaxed'
+                                  : isDateTimeColumn(h)
+                                    ? 'px-3 min-w-32 whitespace-nowrap'
+                                    : 'px-3 whitespace-nowrap'
+                            }`}
                           >
                             {row[h]}
                           </td>
