@@ -140,10 +140,56 @@ async function decodeFile(file: File): Promise<string> {
 }
 
 // ────────────────────────────────────────────
+//  HTML 테이블 파싱 (농협 등 HTML을 .xls로 저장한 파일)
+// ────────────────────────────────────────────
+function parseHTMLTable(html: string): { headers: string[]; rows: Record<string, string>[] } {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  // 행이 가장 많은 테이블 선택
+  const tables = Array.from(doc.querySelectorAll('table'))
+  if (tables.length === 0) return { headers: [], rows: [] }
+  const table = tables.reduce((best, t) =>
+    t.querySelectorAll('tr').length > best.querySelectorAll('tr').length ? t : best,
+    tables[0]
+  )
+
+  const allRows = Array.from(table.querySelectorAll('tr'))
+
+  // 첫 번째 비어있지 않은 행 = 헤더
+  const headerRow = allRows.find(r => r.querySelectorAll('th, td').length > 0)
+  if (!headerRow) return { headers: [], rows: [] }
+
+  const headers = Array.from(headerRow.querySelectorAll('th, td'))
+    .map(cell => cell.textContent?.trim() ?? '')
+
+  const headerIdx = allRows.indexOf(headerRow)
+  const dataRows: Record<string, string>[] = []
+
+  for (let i = headerIdx + 1; i < allRows.length; i++) {
+    const cells = Array.from(allRows[i].querySelectorAll('td, th'))
+    if (cells.every(c => !c.textContent?.trim())) continue
+    const record: Record<string, string> = {}
+    headers.forEach((h, idx) => {
+      record[h] = cells[idx]?.textContent?.trim() ?? ''
+    })
+    dataRows.push(record)
+  }
+
+  return { headers, rows: dataRows }
+}
+
+// ────────────────────────────────────────────
 //  CSV 파싱 → ParsedRow[]
 // ────────────────────────────────────────────
 export async function parseCSV(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const text = await decodeFile(file)
+
+  // HTML 테이블 형식 감지 (농협 등 .xls 위장 HTML 파일)
+  if (/^\s*<(!doctype\s+html|html|table)/i.test(text)) {
+    return parseHTMLTable(text)
+  }
+
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(text, {
       header: true,
