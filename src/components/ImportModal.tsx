@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, Upload, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
 import type { Transaction } from '../types'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI } from '../types'
 import {
-  parseCSV, applyMapping, detectColumns, guessCategory,
+  parseTabularFile, applyMapping, detectColumns, guessCategory,
   extractPDFText, parsePDFText, type ColumnMapping, type ParsedRow,
 } from '../lib/bankParser'
 
@@ -24,6 +24,21 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const tableScrollRef = useRef<HTMLDivElement>(null)
+
+  // 휠 세로 스크롤 → 테이블 가로 스크롤 변환
+  useEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    function onWheel(e: WheelEvent) {
+      if (el!.scrollWidth > el!.clientWidth) {
+        e.preventDefault()
+        el!.scrollLeft += e.deltaY
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [step]) // step 변경 시 ref 대상이 마운트됨
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([])
   const [mapping, setMapping] = useState<ColumnMapping>({ ...EMPTY_MAPPING })
@@ -42,8 +57,8 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
         buildPreview(parsed); setStep('preview')
       } else {
         setIsPDF(false)
-        const { headers, rows } = await parseCSV(file)
-        if (!headers.length) { setError('파일을 읽지 못했습니다. CSV 파일인지 확인해주세요.'); return }
+        const { headers, rows } = await parseTabularFile(file)
+        if (!headers.length) { setError('파일을 읽지 못했습니다. CSV 또는 엑셀 파일인지 확인해주세요.'); return }
         setCsvHeaders(headers); setCsvRows(rows)
         setMapping({ ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
       }
@@ -156,7 +171,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 <MappingSelect label="단일 금액" value={mapping.amount} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, amount: v }))} />
                 <MappingSelect label="입출금 구분" value={mapping.typeCol} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, typeCol: v }))} />
               </div>
-              <div className="rounded-2xl overflow-x-auto border border-white/[0.05]">
+              <div ref={tableScrollRef} className="table-h-scroll rounded-2xl overflow-x-auto border border-white/[0.05] relative">
                 <table className="w-full text-xs">
                   <thead className="bg-[#252A3F]">
                     <tr>{csvHeaders.map((h) => <th key={h} className="px-3 py-2 text-left font-semibold text-[#4E5968] whitespace-nowrap">{h}</th>)}</tr>
