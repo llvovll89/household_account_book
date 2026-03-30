@@ -1,10 +1,13 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil } from 'lucide-react'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge } from 'lucide-react'
 import type { Transaction, Budget, RecurringTransaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
 import { loadSettings, saveSettings } from '../lib/storage'
+import { useMonthlyData } from '../lib/useMonthlyData'
+import SparklineCard from './charts/SparklineCard'
+import BudgetGauge from './charts/BudgetGauge'
 
 interface Props {
   transactions: Transaction[]
@@ -20,12 +23,19 @@ function fmt(n: number) {
   return n.toLocaleString('ko-KR')
 }
 
+function fmtShort(n: number) {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
+  if (n >= 10_000) return `${Math.round(n / 10_000)}만`
+  return n.toLocaleString()
+}
+
 export default function Dashboard({ transactions, budgets, recurring, yearMonth, onBudgetsChange, onRecurringSave, onApplyRecurring }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | null>(null)
   const [editingPayday, setEditingPayday] = useState(false)
   const [paydayInput, setPaydayInput] = useState('')
+  const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
 
   useEffect(() => {
     const settings = loadSettings()
@@ -50,24 +60,20 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
 
     let daysLeft: number
     if (payday > todayNum) {
-      // 이번 달 아직 안 됨
       daysLeft = payday - todayNum
     } else if (payday === todayNum) {
       daysLeft = 0
     } else {
-      // 다음 달 월급날
       const nextPayday = new Date(currentYear, currentMonth + 1, payday)
       daysLeft = Math.round((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     }
 
-    // 이번 달 남은 예산 = 수입 - 지출
     const [y, m] = yearMonth.split('-').map(Number)
     const monthlyTx = transactions.filter((t) => t.date.startsWith(yearMonth))
     const income = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const expense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     const remaining = income - expense
 
-    // 이번 달 남은 날수
     const daysInMonth = new Date(y, m, 0).getDate()
     const daysRemaining = Math.max(1, daysInMonth - todayNum + 1)
     const dailyBudget = remaining > 0 ? Math.floor(remaining / daysRemaining) : 0
@@ -112,6 +118,27 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     })
     return budgets.filter((b) => (map[b.category] || 0) > b.limit)
   }, [monthly, budgets])
+
+  // 6개월 스파크라인 데이터
+  const monthlyData = useMonthlyData(transactions)
+  const sparkIncome = monthlyData.map(m => ({ value: m.income }))
+  const sparkExpense = monthlyData.map(m => ({ value: m.expense }))
+  const sparkBalance = monthlyData.map(m => ({ value: Math.max(0, m.balance) }))
+
+  const prevMonth = monthlyData[4]
+  const incomeTrend = prevMonth.income > 0
+    ? Math.round(((income - prevMonth.income) / prevMonth.income) * 100) : null
+  const expenseTrend = prevMonth.expense > 0
+    ? Math.round(((expense - prevMonth.expense) / prevMonth.expense) * 100) : null
+
+  // 예산 게이지용 카테고리별 지출
+  const spentByCategory = useMemo(() => {
+    const map: Record<string, number> = {}
+    monthly.filter((t) => t.type === 'expense').forEach((t) => {
+      map[t.category] = (map[t.category] || 0) + t.amount
+    })
+    return map
+  }, [monthly])
 
   return (
     <div className="space-y-3 tab-content">
@@ -174,7 +201,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
       )}
 
       {/* 메인 잔액 카드 */}
-      <div className="rounded-3xl p-6 bg-gradient-to-br from-[#1E2A4A] to-[#162040] border border-[#3D8EF8]/20">
+      <div className="rounded-3xl p-6 bg-linear-to-br from-[#1E2A4A] to-[#162040] border border-[#3D8EF8]/20">
         <p className="text-sm font-medium text-[#8B95A1] mb-1">이번 달 잔액</p>
         <p className={`text-[38px] font-extrabold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
           {balance < 0 ? '-' : ''}{fmt(Math.abs(balance))}
@@ -219,6 +246,30 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
             </div>
           </div>
         )}
+      </div>
+
+      {/* 6개월 스파크라인 요약 */}
+      <div className="flex gap-2">
+        <SparklineCard
+          data={sparkIncome}
+          color="#3D8EF8"
+          label="수입"
+          value={`${fmtShort(income)}원`}
+          trend={incomeTrend}
+        />
+        <SparklineCard
+          data={sparkExpense}
+          color="#F25260"
+          label="지출"
+          value={`${fmtShort(expense)}원`}
+          trend={expenseTrend !== null ? -expenseTrend : null}
+        />
+        <SparklineCard
+          data={sparkBalance}
+          color={balance >= 0 ? '#2ACF6A' : '#F25260'}
+          label="잔액"
+          value={`${balance >= 0 ? '' : '-'}${fmtShort(Math.abs(balance))}원`}
+        />
       </div>
 
       {/* 월급날 카운트다운 */}
@@ -296,6 +347,15 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
         <div className="flex items-center justify-between mb-4">
           <p className="text-[15px] font-bold text-white">예산 관리</p>
           <div className="flex gap-2">
+            {budgets.length > 0 && (
+              <button
+                onClick={() => setBudgetView(v => v === 'list' ? 'gauge' : 'list')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+                title={budgetView === 'list' ? '게이지 보기' : '목록 보기'}
+              >
+                {budgetView === 'list' ? <Gauge size={12} /> : <LayoutList size={12} />}
+              </button>
+            )}
             <button
               onClick={() => setShowRecurring(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
@@ -303,13 +363,13 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
               <RefreshCw size={11} />
               정기
             </button>
-          <button
-            onClick={() => setShowBudget(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
-          >
-            <Settings2 size={12} />
-            설정
-          </button>
+            <button
+              onClick={() => setShowBudget(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+            >
+              <Settings2 size={12} />
+              설정
+            </button>
           </div>
         </div>
 
@@ -320,7 +380,27 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
           >
             + 카테고리별 예산을 설정해보세요
           </button>
+        ) : budgetView === 'gauge' ? (
+          /* 게이지 뷰 */
+          <div className="grid grid-cols-3 gap-4">
+            {EXPENSE_CATEGORIES.filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
+              const budget = budgets.find((b) => b.category === cat)!
+              const spent = spentByCategory[cat] ?? 0
+              const color = CATEGORY_COLOR[cat]?.text ?? '#8B95A1'
+              return (
+                <BudgetGauge
+                  key={cat}
+                  category={cat}
+                  emoji={CATEGORY_EMOJI[cat] ?? '📦'}
+                  spent={spent}
+                  limit={budget.limit}
+                  color={color}
+                />
+              )
+            })}
+          </div>
         ) : (
+          /* 리스트 뷰 */
           <div className="space-y-3.5">
             {EXPENSE_CATEGORIES.filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
               const budget = budgets.find((b) => b.category === cat)!

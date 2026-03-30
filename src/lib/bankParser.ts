@@ -180,8 +180,9 @@ export async function extractPDFText(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    const pageText = content.items
-      .filter((item): item is { str: string; transform: number[] } => 'str' in item)
+    type TextItem = { str: string; transform: number[] }
+    const pageText = (content.items as unknown[])
+      .filter((item): item is TextItem => typeof item === 'object' && item !== null && 'str' in item)
       .sort((a, b) => {
         const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5])
         return yDiff !== 0 ? yDiff : a.transform[4] - b.transform[4]

@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Transaction } from '../types'
-import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { CATEGORY_EMOJI } from '../types'
+import { useMonthlyData } from '../lib/useMonthlyData'
+import TrendAreaChart from './charts/TrendAreaChart'
+import WeekdayBarChart from './charts/WeekdayBarChart'
+import DonutChart from './charts/DonutChart'
+import YearlyBarChart from './charts/YearlyBarChart'
+import CumulativeLineChart from './charts/CumulativeLineChart'
+import CashflowChart from './charts/CashflowChart'
 
 interface Props {
   transactions: Transaction[]
@@ -18,38 +25,18 @@ function getYM(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
-function getRelativeYM(offset: number): string {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getMonthLabel(ym: string) {
-  return `${parseInt(ym.split('-')[1])}월`
-}
-
-type ViewMode = 'monthly' | 'yearly'
 const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
+
+type ViewMode = 'monthly' | 'yearly' | 'cashflow'
 
 export default function Analytics({ transactions, yearMonth }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // ── 월간 데이터 ────────────────────────────────────────
-  const monthlyData = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const ym = getRelativeYM(i - 5)
-      const monthly = transactions.filter((t) => t.date.startsWith(ym))
-      const income = monthly.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-      const expense = monthly.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-      return { ym, label: getMonthLabel(ym), income, expense, balance: income - expense }
-    })
-  }, [transactions])
-
+  // ── 월간 데이터 (공유 훅) ────────────────────────────────
+  const monthlyData = useMonthlyData(transactions)
   const current = monthlyData[5]
   const prev = monthlyData[4]
-  const maxMonthlyVal = Math.max(...monthlyData.flatMap((m) => [m.income, m.expense]), 1)
 
   const expenseDiff = prev.expense > 0
     ? Math.round(((current.expense - prev.expense) / prev.expense) * 100) : null
@@ -69,7 +56,6 @@ export default function Analytics({ transactions, yearMonth }: Props) {
 
   const yearTotalIncome = yearlyData.reduce((s, m) => s + m.income, 0)
   const yearTotalExpense = yearlyData.reduce((s, m) => s + m.expense, 0)
-  const maxYearlyVal = Math.max(...yearlyData.flatMap((m) => [m.income, m.expense]), 1)
 
   // ── 이번 달 카테고리별 지출 ────────────────────────────
   const currentMonthly = transactions.filter((t) => t.date.startsWith(yearMonth))
@@ -100,7 +86,6 @@ export default function Analytics({ transactions, yearMonth }: Props) {
     }))
   }, [currentMonthly])
 
-  const maxWeekday = Math.max(...weekdayData.map((d) => d.total), 1)
   const topWeekday = weekdayData.reduce((max, d) => d.total > max.total ? d : max, weekdayData[0])
 
   // ── 스마트 인사이트 ───────────────────────────────────
@@ -143,19 +128,34 @@ export default function Analytics({ transactions, yearMonth }: Props) {
     return list.slice(0, 4)
   }, [expenseDiff, incomeDiff, expenseByCategory, current, topWeekday])
 
+  // ── 캐시플로 탭 best/worst 월 ────────────────────────
+  const cashflowStats = useMemo(() => {
+    const withData = monthlyData.filter(m => m.income > 0 || m.expense > 0)
+    if (withData.length === 0) return null
+    const best = withData.reduce((a, b) => b.balance > a.balance ? b : a)
+    const worst = withData.reduce((a, b) => b.balance < a.balance ? b : a)
+    return { best, worst }
+  }, [monthlyData])
+
+  const TAB_LABELS: Record<ViewMode, string> = {
+    monthly: '월간 분석',
+    yearly: '연간 요약',
+    cashflow: '캐시플로',
+  }
+
   return (
     <div className="space-y-3 tab-content">
-      {/* 월간 / 연간 토글 */}
+      {/* 탭 토글 */}
       <div className="bg-[#1E2236] rounded-2xl p-1 flex">
-        {(['monthly', 'yearly'] as ViewMode[]).map((m) => (
+        {(['monthly', 'yearly', 'cashflow'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
           >
-            {m === 'monthly' ? '월간 분석' : '연간 요약'}
+            {TAB_LABELS[m]}
           </button>
         ))}
       </div>
@@ -195,7 +195,7 @@ export default function Analytics({ transactions, yearMonth }: Props) {
           {/* 6개월 트렌드 차트 */}
           <div className="bg-[#1E2236] rounded-3xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">최근 6개월 트렌드</p>
-            <div className="flex items-center gap-4 mb-5">
+            <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
                 <span className="text-xs text-[#8B95A1]">수입</span>
@@ -205,25 +205,7 @@ export default function Analytics({ transactions, yearMonth }: Props) {
                 <span className="text-xs text-[#8B95A1]">지출</span>
               </div>
             </div>
-            <div className="flex items-end gap-2" style={{ height: 140 }}>
-              {monthlyData.map((m, i) => {
-                const isCurrent = m.ym === yearMonth
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-full flex gap-0.5 items-end" style={{ height: 112 }}>
-                      <div className={`flex-1 rounded-t-lg min-h-[3px] transition-all duration-700 ${isCurrent ? 'opacity-100' : 'opacity-50'}`}
-                        style={{ height: `${(m.income / maxMonthlyVal) * 100}%`, backgroundColor: '#3D8EF8' }} />
-                      <div className={`flex-1 rounded-t-lg min-h-[3px] transition-all duration-700 ${isCurrent ? 'opacity-100' : 'opacity-50'}`}
-                        style={{ height: `${(m.expense / maxMonthlyVal) * 100}%`, backgroundColor: '#F25260' }} />
-                    </div>
-                    <div className="text-center">
-                      <span className={`text-[10px] font-semibold ${isCurrent ? 'text-white' : 'text-[#4E5968]'}`}>{m.label}</span>
-                      {isCurrent && <div className="w-1 h-1 rounded-full bg-[#3D8EF8] mx-auto mt-0.5" />}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            <TrendAreaChart data={monthlyData} currentYM={yearMonth} />
             <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-2">
               {monthlyData.slice(-3).map((m) => (
                 <div key={m.ym} className="flex items-center justify-between">
@@ -240,37 +222,26 @@ export default function Analytics({ transactions, yearMonth }: Props) {
             </div>
           </div>
 
+          {/* 이번 달 누적 잔액 흐름 */}
+          <div className="bg-[#1E2236] rounded-3xl p-5">
+            <p className="text-[15px] font-bold text-white mb-1">이번 달 잔액 흐름</p>
+            <p className="text-xs text-[#4E5968] mb-4">일별 누적 순잔액 변화</p>
+            {currentMonthly.length === 0 ? (
+              <p className="text-sm text-[#4E5968] text-center py-4">이번 달 내역이 없어요</p>
+            ) : (
+              <CumulativeLineChart transactions={transactions} yearMonth={yearMonth} />
+            )}
+          </div>
+
           {/* 요일별 소비 패턴 */}
           <div className="bg-[#1E2236] rounded-3xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">요일별 소비 패턴</p>
-            <p className="text-xs text-[#4E5968] mb-5">이번 달 요일별 총 지출</p>
+            <p className="text-xs text-[#4E5968] mb-4">이번 달 요일별 총 지출</p>
             {weekdayData.every((d) => d.total === 0) ? (
               <p className="text-sm text-[#4E5968] text-center py-4">이번 달 지출 내역이 없어요</p>
             ) : (
               <>
-                <div className="flex items-end gap-1.5" style={{ height: 100 }}>
-                  {weekdayData.map((d, i) => {
-                    const isTop = d.total === topWeekday.total && d.total > 0
-                    const isWeekend = i === 0 || i === 6
-                    const barColor = isTop ? '#3D8EF8' : isWeekend ? 'rgba(242,82,96,0.5)' : 'rgba(139,149,161,0.25)'
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                        <div className="w-full flex items-end justify-center" style={{ height: 72 }}>
-                          <div
-                            className="w-full rounded-t-lg min-h-[3px] transition-all duration-500"
-                            style={{
-                              height: `${(d.total / maxWeekday) * 100}%`,
-                              backgroundColor: barColor,
-                            }}
-                          />
-                        </div>
-                        <span className={`text-[11px] font-bold ${
-                          isTop ? 'text-[#3D8EF8]' : isWeekend ? 'text-[#F25260]/70' : 'text-[#4E5968]'
-                        }`}>{d.label}</span>
-                      </div>
-                    )
-                  })}
-                </div>
+                <WeekdayBarChart data={weekdayData} />
                 <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-2 gap-2">
                   {weekdayData.filter((d) => d.total > 0).sort((a, b) => b.total - a.total).slice(0, 4).map((d, i) => (
                     <div key={i} className="flex items-center justify-between bg-[#252A3F] rounded-xl px-3 py-2">
@@ -283,36 +254,11 @@ export default function Analytics({ transactions, yearMonth }: Props) {
             )}
           </div>
 
-          {/* 카테고리 비율 */}
+          {/* 카테고리 비율 - 도넛 차트 */}
           {expenseByCategory.length > 0 && (
             <div className="bg-[#1E2236] rounded-3xl p-5">
               <p className="text-[15px] font-bold text-white mb-4">카테고리 비율</p>
-              <div className="space-y-2.5">
-                {expenseByCategory.map(({ cat, amt, pct }) => {
-                  const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
-                  return (
-                    <div key={cat} className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: color.bg }}>
-                        <span className="text-base">{CATEGORY_EMOJI[cat]}</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm font-semibold text-white">{cat}</span>
-                          <span className="text-sm font-bold text-white num">{pct}%</span>
-                        </div>
-                        <div className="h-1.5 bg-[#252A3F] rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${pct}%`, backgroundColor: color.text }} />
-                        </div>
-                      </div>
-                      <span className="text-xs text-[#4E5968] num w-16 text-right shrink-0">
-                        {amt.toLocaleString()}원
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+              <DonutChart data={expenseByCategory} />
             </div>
           )}
         </>
@@ -385,7 +331,7 @@ export default function Analytics({ transactions, yearMonth }: Props) {
           {/* 12개월 차트 */}
           <div className="bg-[#1E2236] rounded-3xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">월별 추이</p>
-            <div className="flex items-center gap-4 mb-5">
+            <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
                 <span className="text-xs text-[#8B95A1]">수입</span>
@@ -395,29 +341,7 @@ export default function Analytics({ transactions, yearMonth }: Props) {
                 <span className="text-xs text-[#8B95A1]">지출</span>
               </div>
             </div>
-            <div className="flex items-end gap-1" style={{ height: 130 }}>
-              {yearlyData.map((m, i) => {
-                const isCurrent = m.ym === yearMonth
-                const hasData = m.income > 0 || m.expense > 0
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-                    <div className="w-full flex gap-px items-end" style={{ height: 100 }}>
-                      <div
-                        className={`flex-1 rounded-t min-h-[2px] transition-all duration-500 ${hasData ? (isCurrent ? 'opacity-100' : 'opacity-60') : 'opacity-20'}`}
-                        style={{ height: `${(m.income / maxYearlyVal) * 100}%`, backgroundColor: '#3D8EF8' }}
-                      />
-                      <div
-                        className={`flex-1 rounded-t min-h-[2px] transition-all duration-500 ${hasData ? (isCurrent ? 'opacity-100' : 'opacity-60') : 'opacity-20'}`}
-                        style={{ height: `${(m.expense / maxYearlyVal) * 100}%`, backgroundColor: '#F25260' }}
-                      />
-                    </div>
-                    <span className={`text-[9px] font-semibold ${isCurrent ? 'text-white' : 'text-[#4E5968]'}`}>
-                      {i + 1}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
+            <YearlyBarChart data={yearlyData} currentYM={yearMonth} />
           </div>
 
           {/* 월별 내역 테이블 */}
@@ -447,6 +371,75 @@ export default function Analytics({ transactions, yearMonth }: Props) {
               )}
             </div>
           </div>
+        </>
+      )}
+
+      {/* ──── 캐시플로 뷰 ──── */}
+      {viewMode === 'cashflow' && (
+        <>
+          {/* 캐시플로 차트 */}
+          <div className="bg-[#1E2236] rounded-3xl p-5">
+            <p className="text-[15px] font-bold text-white mb-1">6개월 캐시플로</p>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
+                <span className="text-xs text-[#8B95A1]">수입</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-[#F25260]" />
+                <span className="text-xs text-[#8B95A1]">지출</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-1 rounded-full bg-[#2ACF6A]" style={{ borderStyle: 'dashed' }} />
+                <span className="text-xs text-[#8B95A1]">순잔액</span>
+              </div>
+            </div>
+            <CashflowChart data={monthlyData} />
+          </div>
+
+          {/* 월별 순이익 */}
+          <div className="bg-[#1E2236] rounded-3xl p-5">
+            <p className="text-[15px] font-bold text-white mb-4">월별 순이익</p>
+            <div className="space-y-2">
+              {monthlyData.map((m) => {
+                const isCurrent = m.ym === yearMonth
+                const isPositive = m.balance >= 0
+                return (
+                  <div key={m.ym}
+                    className={`flex items-center justify-between py-2.5 px-3 rounded-xl ${isCurrent ? 'bg-[#3D8EF8]/10' : ''}`}>
+                    <span className={`text-sm font-bold ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>{m.label}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[#4E5968] num">{fmt(m.income)} → {fmt(m.expense)}</span>
+                      <span className={`text-sm font-extrabold num ${isPositive ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                        {isPositive ? '+' : ''}{fmt(m.balance)}
+                      </span>
+                      <span className="text-base">{isPositive ? '📈' : '📉'}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Best / Worst 월 */}
+          {cashflowStats && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#1E2236] rounded-3xl p-4 text-center">
+                <p className="text-[10px] text-[#4E5968] font-semibold mb-2">최고의 달 🏆</p>
+                <p className="text-sm font-bold text-white">{cashflowStats.best.label}</p>
+                <p className="text-[13px] font-extrabold text-[#2ACF6A] num mt-1">
+                  +{fmt(cashflowStats.best.balance)}원
+                </p>
+              </div>
+              <div className="bg-[#1E2236] rounded-3xl p-4 text-center">
+                <p className="text-[10px] text-[#4E5968] font-semibold mb-2">아쉬운 달 😓</p>
+                <p className="text-sm font-bold text-white">{cashflowStats.worst.label}</p>
+                <p className="text-[13px] font-extrabold text-[#F25260] num mt-1">
+                  {fmt(cashflowStats.worst.balance)}원
+                </p>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

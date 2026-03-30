@@ -13,6 +13,10 @@ html, body {
   overscroll-behavior: none;
 }
 
+button {
+  cursor: pointer;
+}
+
 ::-webkit-scrollbar { display: none; }
 
 /* 탭 전환 애니메이션 */

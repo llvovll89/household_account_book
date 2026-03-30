@@ -61,6 +61,14 @@ export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
   기타지출:    { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
 }
 
+export interface MonthlyDataPoint {
+  ym: string
+  label: string
+  income: number
+  expense: number
+  balance: number
+}
+
 export const CATEGORY_EMOJI: Record<string, string> = {
   급여: '💼', 부업: '💻', 용돈: '🎁', 투자수익: '📈', 기타수입: '💰',
   식비: '🍽️', 교통비: '🚌', 주거비: '🏠', 통신비: '📱', 의료비: '🏥',
