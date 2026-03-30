@@ -111,6 +111,16 @@ function countKorean(text: string): number {
   return (text.match(/[\uAC00-\uD7A3\u1100-\u11FF]/g) ?? []).length
 }
 
+function hasManyNullBytes(bytes: Uint8Array): boolean {
+  if (bytes.length < 8) return false
+  let nullCount = 0
+  const sampleSize = Math.min(bytes.length, 4096)
+  for (let i = 0; i < sampleSize; i++) {
+    if (bytes[i] === 0x00) nullCount++
+  }
+  return nullCount / sampleSize > 0.2
+}
+
 async function decodeFile(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
@@ -128,15 +138,84 @@ async function decodeFile(file: File): Promise<string> {
     return new TextDecoder('utf-16be').decode(buffer)
   }
 
-  // BOM 없음 → UTF-8 / EUC-KR 둘 다 디코딩해서 한글이 더 많은 쪽 채택
-  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer)
-  try {
-    const euckr = new TextDecoder('euc-kr').decode(buffer)
-    if (countKorean(euckr) > countKorean(utf8)) return euckr
-  } catch {
-    // euc-kr 미지원 환경 → utf-8 사용
+  // BOM이 없는 UTF-16 파일 방어 (NULL 바이트 비율로 추정)
+  if (hasManyNullBytes(bytes)) {
+    const utf16le = new TextDecoder('utf-16le').decode(buffer)
+    const utf16be = new TextDecoder('utf-16be').decode(buffer)
+    return countKorean(utf16le) >= countKorean(utf16be) ? utf16le : utf16be
   }
-  return utf8
+
+  // UTF-8 엄격 검증 성공 시 UTF-8 사용
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+  } catch {
+    // UTF-8 불일치 시 아래 EUC-KR 후보로 진행
+  }
+
+  // UTF-8이 아니면 은행 내역에서 흔한 EUC-KR 우선 시도
+  try {
+    return new TextDecoder('euc-kr').decode(buffer)
+  } catch {
+    // euc-kr 미지원 환경에서는 복구 가능한 utf-8로 마지막 폴백
+    return new TextDecoder('utf-8', { fatal: false }).decode(buffer)
+  }
+}
+
+function normalizeHeaderRow(row: string[]): string[] {
+  return row.map((cell, idx) => {
+    const value = String(cell ?? '').trim()
+    return value || `컬럼${idx + 1}`
+  })
+}
+
+function rowHasValue(row: string[]): boolean {
+  return row.some((cell) => String(cell ?? '').trim() !== '')
+}
+
+async function parseSpreadsheet(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const XLSX = await import('xlsx')
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+
+  if (!workbook.SheetNames.length) return { headers: [], rows: [] }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]]
+  const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+    blankrows: false,
+  })
+
+  if (!matrix.length) return { headers: [], rows: [] }
+
+  // 첫 20행에서 값이 가장 많은 행을 헤더로 선택
+  let headerIdx = 0
+  let maxFilled = -1
+  for (let i = 0; i < Math.min(matrix.length, 20); i++) {
+    const row = matrix[i].map((cell) => String(cell ?? '').trim())
+    const filled = row.filter(Boolean).length
+    if (filled > maxFilled) {
+      maxFilled = filled
+      headerIdx = i
+    }
+  }
+
+  const headers = normalizeHeaderRow(matrix[headerIdx].map((cell) => String(cell ?? '')))
+  const rows: Record<string, string>[] = []
+
+  for (let i = headerIdx + 1; i < matrix.length; i++) {
+    const source = matrix[i].map((cell) => String(cell ?? ''))
+    if (!rowHasValue(source)) continue
+
+    const record: Record<string, string> = {}
+    headers.forEach((h, idx) => {
+      record[h] = source[idx]?.trim() ?? ''
+    })
+    rows.push(record)
+  }
+
+  return { headers, rows }
 }
 
 // ────────────────────────────────────────────
@@ -203,6 +282,14 @@ export async function parseCSV(file: File): Promise<{ headers: string[]; rows: R
       },
     })
   })
+}
+
+export async function parseTabularFile(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (ext === 'xls' || ext === 'xlsx') {
+    return parseSpreadsheet(file)
+  }
+  return parseCSV(file)
 }
 
 export function applyMapping(
