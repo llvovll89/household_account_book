@@ -43,7 +43,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
       } else {
         setIsPDF(false)
         const { headers, rows } = await parseCSV(file)
-        if (!headers.length) { setError('파일을 읽지 못했습니다. UTF-8 인코딩 CSV 파일을 사용해주세요.'); return }
+        if (!headers.length) { setError('파일을 읽지 못했습니다. CSV 파일인지 확인해주세요.'); return }
         setCsvHeaders(headers); setCsvRows(rows)
         setMapping({ ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
       }

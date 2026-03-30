@@ -104,19 +104,51 @@ export function guessCategory(description: string, type: 'income' | 'expense'): 
 }
 
 // ────────────────────────────────────────────
+//  인코딩 자동 감지 (UTF-8 / UTF-16LE / EUC-KR)
+// ────────────────────────────────────────────
+async function decodeFile(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+
+  // UTF-8 BOM (EF BB BF)
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(buffer)
+  }
+  // UTF-16 LE BOM (FF FE)
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+    return new TextDecoder('utf-16le').decode(buffer)
+  }
+  // UTF-16 BE BOM (FE FF)
+  if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+    return new TextDecoder('utf-16be').decode(buffer)
+  }
+
+  // BOM 없음 → UTF-8 시도 후 깨지면 EUC-KR로 재시도
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer)
+  if (utf8.includes('\uFFFD')) {
+    try {
+      return new TextDecoder('euc-kr').decode(buffer)
+    } catch {
+      // euc-kr 미지원 환경이면 utf-8 그대로 반환
+    }
+  }
+  return utf8
+}
+
+// ────────────────────────────────────────────
 //  CSV 파싱 → ParsedRow[]
 // ────────────────────────────────────────────
 export async function parseCSV(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
+  const text = await decodeFile(file)
   return new Promise((resolve, reject) => {
-    Papa.parse<Record<string, string>>(file, {
+    Papa.parse<Record<string, string>>(text, {
       header: true,
       skipEmptyLines: true,
-      encoding: 'UTF-8',
       complete(result) {
         const headers = result.meta.fields ?? []
         resolve({ headers, rows: result.data })
       },
-      error(err) {
+      error(err: Error) {
         reject(err)
       },
     })
