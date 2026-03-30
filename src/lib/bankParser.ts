@@ -106,6 +106,11 @@ export function guessCategory(description: string, type: 'income' | 'expense'): 
 // ────────────────────────────────────────────
 //  인코딩 자동 감지 (UTF-8 / UTF-16LE / EUC-KR)
 // ────────────────────────────────────────────
+function countKorean(text: string): number {
+  // 한글 음절 (AC00–D7A3) + 한글 자모 (1100–11FF) 개수
+  return (text.match(/[\uAC00-\uD7A3\u1100-\u11FF]/g) ?? []).length
+}
+
 async function decodeFile(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const bytes = new Uint8Array(buffer)
@@ -123,14 +128,13 @@ async function decodeFile(file: File): Promise<string> {
     return new TextDecoder('utf-16be').decode(buffer)
   }
 
-  // BOM 없음 → UTF-8 시도 후 깨지면 EUC-KR로 재시도
+  // BOM 없음 → UTF-8 / EUC-KR 둘 다 디코딩해서 한글이 더 많은 쪽 채택
   const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer)
-  if (utf8.includes('\uFFFD')) {
-    try {
-      return new TextDecoder('euc-kr').decode(buffer)
-    } catch {
-      // euc-kr 미지원 환경이면 utf-8 그대로 반환
-    }
+  try {
+    const euckr = new TextDecoder('euc-kr').decode(buffer)
+    if (countKorean(euckr) > countKorean(utf8)) return euckr
+  } catch {
+    // euc-kr 미지원 환경 → utf-8 사용
   }
   return utf8
 }
