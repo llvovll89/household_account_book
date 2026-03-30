@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
+import { X, Upload, AlertCircle, CheckCircle2, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import type { Transaction } from '../types'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI } from '../types'
 import {
@@ -44,6 +44,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
   const [mapping, setMapping] = useState<ColumnMapping>({ ...EMPTY_MAPPING })
   const [isPDF, setIsPDF] = useState(false)
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
+  const [detailIdx, setDetailIdx] = useState<number | null>(null)
 
   async function handleFile(file: File) {
     setError(''); setLoading(true)
@@ -177,7 +178,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                     <tr>{csvHeaders.map((h) => <th key={h} className="px-3 py-2 text-left font-semibold text-[#4E5968] whitespace-nowrap">{h}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.03]">
-                    {csvRows.slice(0, 3).map((row, i) => (
+                    {csvRows.slice(0, 8).map((row, i) => (
                       <tr key={i}>
                         {csvHeaders.map((h) => <td key={h} className="px-3 py-2 text-[#8B95A1] whitespace-nowrap max-w-[100px] truncate">{row[h]}</td>)}
                       </tr>
@@ -226,22 +227,18 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                     </thead>
                     <tbody className="divide-y divide-white/[0.03]">
                       {previewRows.map((row, i) => (
-                        <tr key={i} className={row.skip ? 'opacity-30' : ''}>
-                          <td className="px-3 py-2.5">
+                        <tr key={i}
+                          className={`cursor-pointer transition-colors hover:bg-white/[0.03] ${row.skip ? 'opacity-30' : ''}`}
+                          onClick={() => setDetailIdx(i)}>
+                          <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" checked={!row.skip}
                               onChange={(e) => setPreviewRows((rows) => rows.map((r, j) => j === i ? { ...r, skip: !e.target.checked } : r))}
                               className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
                           </td>
                           <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap">{row.date}</td>
                           <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] max-w-[90px] truncate">{row.description || '-'}</td>
-                          <td className="px-3 py-2.5">
-                            <select value={row.category}
-                              onChange={(e) => setPreviewRows((rows) => rows.map((r, j) => j === i ? { ...r, category: e.target.value } : r))}
-                              className="text-[11px] bg-[#252A3F] text-white border border-white/[0.08] rounded-lg px-2 py-1 focus:outline-none">
-                              {[...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES].map((c) => (
-                                <option key={c} value={c}>{CATEGORY_EMOJI[c]} {c}</option>
-                              ))}
-                            </select>
+                          <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap">
+                            {CATEGORY_EMOJI[row.category]} {row.category}
                           </td>
                           <td className={`px-3 py-2.5 text-[11px] font-bold text-right num whitespace-nowrap ${row.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
                             {row.type === 'income' ? '+' : '-'}{row.amount.toLocaleString()}원
@@ -285,6 +282,86 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
           </div>
         )}
       </div>
+
+      {/* 행 상세 모달 */}
+      {detailIdx !== null && (() => {
+        const row = previewRows[detailIdx]
+        const isIncome = row.type === 'income'
+        return (
+          <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-[60]"
+            onClick={() => setDetailIdx(null)}>
+            <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/[0.06] pb-safe"
+              onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-9 h-1 bg-white/10 rounded-full" />
+              </div>
+              <div className="px-6 pt-3 pb-6 space-y-4">
+                {/* 헤더 */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isIncome ? 'bg-[#3D8EF8]/15' : 'bg-[#F25260]/15'}`}>
+                      {isIncome
+                        ? <TrendingUp size={18} className="text-[#3D8EF8]" />
+                        : <TrendingDown size={18} className="text-[#F25260]" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[#4E5968]">{row.date}</p>
+                      <p className={`text-xl font-extrabold num ${isIncome ? 'text-[#3D8EF8]' : 'text-white'}`}>
+                        {isIncome ? '+' : '-'}{row.amount.toLocaleString()}원
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setDetailIdx(null)}
+                    className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+                    <X size={15} className="text-[#8B95A1]" />
+                  </button>
+                </div>
+
+                {/* 적요 */}
+                {row.description && (
+                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-semibold text-[#4E5968] mb-1">적요</p>
+                    <p className="text-sm text-white break-all">{row.description}</p>
+                  </div>
+                )}
+
+                {/* 카테고리 */}
+                <div>
+                  <p className="text-[10px] font-semibold text-[#4E5968] mb-2">카테고리</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map((c) => (
+                      <button key={c}
+                        onClick={() => setPreviewRows((rows) => rows.map((r, j) => j === detailIdx ? { ...r, category: c } : r))}
+                        className={`flex flex-col items-center gap-1 py-2.5 rounded-2xl text-[10px] font-semibold transition-all ${
+                          row.category === c
+                            ? 'bg-[#3D8EF8] text-white'
+                            : 'bg-[#252A3F] text-[#8B95A1] hover:bg-[#2D3352]'
+                        }`}>
+                        <span className="text-base">{CATEGORY_EMOJI[c]}</span>
+                        <span>{c}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 포함/제외 토글 */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setPreviewRows((rows) => rows.map((r, j) => j === detailIdx ? { ...r, skip: true } : r)); setDetailIdx(null) }}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-colors ${row.skip ? 'bg-[#F25260]/20 text-[#F25260]' : 'bg-[#252A3F] text-[#8B95A1] hover:bg-[#2D3352]'}`}>
+                    제외
+                  </button>
+                  <button
+                    onClick={() => { setPreviewRows((rows) => rows.map((r, j) => j === detailIdx ? { ...r, skip: false } : r)); setDetailIdx(null) }}
+                    className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-colors ${!row.skip ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'bg-[#252A3F] text-[#8B95A1] hover:bg-[#2D3352]'}`}>
+                    포함
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
