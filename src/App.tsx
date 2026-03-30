@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction } from './types'
@@ -51,6 +51,8 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [isIosManualInstall, setIsIosManualInstall] = useState(false)
+  const [installGuideText, setInstallGuideText] = useState('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
+  const hasInstallPromptRef = useRef(false)
 
   const yearMonth = getYearMonth(currentDate)
 
@@ -67,18 +69,37 @@ export default function App() {
     if (dismissed || isStandalone) return
 
     const ua = window.navigator.userAgent.toLowerCase()
+    const isMobile = /android|iphone|ipad|ipod/.test(ua)
     const isIos = /iphone|ipad|ipod/.test(ua)
     const isSafari = /safari/.test(ua) && !/crios|fxios|edgios/.test(ua)
+    const isIosChrome = /crios/.test(ua)
+    const isIosEdge = /edgios/.test(ua)
+    const isIosFirefox = /fxios/.test(ua)
 
-    if (isIos && isSafari) {
+    if (!isMobile) return
+
+    if (isIos) {
+      const iosGuideText = isSafari
+        ? 'Safari 하단 공유 버튼 → 홈 화면에 추가'
+        : isIosChrome
+          ? 'Chrome 메뉴(⋯) → 홈 화면에 추가'
+          : isIosEdge
+            ? 'Edge 메뉴(⋯) → 휴대폰에 추가(홈 화면)'
+            : isIosFirefox
+              ? 'Firefox 메뉴(☰) → 홈 화면에 추가'
+              : '브라우저 메뉴에서 홈 화면에 추가를 선택하세요.'
+
       setIsIosManualInstall(true)
+      setInstallGuideText(iosGuideText)
       setShowInstallBanner(true)
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
+      hasInstallPromptRef.current = true
       setDeferredPrompt(event as BeforeInstallPromptEvent)
       setIsIosManualInstall(false)
+      setInstallGuideText('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
       setShowInstallBanner(true)
     }
 
@@ -91,7 +112,16 @@ export default function App() {
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
 
+    const fallbackTimer = window.setTimeout(() => {
+      if (!isIos && !hasInstallPromptRef.current) {
+        setIsIosManualInstall(true)
+        setInstallGuideText('브라우저 메뉴(⋮/⋯) → 홈 화면에 추가를 선택하세요.')
+        setShowInstallBanner(true)
+      }
+    }, 2200)
+
     return () => {
+      window.clearTimeout(fallbackTimer)
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)
     }
@@ -333,9 +363,7 @@ export default function App() {
           <div className="bg-[#252A3F] border border-[#3D8EF8]/25 rounded-2xl px-4 py-3.5 shadow-xl">
             <p className="text-sm font-semibold text-white">앱처럼 빠르게 사용하려면 홈 화면에 추가하세요.</p>
             <p className="text-[11px] text-[#8B95A1] mt-1">
-              {isIosManualInstall
-                ? 'Safari 하단 공유 버튼 → 홈 화면에 추가'
-                : '설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.'}
+              {isIosManualInstall ? installGuideText : '설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.'}
             </p>
             <div className="mt-3 flex items-center justify-end gap-2">
               <button
