@@ -12,6 +12,13 @@ import ImportModal from './components/ImportModal'
 
 type Tab = 'home' | 'transactions' | 'analytics' | 'memos'
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
+
+const PWA_PROMPT_DISMISSED_KEY = 'pwa-install-prompt-dismissed'
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
 }
@@ -41,6 +48,9 @@ export default function App() {
   const [showModal, setShowModal] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [isIosManualInstall, setIsIosManualInstall] = useState(false)
 
   const yearMonth = getYearMonth(currentDate)
 
@@ -50,6 +60,58 @@ export default function App() {
     setBudgets(loadBudgets())
     setRecurring(loadRecurring())
   }, [])
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(PWA_PROMPT_DISMISSED_KEY) === '1'
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    if (dismissed || isStandalone) return
+
+    const ua = window.navigator.userAgent.toLowerCase()
+    const isIos = /iphone|ipad|ipod/.test(ua)
+    const isSafari = /safari/.test(ua) && !/crios|fxios|edgios/.test(ua)
+
+    if (isIos && isSafari) {
+      setIsIosManualInstall(true)
+      setShowInstallBanner(true)
+    }
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setDeferredPrompt(event as BeforeInstallPromptEvent)
+      setIsIosManualInstall(false)
+      setShowInstallBanner(true)
+    }
+
+    const onInstalled = () => {
+      setShowInstallBanner(false)
+      setDeferredPrompt(null)
+      localStorage.setItem(PWA_PROMPT_DISMISSED_KEY, '1')
+    }
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
+  }, [])
+
+  const closeInstallBanner = useCallback(() => {
+    setShowInstallBanner(false)
+    localStorage.setItem(PWA_PROMPT_DISMISSED_KEY, '1')
+  }, [])
+
+  const handleInstallClick = useCallback(async () => {
+    if (!deferredPrompt) return
+    await deferredPrompt.prompt()
+    const choice = await deferredPrompt.userChoice
+    if (choice.outcome === 'accepted') {
+      setShowInstallBanner(false)
+      localStorage.setItem(PWA_PROMPT_DISMISSED_KEY, '1')
+    }
+    setDeferredPrompt(null)
+  }, [deferredPrompt])
 
   // ── 거래 내역 ────────────────────────────────────────
   const handleSaveTransaction = useCallback(
@@ -266,6 +328,35 @@ export default function App() {
       )}
 
       {/* ── 하단 탭 ── */}
+      {showInstallBanner && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 w-[calc(100%-2.5rem)] max-w-sm">
+          <div className="bg-[#252A3F] border border-[#3D8EF8]/25 rounded-2xl px-4 py-3.5 shadow-xl">
+            <p className="text-sm font-semibold text-white">앱처럼 빠르게 사용하려면 홈 화면에 추가하세요.</p>
+            <p className="text-[11px] text-[#8B95A1] mt-1">
+              {isIosManualInstall
+                ? 'Safari 하단 공유 버튼 → 홈 화면에 추가'
+                : '설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.'}
+            </p>
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <button
+                onClick={closeInstallBanner}
+                className="px-3 py-1.5 rounded-xl bg-[#1E2236] text-[#8B95A1] text-xs font-bold"
+              >
+                닫기
+              </button>
+              {!isIosManualInstall && deferredPrompt && (
+                <button
+                  onClick={handleInstallClick}
+                  className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors"
+                >
+                  설치
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <nav className="fixed bottom-0 left-0 right-0 z-40">
         <div className="max-w-lg mx-auto bg-[#0D0F14] border-t border-white/6">
           <div className="flex pb-safe">
