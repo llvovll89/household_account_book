@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Upload, AlertCircle, CheckCircle2, ChevronDown, TrendingUp, TrendingDown } from 'lucide-react'
 import type { Transaction } from '../types'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI } from '../types'
@@ -25,7 +26,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const tableScrollRef = useRef<HTMLDivElement>(null)
+  const mappingTableRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const [csvHeaders, setCsvHeaders] = useState<string[]>([])
@@ -36,9 +37,9 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [detailIdx, setDetailIdx] = useState<number | null>(null)
 
-  // 컬럼 매핑 단계 — 가로 휠 스크롤
+  // 매핑 단계 — 가로 휠 → 가로 스크롤
   useEffect(() => {
-    const el = tableScrollRef.current
+    const el = mappingTableRef.current
     if (!el) return
     function onWheel(e: WheelEvent) {
       if (el!.scrollWidth > el!.clientWidth) {
@@ -55,11 +56,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
     const el = sentinelRef.current
     if (!el) return
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((n) => Math.min(n + PAGE_SIZE, previewRows.length))
-        }
-      },
+      (entries) => { if (entries[0].isIntersecting) setVisibleCount((n) => Math.min(n + PAGE_SIZE, previewRows.length)) },
       { threshold: 0.1 }
     )
     observer.observe(el)
@@ -123,9 +120,12 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
       <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
         onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06]">
+          {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="w-9 h-1 bg-white/10 rounded-full" />
           </div>
+
+          {/* 제목 */}
           <div className="flex items-start justify-between px-6 pt-2 pb-4 shrink-0">
             <div>
               <h2 className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
@@ -136,7 +136,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
             </button>
           </div>
 
-          {/* 스텝 */}
+          {/* 스텝 인디케이터 */}
           <div className="flex items-center px-6 pb-4 gap-1 shrink-0">
             {(['upload', 'mapping', 'preview'] as Step[]).map((s, i) => {
               const done = (step === 'preview' && s !== 'preview') || (step === 'mapping' && s === 'upload')
@@ -154,9 +154,9 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
             })}
           </div>
 
-          <div className="overflow-y-auto flex-1 px-6 pb-6">
-            {/* STEP 1 */}
-            {step === 'upload' && (
+          {/* ── STEP 1: 업로드 ── */}
+          {step === 'upload' && (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
               <div
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
                 onDragLeave={() => setIsDragging(false)}
@@ -181,47 +181,64 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 <input ref={fileInputRef} type="file" accept=".csv,.pdf,.xls,.xlsx,.txt" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
               </div>
-            )}
+              {error && (
+                <div className="mt-3 flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
+                  <AlertCircle size={13} className="text-[#F25260] shrink-0" />
+                  <p className="text-sm text-[#F25260] font-medium">{error}</p>
+                </div>
+              )}
+              {loading && <div className="mt-6 text-center text-sm text-[#4E5968] font-medium animate-pulse">파일 분석 중...</div>}
+            </div>
+          )}
 
-            {/* STEP 2 */}
-            {step === 'mapping' && (
-              <div className="space-y-4">
-                <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
-                  <p className="text-sm text-[#8B95A1]">
-                    <span className="font-bold text-white">{csvRows.length}개</span> 행을 읽었습니다. 컬럼을 지정해주세요.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <MappingSelect label="날짜 컬럼 *" value={mapping.date} headers={csvHeaders} onChange={(v) => setMapping((m) => ({ ...m, date: v }))} />
-                  <MappingSelect label="설명/적요" value={mapping.description} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, description: v }))} />
-                  <MappingSelect label="입금 컬럼" value={mapping.deposit} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, deposit: v }))} />
-                  <MappingSelect label="출금 컬럼" value={mapping.withdrawal} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, withdrawal: v }))} />
-                  <MappingSelect label="단일 금액" value={mapping.amount} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, amount: v }))} />
-                  <MappingSelect label="입출금 구분" value={mapping.typeCol} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, typeCol: v }))} />
-                </div>
-                <div ref={tableScrollRef} className="table-h-scroll rounded-2xl overflow-x-auto border border-white/[0.05] relative">
-                  <table className="w-full text-xs">
-                    <thead className="bg-[#252A3F]">
-                      <tr>{csvHeaders.map((h) => <th key={h} className="px-3 py-2 text-left font-semibold text-[#4E5968] whitespace-nowrap">{h}</th>)}</tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
-                      {csvRows.map((row, i) => (
-                        <tr key={i}>
-                          {csvHeaders.map((h) => <td key={h} className="px-3 py-2 text-[#8B95A1] whitespace-nowrap max-w-[100px] truncate">{row[h]}</td>)}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <button onClick={proceedToPreview} className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
-                  다음
-                </button>
+          {/* ── STEP 2: 컬럼 매핑 ── */}
+          {step === 'mapping' && (
+            <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
+              <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
+                <p className="text-sm text-[#8B95A1]">
+                  <span className="font-bold text-white">{csvRows.length}개</span> 행을 읽었습니다. 컬럼을 지정해주세요.
+                </p>
               </div>
-            )}
+              <div className="grid grid-cols-2 gap-3">
+                <MappingSelect label="날짜 컬럼 *" value={mapping.date} headers={csvHeaders} onChange={(v) => setMapping((m) => ({ ...m, date: v }))} />
+                <MappingSelect label="설명/적요" value={mapping.description} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, description: v }))} />
+                <MappingSelect label="입금 컬럼" value={mapping.deposit} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, deposit: v }))} />
+                <MappingSelect label="출금 컬럼" value={mapping.withdrawal} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, withdrawal: v }))} />
+                <MappingSelect label="단일 금액" value={mapping.amount} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, amount: v }))} />
+                <MappingSelect label="입출금 구분" value={mapping.typeCol} headers={csvHeaders} optional onChange={(v) => setMapping((m) => ({ ...m, typeCol: v }))} />
+              </div>
+              {/* 가로 스크롤만 — 세로 스크롤 없음 */}
+              <div ref={mappingTableRef} className="table-h-scroll rounded-2xl overflow-x-auto overflow-y-hidden border border-white/[0.05]">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#252A3F]">
+                    <tr>{csvHeaders.map((h) => <th key={h} className="px-3 py-2 text-left font-semibold text-[#4E5968] whitespace-nowrap">{h}</th>)}</tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.03]">
+                    {csvRows.slice(0, 5).map((row, i) => (
+                      <tr key={i}>
+                        {csvHeaders.map((h) => <td key={h} className="px-3 py-2 text-[#8B95A1] whitespace-nowrap max-w-[120px] truncate">{row[h]}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {error && (
+                <div className="flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
+                  <AlertCircle size={13} className="text-[#F25260] shrink-0" />
+                  <p className="text-sm text-[#F25260] font-medium">{error}</p>
+                </div>
+              )}
+              <button onClick={proceedToPreview} className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
+                다음
+              </button>
+            </div>
+          )}
 
-            {/* STEP 3 */}
-            {step === 'preview' && (
-              <div className="space-y-3">
+          {/* ── STEP 3: 프리뷰 ── */}
+          {step === 'preview' && (
+            <>
+              <div className="px-6 pb-3 shrink-0 space-y-3">
+                {/* 요약 카드 */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-[#3D8EF8]/10 rounded-2xl p-3 text-center border border-[#3D8EF8]/15">
                     <p className="text-xl font-bold text-[#3D8EF8] num">{importCount}</p>
@@ -237,26 +254,38 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.05] overflow-hidden">
+                {isPDF && (
+                  <div className="flex items-center gap-2 p-3.5 bg-[#3D8EF8]/10 rounded-2xl border border-[#3D8EF8]/15">
+                    <AlertCircle size={13} className="text-[#3D8EF8] shrink-0" />
+                    <p className="text-xs text-[#3D8EF8] font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 테이블 — 세로 스크롤만, 고정 높이 */}
+              <div className="mx-6 flex-1 min-h-0 rounded-2xl border border-white/[0.05] overflow-hidden flex flex-col">
+                <table className="w-full shrink-0">
+                  <thead className="bg-[#252A3F]">
+                    <tr>
+                      <th className="px-3 py-2.5 w-10">
+                        <input type="checkbox" checked={previewRows.every((r) => !r.skip)}
+                          onChange={(e) => setPreviewRows((rows) => rows.map((r) => ({ ...r, skip: !e.target.checked })))}
+                          className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
+                      </th>
+                      {['날짜', '설명', '카테고리', '금액'].map(h => (
+                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-[#4E5968]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                </table>
+                <div className="overflow-y-auto overflow-x-hidden flex-1">
                   <table className="w-full">
-                    <thead className="bg-[#252A3F]">
-                      <tr>
-                        <th className="px-3 py-2.5 w-10">
-                          <input type="checkbox" checked={previewRows.every((r) => !r.skip)}
-                            onChange={(e) => setPreviewRows((rows) => rows.map((r) => ({ ...r, skip: !e.target.checked })))}
-                            className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
-                        </th>
-                        {['날짜', '설명', '카테고리', '금액'].map(h => (
-                          <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-[#4E5968]">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
                     <tbody className="divide-y divide-white/[0.03]">
                       {visibleRows.map((row, i) => (
                         <tr key={i}
                           className={`cursor-pointer transition-colors hover:bg-white/[0.03] active:bg-white/[0.06] ${row.skip ? 'opacity-30' : ''}`}
                           onClick={() => setDetailIdx(i)}>
-                          <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-3 py-2.5 w-10" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" checked={!row.skip}
                               onChange={(e) => updateRow(i, { skip: !e.target.checked })}
                               className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
@@ -273,55 +302,39 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                       ))}
                     </tbody>
                   </table>
-                  {/* 무한 스크롤 sentinel */}
                   {visibleCount < previewRows.length && (
                     <div ref={sentinelRef} className="py-3 text-center text-[11px] text-[#4E5968]">
-                      {visibleCount} / {previewRows.length}행 표시 중...
+                      {visibleCount} / {previewRows.length}
                     </div>
                   )}
                 </div>
-
-                {isPDF && (
-                  <div className="flex items-center gap-2 p-3.5 bg-[#3D8EF8]/10 rounded-2xl border border-[#3D8EF8]/15">
-                    <AlertCircle size={13} className="text-[#3D8EF8] shrink-0" />
-                    <p className="text-xs text-[#3D8EF8] font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
-                  </div>
-                )}
               </div>
-            )}
 
-            {error && (
-              <div className="mt-3 flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
-                <AlertCircle size={13} className="text-[#F25260] shrink-0" />
-                <p className="text-sm text-[#F25260] font-medium">{error}</p>
+              {/* 하단 버튼 */}
+              <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0 flex gap-3">
+                <button onClick={() => setStep(isPDF ? 'upload' : 'mapping')}
+                  className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#252A3F] hover:bg-[#2D3352] transition-colors">
+                  이전
+                </button>
+                <button onClick={handleImport} disabled={importCount === 0}
+                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 transition-colors flex items-center justify-center gap-2">
+                  <CheckCircle2 size={16} />
+                  {importCount}개 가져오기
+                </button>
               </div>
-            )}
-            {loading && <div className="mt-6 text-center text-sm text-[#4E5968] font-medium animate-pulse">파일 분석 중...</div>}
-          </div>
-
-          {step === 'preview' && (
-            <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0 flex gap-3">
-              <button onClick={() => setStep(isPDF ? 'upload' : 'mapping')}
-                className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#252A3F] hover:bg-[#2D3352] transition-colors">
-                이전
-              </button>
-              <button onClick={handleImport} disabled={importCount === 0}
-                className="flex-1 py-4 rounded-2xl font-bold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 transition-colors flex items-center justify-center gap-2">
-                <CheckCircle2 size={16} />
-                {importCount}개 가져오기
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* 행 상세 모달 — 최상위 레이어 */}
-      {detailIdx !== null && (
+      {/* 상세 모달 — createPortal로 document.body에 직접 마운트 */}
+      {detailIdx !== null && createPortal(
         <RowDetailModal
           row={previewRows[detailIdx]}
           onClose={() => setDetailIdx(null)}
           onUpdate={(patch) => updateRow(detailIdx, patch)}
-        />
+        />,
+        document.body
       )}
     </>
   )
@@ -334,7 +347,7 @@ function RowDetailModal({ row, onClose, onUpdate }: {
 }) {
   const isIncome = row.type === 'income'
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-[60]"
+    <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-[100]"
       onClick={onClose}>
       <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/[0.06]"
         onClick={(e) => e.stopPropagation()}>
@@ -390,7 +403,7 @@ function RowDetailModal({ row, onClose, onUpdate }: {
             </div>
           </div>
 
-          {/* 포함/제외 토글 */}
+          {/* 포함/제외 */}
           <div className="flex gap-3">
             <button
               onClick={() => { onUpdate({ skip: true }); onClose() }}
