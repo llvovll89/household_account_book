@@ -57,9 +57,20 @@ export function saveStockTrades(trades: StockTrade[]): void {
 const SETTINGS_KEY = 'hb_settings'
 export interface AppSettings {
   payday: number | 'last' | null // 1-31 or 'last' for end of month
+  customExpenseCategories: string[]
+  customIncomeCategories: string[]
 }
 export function loadSettings(): AppSettings {
-  try { return { payday: null, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') } } catch { return { payday: null } }
+  try {
+    return {
+      payday: null,
+      customExpenseCategories: [],
+      customIncomeCategories: [],
+      ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'),
+    }
+  } catch {
+    return { payday: null, customExpenseCategories: [], customIncomeCategories: [] }
+  }
 }
 export function saveSettings(s: AppSettings): void {
   safeSave(SETTINGS_KEY, s)

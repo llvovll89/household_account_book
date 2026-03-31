@@ -1,4 +1,5 @@
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
+import { fmtShort as fmt } from '../../lib/format'
 
 interface Props {
   category: string
@@ -6,11 +7,6 @@ interface Props {
   spent: number
   limit: number
   color: string
-}
-
-function fmt(n: number): string {
-  if (n >= 10_000) return `${Math.round(n / 10_000)}만`
-  return n.toLocaleString()
 }
 
 export default function BudgetGauge({ category, emoji, spent, limit, color }: Props) {

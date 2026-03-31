@@ -7,9 +7,11 @@ interface Props {
   transaction?: Transaction | null
   onSave: (data: Omit<Transaction, 'id' | 'createdAt'>) => void
   onClose: () => void
+  customExpenseCategories?: string[]
+  customIncomeCategories?: string[]
 }
 
-export default function TransactionModal({ transaction, onSave, onClose }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [] }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
   const [amount, setAmount] = useState('')
@@ -17,7 +19,9 @@ export default function TransactionModal({ transaction, onSave, onClose }: Props
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
 
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const categories = type === 'income'
+    ? [...INCOME_CATEGORIES, ...customIncomeCategories]
+    : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
 
   useEffect(() => {
     if (transaction) {

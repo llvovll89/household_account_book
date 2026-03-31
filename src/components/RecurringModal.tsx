@@ -2,20 +2,18 @@ import { useState } from 'react'
 import { X, Plus, Trash2, ChevronDown, RefreshCw } from 'lucide-react'
 import type { RecurringTransaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { generateId } from '../lib/format'
 
 interface Props {
   recurring: RecurringTransaction[]
+  customExpenseCategories?: string[]
   onSave: (items: RecurringTransaction[]) => void
   onClose: () => void
 }
 
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2)
-}
-
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
-export default function RecurringModal({ recurring, onSave, onClose }: Props) {
+export default function RecurringModal({ recurring, customExpenseCategories = [], onSave, onClose }: Props) {
   const [items, setItems] = useState<RecurringTransaction[]>(recurring)
   const [adding, setAdding] = useState(false)
 
@@ -26,7 +24,7 @@ export default function RecurringModal({ recurring, onSave, onClose }: Props) {
   const [newDesc, setNewDesc] = useState('')
   const [newDay, setNewDay] = useState(1)
 
-  const categories = newType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const categories = newType === 'income' ? INCOME_CATEGORIES : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
 
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
