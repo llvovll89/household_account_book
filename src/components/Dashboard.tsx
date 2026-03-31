@@ -32,7 +32,7 @@ function fmtShort(n: number) {
 export default function Dashboard({ transactions, budgets, recurring, yearMonth, onBudgetsChange, onRecurringSave, onApplyRecurring }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
-  const [payday, setPayday] = useState<number | null>(null)
+  const [payday, setPayday] = useState<number | 'last' | null>(null)
   const [editingPayday, setEditingPayday] = useState(false)
   const [paydayInput, setPaydayInput] = useState('')
   const [paydayError, setPaydayError] = useState('')
@@ -44,6 +44,13 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
   }, [])
 
   function handleSavePayday() {
+    if (paydayInput === 'last') {
+      setPaydayError('')
+      setPayday('last')
+      saveSettings({ payday: 'last' })
+      setEditingPayday(false)
+      return
+    }
     const val = parseInt(paydayInput, 10)
     if (isNaN(val) || val < 1 || val > 31) {
       setPaydayError('1~31 사이의 숫자를 입력하세요')
@@ -64,7 +71,10 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     const currentMonth = today.getMonth()
 
     let daysLeft: number
-    if (payday > todayNum) {
+    if (payday === 'last') {
+      const lastDayOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+      daysLeft = lastDayOfCurrentMonth - todayNum
+    } else if (payday > todayNum) {
       daysLeft = payday - todayNum
     } else if (payday === todayNum) {
       daysLeft = 0
@@ -292,18 +302,38 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
 
       {editingPayday && (
         <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5 space-y-2">
+          <div className="flex gap-2 mb-1">
+            <button
+              onClick={() => { setPaydayInput(paydayInput === 'last' ? '' : paydayInput); setPaydayError('') }}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput !== 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+            >
+              날짜 입력
+            </button>
+            <button
+              onClick={() => { setPaydayInput('last'); setPaydayError('') }}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput === 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+            >
+              매월 말일
+            </button>
+          </div>
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-white shrink-0">매월</span>
-            <input
-              type="number" min="1" max="31"
-              value={paydayInput}
-              onChange={(e) => { setPaydayInput(e.target.value); setPaydayError('') }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSavePayday()}
-              placeholder="15"
-              autoFocus
-              className={`flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 ${paydayError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
-            />
-            <span className="text-sm font-semibold text-white shrink-0">일이 월급날</span>
+            {paydayInput === 'last' ? (
+              <div className="flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm">
+                말일
+              </div>
+            ) : (
+              <input
+                type="number" min="1" max="31"
+                value={paydayInput}
+                onChange={(e) => { setPaydayInput(e.target.value); setPaydayError('') }}
+                onKeyDown={(e) => e.key === 'Enter' && handleSavePayday()}
+                placeholder="15"
+                autoFocus
+                className={`flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 ${paydayError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
+              />
+            )}
+            <span className="text-sm font-semibold text-white shrink-0">이 월급날</span>
             <button onClick={handleSavePayday}
               className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0">
               저장
@@ -324,14 +354,19 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
-              <span className="text-sm font-bold text-white">
-                {paydayInfo.daysLeft === 0
-                  ? '오늘이 월급날이에요! 🎉'
-                  : `월급까지 D-${paydayInfo.daysLeft}`}
-              </span>
+              <div>
+                <span className="text-sm font-bold text-white">
+                  {paydayInfo.daysLeft === 0
+                    ? '오늘이 월급날이에요! 🎉'
+                    : `월급까지 D-${paydayInfo.daysLeft}`}
+                </span>
+                <p className="text-[11px] text-[#4E5968]">
+                  {payday === 'last' ? '매월 말일 기준' : `매월 ${payday}일 기준`}
+                </p>
+              </div>
             </div>
             <button
-              onClick={() => { setEditingPayday(true); setPaydayInput(String(payday)) }}
+              onClick={() => { setEditingPayday(true); setPaydayInput(payday === 'last' ? 'last' : String(payday)) }}
               className="p-1.5 rounded-lg text-[#4E5968] hover:text-[#8B95A1] transition-colors"
             >
               <Pencil size={12} />

@@ -47,7 +47,7 @@ export function saveRecurring(r: RecurringTransaction[]): void {
 
 const SETTINGS_KEY = 'hb_settings'
 export interface AppSettings {
-  payday: number | null // 1-31
+  payday: number | 'last' | null // 1-31 or 'last' for end of month
 }
 export function loadSettings(): AppSettings {
   try { return { payday: null, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') } } catch { return { payday: null } }
