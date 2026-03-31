@@ -133,12 +133,12 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
       )}
 
       {/* 필터 + 검색 */}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1 bg-[#1E2236] p-1 rounded-xl shrink-0">
+      <div className="space-y-2">
+        <div className="flex gap-1 bg-[#1E2236] p-1 rounded-xl">
           {(['all', 'buy', 'sell'] as Filter[]).map((f) => (
             <button key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 filter === f ? 'bg-[#252A3F] text-white' : 'text-[#4E5968]'
               }`}>
               {f === 'all' ? '전체' : f === 'buy' ? '매수' : '매도'}
@@ -149,7 +149,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           type="text" value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="종목 검색"
-          className="flex-1 bg-[#1E2236] rounded-xl px-3 py-2 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+          className="w-full bg-[#1E2236] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
         />
       </div>
 
