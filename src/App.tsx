@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2 } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType } from './types'
-import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring } from './lib/storage'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, TrendingUp } from 'lucide-react'
+import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade } from './types'
+import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring, loadStockTrades, saveStockTrades } from './lib/storage'
+import StockTradeList from './components/StockTradeList'
+import StockTradeModal from './components/StockTradeModal'
 import { registerToastHandler } from './lib/toast'
 import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
@@ -12,7 +14,7 @@ import Analytics from './components/Analytics'
 import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
 
-type Tab = 'home' | 'transactions' | 'analytics' | 'memos'
+type Tab = 'home' | 'transactions' | 'analytics' | 'memos' | 'stocks'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -33,6 +35,7 @@ const TABS = [
   { id: 'transactions' as Tab, label: '내역', Icon: List },
   { id: 'analytics' as Tab, label: '분석', Icon: BarChart2 },
   { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
+  { id: 'stocks' as Tab, label: '주식', Icon: TrendingUp },
 ]
 
 export default function App() {
@@ -64,6 +67,9 @@ export default function App() {
   const [isIosManualInstall, setIsIosManualInstall] = useState(false)
   const [installGuideText, setInstallGuideText] = useState('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
   const hasInstallPromptRef = useRef(false)
+  const [stockTrades, setStockTrades] = useState<StockTrade[]>([])
+  const [showStockModal, setShowStockModal] = useState(false)
+  const [editingTrade, setEditingTrade] = useState<StockTrade | null>(null)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -82,6 +88,7 @@ export default function App() {
     setMemos(loadMemos())
     setBudgets(loadBudgets())
     setRecurring(loadRecurring())
+    setStockTrades(loadStockTrades())
   }, [])
 
   useEffect(() => {
@@ -228,6 +235,27 @@ export default function App() {
     })
   }, [yearMonth])
 
+  // ── 주식 거래 ─────────────────────────────────────────
+  const handleSaveStockTrade = useCallback(
+    (data: Omit<StockTrade, 'id' | 'createdAt'>) => {
+      setStockTrades((prev) => {
+        const next = editingTrade
+          ? prev.map((t) => t.id === editingTrade.id ? { ...t, ...data } : t)
+          : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
+        saveStockTrades(next)
+        return next
+      })
+      setShowStockModal(false)
+      setEditingTrade(null)
+    },
+    [editingTrade]
+  )
+
+  const handleDeleteStockTrade = useCallback((id: string) => {
+    if (!confirm('이 거래를 삭제할까요?')) return
+    setStockTrades((prev) => { const next = prev.filter((t) => t.id !== id); saveStockTrades(next); return next })
+  }, [])
+
   // ── 메모 ─────────────────────────────────────────────
   const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
     setMemos((prev) => {
@@ -263,7 +291,7 @@ export default function App() {
   const monthIncome = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const monthExpense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
 
-  const showFAB = tab === 'home' || tab === 'transactions'
+  const showFAB = tab === 'home' || tab === 'transactions' || tab === 'stocks'
 
   return (
     <div className="min-h-screen bg-[#181818] pb-nav-safe">
@@ -366,12 +394,22 @@ export default function App() {
             onTogglePin={handleTogglePin}
           />
         )}
+        {tab === 'stocks' && (
+          <StockTradeList
+            trades={stockTrades}
+            onEdit={(t) => { setEditingTrade(t); setShowStockModal(true) }}
+            onDelete={handleDeleteStockTrade}
+          />
+        )}
       </main>
 
       {/* ── FAB ── */}
       {showFAB && (
         <button
-          onClick={() => { setEditingTransaction(null); setShowModal(true) }}
+          onClick={() => {
+            if (tab === 'stocks') { setEditingTrade(null); setShowStockModal(true) }
+            else { setEditingTransaction(null); setShowModal(true) }
+          }}
           aria-label="내역 추가"
           className="fixed right-5 bottom-fab-safe w-8 h-8 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
         >
@@ -453,6 +491,13 @@ export default function App() {
       )}
 
       {/* ── 모달 ── */}
+      {showStockModal && (
+        <StockTradeModal
+          trade={editingTrade}
+          onSave={handleSaveStockTrade}
+          onClose={() => { setShowStockModal(false); setEditingTrade(null) }}
+        />
+      )}
       {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       {showImport && (
         <ImportModal

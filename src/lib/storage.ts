@@ -45,6 +45,15 @@ export function saveRecurring(r: RecurringTransaction[]): void {
   safeSave(RECURRING_KEY, r)
 }
 
+const STOCK_TRADES_KEY = 'hb_stock_trades'
+import type { StockTrade } from '../types'
+export function loadStockTrades(): StockTrade[] {
+  try { return JSON.parse(localStorage.getItem(STOCK_TRADES_KEY) || '[]') } catch { return [] }
+}
+export function saveStockTrades(trades: StockTrade[]): void {
+  safeSave(STOCK_TRADES_KEY, trades)
+}
+
 const SETTINGS_KEY = 'hb_settings'
 export interface AppSettings {
   payday: number | 'last' | null // 1-31 or 'last' for end of month
