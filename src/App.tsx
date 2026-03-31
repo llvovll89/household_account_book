@@ -365,9 +365,9 @@ export default function App() {
         <button
           onClick={() => { setEditingTransaction(null); setShowModal(true) }}
           aria-label="내역 추가"
-          className="fixed right-5 bottom-fab-safe w-10 h-10 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
+          className="fixed right-5 bottom-fab-safe w-8 h-8 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
         >
-          <Plus size={26} />
+          <Plus size={20} />
         </button>
       )}
 
