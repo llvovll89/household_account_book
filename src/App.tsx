@@ -39,7 +39,15 @@ export default function App() {
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
-  } = useRegisterSW()
+  } = useRegisterSW({
+    onNeedRefresh() {
+      updateServiceWorker(true)
+    },
+    onRegistered(r) {
+      // 1시간마다 SW 업데이트 체크
+      setInterval(() => r?.update(), 60 * 60 * 1000)
+    },
+  })
 
   const [tab, setTab] = useState<Tab>('home')
   const [currentDate, setCurrentDate] = useState(new Date())
