@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
+import { Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react'
 import type { StockTrade } from '../types'
 import { calcHoldings, calcTotalRealizedPnL, calcTotalFee } from '../lib/stockCalc'
+import StockDetailModal from './StockDetailModal'
 
 interface Props {
   trades: StockTrade[]
@@ -29,6 +30,7 @@ function formatDate(dateStr: string) {
 export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
 
   const holdings = useMemo(() => calcHoldings(trades), [trades])
   const totalRealizedPnL = useMemo(() => calcTotalRealizedPnL(trades), [trades])
@@ -68,6 +70,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
   }
 
   return (
+    <>
     <div className="space-y-3 tab-content">
       {/* 요약 카드 3개 */}
       <div className="grid grid-cols-3 gap-2">
@@ -108,7 +111,11 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           <p className="text-sm font-bold text-white mb-3">보유 종목</p>
           <div className="space-y-2.5">
             {holdings.map((h) => (
-              <div key={h.ticker} className="flex items-center gap-3">
+              <button
+                key={h.ticker}
+                onClick={() => setSelectedTicker(h.ticker)}
+                className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity"
+              >
                 <div className="w-8 h-8 rounded-xl bg-[#3D8EF8]/15 flex items-center justify-center shrink-0">
                   <TrendingUp size={14} className="text-[#3D8EF8]" />
                 </div>
@@ -126,19 +133,20 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
                     </p>
                   )}
                 </div>
-              </div>
+                <ChevronRight size={14} className="text-[#4E5968] shrink-0" />
+              </button>
             ))}
           </div>
         </div>
       )}
 
       {/* 필터 + 검색 */}
-      <div className="flex items-center gap-2">
-        <div className="flex gap-1 bg-[#1E2236] p-1 rounded-xl shrink-0">
+      <div className="space-y-2">
+        <div className="flex gap-1 bg-[#1E2236] p-1 rounded-xl">
           {(['all', 'buy', 'sell'] as Filter[]).map((f) => (
             <button key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 filter === f ? 'bg-[#252A3F] text-white' : 'text-[#4E5968]'
               }`}>
               {f === 'all' ? '전체' : f === 'buy' ? '매수' : '매도'}
@@ -149,7 +157,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           type="text" value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="종목 검색"
-          className="flex-1 bg-[#1E2236] rounded-xl px-3 py-2 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+          className="w-full bg-[#1E2236] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
         />
       </div>
 
@@ -174,17 +182,20 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
                   const total = t.price * t.quantity + t.fee
                   return (
                     <div key={t.id} className="group flex items-center gap-3 px-4 py-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        isBuy ? 'bg-[#3D8EF8]/15' : 'bg-[#F25260]/15'
-                      }`}>
+                      <button
+                        onClick={() => setSelectedTicker(t.ticker)}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 active:opacity-70 transition-opacity ${
+                          isBuy ? 'bg-[#3D8EF8]/15' : 'bg-[#F25260]/15'
+                        }`}
+                      >
                         {isBuy
                           ? <TrendingUp size={16} className="text-[#3D8EF8]" />
                           : <TrendingDown size={16} className="text-[#F25260]" />
                         }
-                      </div>
+                      </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-[14px] font-bold text-white truncate">{t.ticker}</p>
+                          <button onClick={() => setSelectedTicker(t.ticker)} className="text-[14px] font-bold text-white truncate hover:text-[#3D8EF8] transition-colors">{t.ticker}</button>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                             isBuy ? 'bg-[#3D8EF8]/15 text-[#3D8EF8]' : 'bg-[#F25260]/15 text-[#F25260]'
                           }`}>
@@ -228,5 +239,18 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
         </div>
       )}
     </div>
+
+    {/* 종목 상세 화면 */}
+    {selectedTicker && (
+      <StockDetailModal
+        ticker={selectedTicker}
+        trades={trades.filter(t => t.ticker === selectedTicker)}
+        holding={holdings.find(h => h.ticker === selectedTicker) ?? null}
+        onEdit={(t) => { setSelectedTicker(null); onEdit(t) }}
+        onDelete={(id) => { onDelete(id) }}
+        onClose={() => setSelectedTicker(null)}
+      />
+    )}
+    </>
   )
 }
