@@ -4,6 +4,7 @@ import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
+import { fmt } from '../lib/format'
 
 interface Props {
   transactions: Transaction[]
@@ -13,8 +14,6 @@ interface Props {
 }
 
 type ViewMode = 'list' | 'calendar'
-
-function fmt(n: number) { return n.toLocaleString('ko-KR') }
 
 type FilterType = 'all' | 'income' | 'expense'
 

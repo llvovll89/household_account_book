@@ -5,11 +5,12 @@ import { EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 
 interface Props {
   budgets: Budget[]
+  customExpenseCategories?: string[]
   onSave: (budgets: Budget[]) => void
   onClose: () => void
 }
 
-export default function BudgetModal({ budgets, onSave, onClose }: Props) {
+export default function BudgetModal({ budgets, customExpenseCategories = [], onSave, onClose }: Props) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
     budgets.forEach((b) => { m[b.category] = b.limit.toLocaleString() })
@@ -51,7 +52,7 @@ export default function BudgetModal({ budgets, onSave, onClose }: Props) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
-          {EXPENSE_CATEGORIES.map((cat) => {
+          {[...EXPENSE_CATEGORIES, ...customExpenseCategories].map((cat) => {
             const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
             return (
               <div key={cat} className="flex items-center gap-3 bg-[#252A3F] rounded-2xl px-4 py-3">

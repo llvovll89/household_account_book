@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { ChevronLeft, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
 import type { StockTrade, StockHolding } from '../types'
+import { fmt, fmtQty, formatDate } from '../lib/format'
 
 interface Props {
   ticker: string
@@ -9,21 +10,6 @@ interface Props {
   onEdit: (trade: StockTrade) => void
   onDelete: (id: string) => void
   onClose: () => void
-}
-
-function fmt(n: number) { return Math.round(n).toLocaleString('ko-KR') }
-function fmtQty(q: number) { return q % 1 === 0 ? q.toFixed(0) : q.toFixed(4).replace(/\.?0+$/, '') }
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  const yesterday = new Date(); yesterday.setDate(today.getDate() - 1)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토']
-  const wd = weekdays[d.getDay()]
-  if (d.toDateString() === today.toDateString()) return `오늘 (${wd})`
-  if (d.toDateString() === yesterday.toDateString()) return `어제 (${wd})`
-  return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${wd})`
 }
 
 export default function StockDetailModal({ ticker, trades, holding, onEdit, onDelete, onClose }: Props) {

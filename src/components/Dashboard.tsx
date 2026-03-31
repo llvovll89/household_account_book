@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge } from 'lucide-react'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag } from 'lucide-react'
 import type { Transaction, Budget, RecurringTransaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
@@ -8,28 +8,21 @@ import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
+import { fmt, fmtShort } from '../lib/format'
 
 interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
   yearMonth: string
+  customExpenseCategories: string[]
   onBudgetsChange: (b: Budget[]) => void
   onRecurringSave: (items: RecurringTransaction[]) => void
   onApplyRecurring: (items: RecurringTransaction[]) => void
+  onOpenCategoryModal: () => void
 }
 
-function fmt(n: number) {
-  return n.toLocaleString('ko-KR')
-}
-
-function fmtShort(n: number) {
-  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
-  if (n >= 10_000) return `${Math.round(n / 10_000)}만`
-  return n.toLocaleString()
-}
-
-export default function Dashboard({ transactions, budgets, recurring, yearMonth, onBudgetsChange, onRecurringSave, onApplyRecurring }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, yearMonth, customExpenseCategories, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
@@ -47,7 +40,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     if (paydayInput === 'last') {
       setPaydayError('')
       setPayday('last')
-      saveSettings({ payday: 'last' })
+      saveSettings({ ...loadSettings(), payday: 'last' })
       setEditingPayday(false)
       return
     }
@@ -58,7 +51,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     }
     setPaydayError('')
     setPayday(val)
-    saveSettings({ payday: val })
+    saveSettings({ ...loadSettings(), payday: val })
     setEditingPayday(false)
   }
 
@@ -405,6 +398,13 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
               </button>
             )}
             <button
+              onClick={onOpenCategoryModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+            >
+              <Tag size={11} />
+              카테고리
+            </button>
+            <button
               onClick={() => setShowRecurring(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
             >
@@ -431,7 +431,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
         ) : budgetView === 'gauge' ? (
           /* 게이지 뷰 */
           <div className="grid grid-cols-3 gap-4">
-            {EXPENSE_CATEGORIES.filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
+            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
               const budget = budgets.find((b) => b.category === cat)!
               const spent = spentByCategory[cat] ?? 0
               const color = CATEGORY_COLOR[cat]?.text ?? '#8B95A1'
@@ -450,7 +450,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
         ) : (
           /* 리스트 뷰 */
           <div className="space-y-3.5">
-            {EXPENSE_CATEGORIES.filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
+            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
               const budget = budgets.find((b) => b.category === cat)!
               const spent = monthly
                 .filter((t) => t.type === 'expense' && t.category === cat)
@@ -535,6 +535,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
       {showBudget && (
         <BudgetModal
           budgets={budgets}
+          customExpenseCategories={customExpenseCategories}
           onSave={onBudgetsChange}
           onClose={() => setShowBudget(false)}
         />
@@ -542,6 +543,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
       {showRecurring && (
         <RecurringModal
           recurring={recurring}
+          customExpenseCategories={customExpenseCategories}
           onSave={onRecurringSave}
           onClose={() => setShowRecurring(false)}
         />
