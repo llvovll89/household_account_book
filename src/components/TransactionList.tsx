@@ -118,7 +118,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           className="w-full bg-[#1E2236] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2">
+          <button onClick={() => setSearch('')} aria-label="검색어 지우기" className="absolute right-4 top-1/2 -translate-y-1/2">
             <X size={14} className="text-[#4E5968]" />
           </button>
         )}
@@ -195,12 +195,14 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                         <div className="hidden group-hover:flex gap-0.5 ml-1">
                           <button
                             onClick={() => onEdit(t)}
+                            aria-label={`${t.category} 내역 수정`}
                             className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
                           >
                             <Pencil size={12} />
                           </button>
                           <button
                             onClick={() => onDelete(t.id)}
+                            aria-label={`${t.category} 내역 삭제`}
                             className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
                           >
                             <Trash2 size={12} />

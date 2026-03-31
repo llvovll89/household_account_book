@@ -63,21 +63,23 @@ export default function TransactionModal({ transaction, onSave, onClose }: Props
           <h2 className="text-[18px] font-bold text-white">
             {transaction ? '내역 수정' : '내역 추가'}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 pb-8 space-y-3">
           {/* 수입 / 지출 */}
-          <div className="flex gap-2 bg-[#252A3F] p-1 rounded-2xl">
+          <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#252A3F] p-1 rounded-2xl">
             <button type="button" onClick={() => setType('income')}
+              aria-pressed={type === 'income'}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 type === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
               }`}>
               수입
             </button>
             <button type="button" onClick={() => setType('expense')}
+              aria-pressed={type === 'expense'}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 type === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
               }`}>

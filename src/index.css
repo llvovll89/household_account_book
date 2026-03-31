@@ -49,3 +49,37 @@ select option {
   background: #1E2230;
   color: #F1F3F6;
 }
+
+/* ── Safe Area (iPhone 홈 인디케이터 영역 보호) ── */
+.pb-nav-safe {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
+.bottom-fab-safe {
+  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+.bottom-banner-safe {
+  bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+.bottom-toast-safe {
+  bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── 접근성: 키보드 포커스 표시 ── */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #3D8EF8;
+  outline-offset: 2px;
+}
+
+/* ── 모션 감소 설정 사용자: 애니메이션 비활성화 ── */
+@media (prefers-reduced-motion: reduce) {
+  .tab-content {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

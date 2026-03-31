@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Download, FileText } from 'lucide-react'
 import type { Transaction } from '../types'
 import { exportTransactionsCSV } from '../lib/exportCsv'
+import { showToast } from '../lib/toast'
 
 interface Props {
   transactions: Transaction[]
@@ -62,6 +63,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
   function handleExport() {
     if (filtered.length === 0) return
     exportTransactionsCSV(filtered, getFilename())
+    showToast(`${filtered.length}개 내역을 다운로드했어요`)
     onClose()
   }
 

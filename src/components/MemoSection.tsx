@@ -103,9 +103,18 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
             placeholder="제목" autoFocus
             className="w-full text-[17px] font-bold text-white placeholder-[#2D3352] focus:outline-none bg-transparent" />
-          <textarea value={content} onChange={(e) => setContent(e.target.value)}
-            placeholder="내용을 입력하세요..." rows={4}
-            className="w-full text-[14px] text-[#8B95A1] placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed bg-transparent" />
+          <textarea
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value)
+              e.currentTarget.style.height = 'auto'
+              e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 240)}px`
+            }}
+            placeholder="내용을 입력하세요..."
+            rows={4}
+            className="w-full text-[14px] text-[#8B95A1] placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed bg-transparent"
+            style={{ minHeight: '96px' }}
+          />
 
           {/* 금액 구분선 */}
           <div className="h-px bg-white/[0.06]" />

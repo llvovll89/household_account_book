@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2 } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType } from './types'
 import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring } from './lib/storage'
+import { registerToastHandler } from './lib/toast'
 import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
 import TransactionModal from './components/TransactionModal'
@@ -53,6 +54,16 @@ export default function App() {
   const [isIosManualInstall, setIsIosManualInstall] = useState(false)
   const [installGuideText, setInstallGuideText] = useState('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
   const hasInstallPromptRef = useRef(false)
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return registerToastHandler((msg, duration = 2500) => {
+      setToastMsg(msg)
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+      toastTimerRef.current = setTimeout(() => setToastMsg(null), duration)
+    })
+  }, [])
 
   const yearMonth = getYearMonth(currentDate)
 
@@ -245,10 +256,10 @@ export default function App() {
   const showFAB = tab === 'home' || tab === 'transactions'
 
   return (
-    <div className="min-h-screen bg-[#181818] pb-24">
+    <div className="min-h-screen bg-[#181818] pb-nav-safe">
       {/* SW 업데이트 토스트 */}
       {needRefresh && (
-        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
+        <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
           <div className="flex items-center gap-3 bg-[#252A3F] border border-[#3D8EF8]/30 rounded-2xl px-4 py-3.5 shadow-xl">
             <RefreshCw size={16} className="text-[#3D8EF8] shrink-0 animate-spin" style={{ animationDuration: '2s' }} />
             <p className="text-sm font-semibold text-white flex-1">새 버전이 있어요!</p>
@@ -351,7 +362,8 @@ export default function App() {
       {showFAB && (
         <button
           onClick={() => { setEditingTransaction(null); setShowModal(true) }}
-          className="fixed right-5 bottom-21 w-10 h-10 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
+          aria-label="내역 추가"
+          className="fixed right-5 bottom-fab-safe w-10 h-10 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all z-30"
         >
           <Plus size={26} />
         </button>
@@ -359,7 +371,7 @@ export default function App() {
 
       {/* ── 하단 탭 ── */}
       {showInstallBanner && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-50 w-[calc(100%-2.5rem)] max-w-sm">
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
           <div className="bg-[#252A3F] border border-[#3D8EF8]/25 rounded-2xl px-4 py-3.5 shadow-xl">
             <p className="text-sm font-semibold text-white">앱처럼 빠르게 사용하려면 홈 화면에 추가하세요.</p>
             <p className="text-[11px] text-[#8B95A1] mt-1">
@@ -410,6 +422,16 @@ export default function App() {
           </div>
         </div>
       </nav>
+
+      {/* ── Toast ── */}
+      {toastMsg && (
+        <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm pointer-events-none">
+          <div className="flex items-center gap-3 bg-[#252A3F] border border-white/10 rounded-2xl px-4 py-3 shadow-xl">
+            <CheckCircle2 size={16} className="text-[#2ACF6A] shrink-0" />
+            <p className="text-sm font-semibold text-white">{toastMsg}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── 모달 ── */}
       {showImport && (
