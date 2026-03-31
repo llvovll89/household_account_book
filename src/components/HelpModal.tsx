@@ -1,4 +1,4 @@
-import { X, LayoutDashboard, List, BarChart2, StickyNote, Plus, Pin, RefreshCw, FileDown, TrendingUp } from 'lucide-react'
+import { X, LayoutDashboard, List, BarChart2, StickyNote, Plus, FileDown, TrendingUp } from 'lucide-react'
 
 interface Props {
   onClose: () => void
