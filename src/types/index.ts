@@ -17,6 +17,7 @@ export interface Memo {
   pinned: boolean
   createdAt: number
   updatedAt: number
+  date?: string // YYYY-MM-DD (사용자 지정 날짜)
   amount?: number
   transactionType?: TransactionType
   category?: string

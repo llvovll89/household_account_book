@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Plus, Pin, Pencil, Trash2, X, Check, ChevronDown } from 'lucide-react'
+import { Plus, Pin, Pencil, Trash2, X, Check, ChevronDown, Calendar } from 'lucide-react'
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 
 interface Props {
   memos: Memo[]
-  onAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => void
-  onUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => void
+  onAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
+  onUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
 }
@@ -23,6 +23,11 @@ function formatDate(ts: number) {
     : `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')}`
 }
 
+function formatMemoDate(dateStr: string) {
+  const [, m, d] = dateStr.split('-')
+  return `${parseInt(m)}.${d}`
+}
+
 // 다크 파스텔 배경
 const CARD_COLORS = [
   '#1A1F2E', '#1E1A2E', '#1A2420', '#21191A', '#1A1E2C', '#1E2018', '#1C1E28',
@@ -32,6 +37,10 @@ function formatAmount(n: number) {
   return n.toLocaleString()
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onTogglePin }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -39,7 +48,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const [content, setContent] = useState('')
   const [amountStr, setAmountStr] = useState('')
   const [txType, setTxType] = useState<TransactionType>('expense')
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0])
+  const [date, setDate] = useState(todayStr())
 
   const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
@@ -51,6 +61,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   function openNew() {
     setEditingId(null); setTitle(''); setContent('')
     setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
+    setDate(todayStr())
     setShowForm(true)
   }
 
@@ -59,6 +70,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     setAmountStr(m.amount ? m.amount.toLocaleString() : '')
     setTxType(m.transactionType ?? 'expense')
     setCategory(m.category ?? (m.transactionType === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]))
+    setDate(m.date ?? todayStr())
     setShowForm(true)
   }
 
@@ -76,21 +88,21 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     if (!title.trim() && !content.trim()) return
     const parsedAmount = amountStr ? parseInt(amountStr.replace(/,/g, ''), 10) : undefined
     const txTypeVal = parsedAmount ? txType : undefined
-    const categoryVal = parsedAmount ? category : undefined
+    const categoryVal = category || undefined
     if (editingId) {
-      onUpdate(editingId, title, content, parsedAmount, txTypeVal, categoryVal)
+      onUpdate(editingId, title, content, parsedAmount, txTypeVal, categoryVal, date)
     } else {
-      onAdd(title, content, parsedAmount, txTypeVal, categoryVal)
+      onAdd(title, content, parsedAmount, txTypeVal, categoryVal, date)
     }
     setShowForm(false); setTitle(''); setContent('')
     setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
-    setEditingId(null)
+    setDate(todayStr()); setEditingId(null)
   }
 
   function handleCancel() {
     setShowForm(false); setTitle(''); setContent('')
     setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
-    setEditingId(null)
+    setDate(todayStr()); setEditingId(null)
   }
 
   const color = CATEGORY_COLOR[category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
@@ -116,61 +128,79 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             style={{ minHeight: '96px' }}
           />
 
+          <div className="h-px bg-white/[0.06]" />
+
+          {/* 날짜 + 카테고리 그리드 */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* 날짜 */}
+            <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">날짜</p>
+              <div className="flex items-center gap-1.5">
+                <Calendar size={12} className="text-[#4E5968] shrink-0" />
+                <input
+                  type="date" value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent text-[13px] font-semibold text-white focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* 카테고리 */}
+            <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
+                  style={{ backgroundColor: color.bg }}>
+                  {CATEGORY_EMOJI[category] ?? '📦'}
+                </div>
+                <div className="relative flex-1 min-w-0">
+                  <select value={category} onChange={(e) => setCategory(e.target.value)}
+                    className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
+                    style={{ color: color.text }}>
+                    {categories.map((c) => (
+                      <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* 금액 구분선 */}
           <div className="h-px bg-white/[0.06]" />
 
           {/* 금액 */}
           <div>
             <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액 (선택)</p>
-            <div className="flex items-baseline gap-2 bg-[#252A3F] rounded-xl px-4 py-3 cursor-text"
+            <div className="flex items-baseline gap-2 bg-[#252A3F] rounded-xl px-4 py-3 overflow-hidden cursor-text"
               onClick={(e) => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}>
               <input
                 type="text" inputMode="numeric"
                 value={amountStr}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0"
-                className="flex-1 bg-transparent text-[22px] font-extrabold text-white focus:outline-none num text-right placeholder-[#2D3352]"
+                className="flex-1 min-w-0 bg-transparent text-[22px] font-extrabold text-white focus:outline-none num text-right placeholder-[#2D3352]"
               />
-              <span className="text-sm font-bold text-[#4E5968]">원</span>
+              <span className="text-sm font-bold text-[#4E5968] shrink-0">원</span>
             </div>
           </div>
 
-          {/* 수입 / 지출 + 카테고리 — 금액 있을 때만 */}
+          {/* 수입 / 지출 — 금액 있을 때만 */}
           {amountStr !== '' && (
-            <div className="space-y-2">
-              {/* 수입/지출 토글 */}
-              <div className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
-                <button type="button" onClick={() => handleTypeChange('income')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                    txType === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
-                  }`}>
-                  수입
-                </button>
-                <button type="button" onClick={() => handleTypeChange('expense')}
-                  className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                    txType === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
-                  }`}>
-                  지출
-                </button>
-              </div>
-
-              {/* 카테고리 */}
-              <div className="bg-[#252A3F] rounded-xl px-4 py-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
-                  style={{ backgroundColor: color.bg }}>
-                  {CATEGORY_EMOJI[category] ?? '📦'}
-                </div>
-                <div className="relative flex-1">
-                  <select value={category} onChange={(e) => setCategory(e.target.value)}
-                    className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-5 truncate"
-                    style={{ color: color.text }}>
-                    {categories.map((c) => (
-                      <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
-                </div>
-              </div>
+            <div className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
+              <button type="button" onClick={() => handleTypeChange('income')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                  txType === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
+                }`}>
+                수입
+              </button>
+              <button type="button" onClick={() => handleTypeChange('expense')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                  txType === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
+                }`}>
+                지출
+              </button>
             </div>
           )}
 
@@ -249,7 +279,9 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                 )}
 
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/[0.05]">
-                  <span className="text-[10px] text-[#4E5968]">{formatDate(memo.updatedAt)}</span>
+                  <span className="text-[10px] text-[#4E5968]">
+                    {memo.date ? formatMemoDate(memo.date) : formatDate(memo.updatedAt)}
+                  </span>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onTogglePin(memo.id)}
                       className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>

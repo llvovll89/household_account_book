@@ -155,7 +155,7 @@ export default function RecurringModal({ recurring, onSave, onClose }: Props) {
 
               <div className="grid grid-cols-2 gap-2">
                 {/* 금액 */}
-                <div className="bg-[#1E2236] rounded-xl px-3 py-2.5">
+                <div className="bg-[#1E2236] rounded-xl px-3 py-2.5 overflow-hidden">
                   <p className="text-[10px] text-[#4E5968] font-semibold mb-1">금액</p>
                   <div className="flex items-baseline gap-1">
                     <input
@@ -163,9 +163,9 @@ export default function RecurringModal({ recurring, onSave, onClose }: Props) {
                       value={newAmount}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
-                      className="flex-1 bg-transparent text-base font-bold text-white focus:outline-none num text-right placeholder-[#252A3F]"
+                      className="flex-1 min-w-0 bg-transparent text-base font-bold text-white focus:outline-none num text-right placeholder-[#252A3F]"
                     />
-                    <span className="text-xs text-[#4E5968]">원</span>
+                    <span className="text-xs text-[#4E5968] shrink-0">원</span>
                   </div>
                 </div>
 

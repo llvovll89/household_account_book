@@ -88,7 +88,7 @@ export default function TransactionModal({ transaction, onSave, onClose }: Props
           </div>
 
           {/* 금액 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-4 cursor-text" onClick={() => amountInputRef.current?.focus()}>
+          <div className="bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
             <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
             <div className="flex items-baseline gap-2">
               <input
@@ -98,9 +98,9 @@ export default function TransactionModal({ transaction, onSave, onClose }: Props
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0"
                 required
-                className="flex-1 bg-transparent text-[34px] font-extrabold text-white focus:outline-none num text-right placeholder-[#1E2A3A]"
+                className="flex-1 min-w-0 bg-transparent text-[34px] font-extrabold text-white focus:outline-none num text-right placeholder-[#1E2A3A]"
               />
-              <span className="text-lg font-bold text-[#4E5968]">원</span>
+              <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
             </div>
           </div>
 

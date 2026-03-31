@@ -10,6 +10,7 @@ import TransactionModal from './components/TransactionModal'
 import MemoSection from './components/MemoSection'
 import Analytics from './components/Analytics'
 import ImportModal from './components/ImportModal'
+import HelpModal from './components/HelpModal'
 
 type Tab = 'home' | 'transactions' | 'analytics' | 'memos'
 
@@ -49,6 +50,7 @@ export default function App() {
   const [showModal, setShowModal] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [isIosManualInstall, setIsIosManualInstall] = useState(false)
@@ -219,16 +221,16 @@ export default function App() {
   }, [yearMonth])
 
   // ── 메모 ─────────────────────────────────────────────
-  const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => {
+  const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
     setMemos((prev) => {
       const now = Date.now()
-      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, amount, transactionType, category }]
+      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, amount, transactionType, category }]
       saveMemos(next); return next
     })
   }, [])
 
-  const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => {
-    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), amount, transactionType, category } : m); saveMemos(next); return next })
+  const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
+    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, amount, transactionType, category } : m); saveMemos(next); return next })
   }, [])
 
   const handleDeleteMemo = useCallback((id: string) => {
@@ -369,6 +371,15 @@ export default function App() {
         </button>
       )}
 
+      {/* ── 도움말 버튼 ── */}
+      <button
+        onClick={() => setShowHelp(true)}
+        aria-label="사용 가이드"
+        className="fixed left-5 bottom-fab-safe w-8 h-8 bg-[#1E2236] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all z-30 text-sm font-bold"
+      >
+        ?
+      </button>
+
       {/* ── 하단 탭 ── */}
       {showInstallBanner && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
@@ -434,6 +445,7 @@ export default function App() {
       )}
 
       {/* ── 모달 ── */}
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
       {showImport && (
         <ImportModal
           existingTransactions={transactions}
