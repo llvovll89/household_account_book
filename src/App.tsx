@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction } from './types'
+import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType } from './types'
 import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring } from './lib/storage'
 import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
@@ -208,16 +208,16 @@ export default function App() {
   }, [yearMonth])
 
   // ── 메모 ─────────────────────────────────────────────
-  const handleAddMemo = useCallback((title: string, content: string) => {
+  const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => {
     setMemos((prev) => {
       const now = Date.now()
-      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now }]
+      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, amount, transactionType, category }]
       saveMemos(next); return next
     })
   }, [])
 
-  const handleUpdateMemo = useCallback((id: string, title: string, content: string) => {
-    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now() } : m); saveMemos(next); return next })
+  const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string) => {
+    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), amount, transactionType, category } : m); saveMemos(next); return next })
   }, [])
 
   const handleDeleteMemo = useCallback((id: string) => {

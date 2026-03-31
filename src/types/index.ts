@@ -17,6 +17,9 @@ export interface Memo {
   pinned: boolean
   createdAt: number
   updatedAt: number
+  amount?: number
+  transactionType?: TransactionType
+  category?: string
 }
 
 export interface Budget {

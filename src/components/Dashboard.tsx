@@ -35,6 +35,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
   const [payday, setPayday] = useState<number | null>(null)
   const [editingPayday, setEditingPayday] = useState(false)
   const [paydayInput, setPaydayInput] = useState('')
+  const [paydayError, setPaydayError] = useState('')
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
 
   useEffect(() => {
@@ -43,8 +44,12 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
   }, [])
 
   function handleSavePayday() {
-    const val = parseInt(paydayInput)
-    if (!val || val < 1 || val > 31) return
+    const val = parseInt(paydayInput, 10)
+    if (isNaN(val) || val < 1 || val > 31) {
+      setPaydayError('1~31 사이의 숫자를 입력하세요')
+      return
+    }
+    setPaydayError('')
     setPayday(val)
     saveSettings({ payday: val })
     setEditingPayday(false)
@@ -64,7 +69,10 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     } else if (payday === todayNum) {
       daysLeft = 0
     } else {
-      const nextPayday = new Date(currentYear, currentMonth + 1, payday)
+      // 다음 달에 해당 날짜가 없을 경우(예: 31일 → 2월) 마지막 날로 보정
+      const lastDayOfNextMonth = new Date(currentYear, currentMonth + 2, 0).getDate()
+      const adjustedPayday = Math.min(payday, lastDayOfNextMonth)
+      const nextPayday = new Date(currentYear, currentMonth + 1, adjustedPayday)
       daysLeft = Math.round((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     }
 
@@ -283,26 +291,31 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
       )}
 
       {editingPayday && (
-        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5 flex items-center gap-3">
-          <span className="text-sm font-semibold text-white shrink-0">매월</span>
-          <input
-            type="number" min="1" max="31"
-            value={paydayInput}
-            onChange={(e) => setPaydayInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSavePayday()}
-            placeholder="15"
-            autoFocus
-            className="flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
-          />
-          <span className="text-sm font-semibold text-white shrink-0">일이 월급날</span>
-          <button onClick={handleSavePayday}
-            className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0">
-            저장
-          </button>
-          <button onClick={() => setEditingPayday(false)}
-            className="px-3 py-2 rounded-xl bg-[#252A3F] text-[#8B95A1] text-xs font-bold transition-colors shrink-0">
-            취소
-          </button>
+        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5 space-y-2">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-white shrink-0">매월</span>
+            <input
+              type="number" min="1" max="31"
+              value={paydayInput}
+              onChange={(e) => { setPaydayInput(e.target.value); setPaydayError('') }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSavePayday()}
+              placeholder="15"
+              autoFocus
+              className={`flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 ${paydayError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
+            />
+            <span className="text-sm font-semibold text-white shrink-0">일이 월급날</span>
+            <button onClick={handleSavePayday}
+              className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0">
+              저장
+            </button>
+            <button onClick={() => { setEditingPayday(false); setPaydayError('') }}
+              className="px-3 py-2 rounded-xl bg-[#252A3F] text-[#8B95A1] text-xs font-bold transition-colors shrink-0">
+              취소
+            </button>
+          </div>
+          {paydayError && (
+            <p className="text-xs text-[#F25260] font-semibold pl-1">{paydayError}</p>
+          )}
         </div>
       )}
 

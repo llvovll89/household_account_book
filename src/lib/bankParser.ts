@@ -55,8 +55,12 @@ function parseDate(raw: string): string {
   if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   // YYYY-MM-DD (already)
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
-  // YY-MM-DD
-  if (/^\d{2}-\d{2}-\d{2}$/.test(s)) return `20${s}`
+  // YY-MM-DD: 현재 연도 이하면 2000년대, 초과면 1900년대
+  if (/^\d{2}-\d{2}-\d{2}$/.test(s)) {
+    const yy = parseInt(s.slice(0, 2), 10)
+    const century = yy <= new Date().getFullYear() % 100 ? '20' : '19'
+    return `${century}${s}`
+  }
   return s.slice(0, 10)
 }
 

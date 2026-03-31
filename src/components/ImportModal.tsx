@@ -107,7 +107,11 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
         setCsvHeaders(headers); setCsvRows(filteredRows)
         setMapping({ ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
       }
-    } catch (e) { setError('파일 파싱 중 오류가 발생했습니다.'); console.error(e) }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '알 수 없는 오류'
+      setError(`파일 파싱 중 오류가 발생했습니다: ${msg}`)
+      console.error('[ImportModal] 파일 파싱 오류:', e)
+    }
     finally { setLoading(false) }
   }
 

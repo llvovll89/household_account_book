@@ -36,6 +36,13 @@ export default function RecurringModal({ recurring, onSave, onClose }: Props) {
   function handleAdd() {
     const amount = parseInt(newAmount.replace(/,/g, ''), 10)
     if (!amount || amount <= 0) return
+    const isDuplicate = items.some(
+      (i) => i.type === newType && i.category === newCategory && i.dayOfMonth === newDay && i.amount === amount
+    )
+    if (isDuplicate) {
+      alert('동일한 정기 항목이 이미 있어요.')
+      return
+    }
     const item: RecurringTransaction = {
       id: generateId(),
       type: newType,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, ChevronDown } from 'lucide-react'
 import type { Transaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function TransactionModal({ transaction, onSave, onClose }: Props) {
+  const amountInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -85,10 +86,11 @@ export default function TransactionModal({ transaction, onSave, onClose }: Props
           </div>
 
           {/* 금액 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-4">
+          <div className="bg-[#252A3F] rounded-2xl px-5 py-4 cursor-text" onClick={() => amountInputRef.current?.focus()}>
             <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
             <div className="flex items-baseline gap-2">
               <input
+                ref={amountInputRef}
                 type="text" inputMode="numeric"
                 value={amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
