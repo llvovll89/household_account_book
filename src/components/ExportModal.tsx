@@ -50,11 +50,11 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
   function getFilename(): string {
     const now = new Date()
     switch (range) {
-      case 'thisMonth': return `가계부_${yearMonth}.csv`
-      case 'lastMonth': return `가계부_${getYearMonth(-1)}.csv`
-      case 'thisYear': return `가계부_${now.getFullYear()}년.csv`
-      case 'custom': return `가계부_${customFrom}_${customTo}.csv`
-      default: return `가계부_전체.csv`
+      case 'thisMonth': return `잔고플랜_${yearMonth}.csv`
+      case 'lastMonth': return `잔고플랜_${getYearMonth(-1)}.csv`
+      case 'thisYear': return `잔고플랜_${now.getFullYear()}년.csv`
+      case 'custom': return `잔고플랜_${customFrom}_${customTo}.csv`
+      default: return `잔고플랜_전체.csv`
     }
   }
 

@@ -11,7 +11,7 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstallBanner, setShowInstallBanner] = useState(false)
   const [isIosManualInstall, setIsIosManualInstall] = useState(false)
-  const [installGuideText, setInstallGuideText] = useState('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
+  const [installGuideText, setInstallGuideText] = useState('설치 버튼을 눌러 잔고플랜 앱을 설치할 수 있어요.')
   const hasInstallPromptRef = useRef(false)
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function usePWAInstall() {
       hasInstallPromptRef.current = true
       setDeferredPrompt(event as BeforeInstallPromptEvent)
       setIsIosManualInstall(false)
-      setInstallGuideText('설치 버튼을 눌러 가계부 앱을 설치할 수 있어요.')
+      setInstallGuideText('설치 버튼을 눌러 잔고플랜 앱을 설치할 수 있어요.')
       setShowInstallBanner(true)
     }
 

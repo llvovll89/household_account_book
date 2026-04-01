@@ -103,7 +103,7 @@ export default function HelpModal({ onClose }: Props) {
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
             <h2 className="text-[18px] font-bold text-white">사용 가이드</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">가계부 앱 기능 안내</p>
+            <p className="text-xs text-[#4E5968] mt-0.5">잔고플랜 앱 기능 안내</p>
           </div>
           <button
             onClick={onClose}

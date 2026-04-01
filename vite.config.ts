@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: '가계부',
-        short_name: '가계부',
-        description: '심플한 개인 가계부 앱',
+        name: '잔고플랜',
+        short_name: '잔고플랜',
+        description: '심플한 개인 잔고플랜 앱',
         theme_color: '#0D0F14',
         background_color: '#0D0F14',
         display: 'standalone',
