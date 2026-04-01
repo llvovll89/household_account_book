@@ -306,7 +306,7 @@ export default function App() {
             )}
 
             <header className="bg-[#0D0F14] sticky top-0 z-40">
-                <div className="max-w-lg mx-auto px-5 pt-5 pb-3">
+                <div className="max-w-lg mx-auto px-5 pt-header-safe pb-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/30 flex items-center justify-center">
