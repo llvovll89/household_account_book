@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType } from './types'
-import { loadTransactions, saveTransactions, loadMemos, saveMemos, loadBudgets, saveBudgets, loadRecurring, saveRecurring } from './lib/storage'
-import { registerToastHandler } from './lib/toast'
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth'
+import { auth, googleProvider } from './firebase/firebase'
+import { hasLocalMigratableData, loadAllData, mergeLocalIntoFirebase, saveBudgets, saveMemos, saveRecurring, saveTransactions, setStorageContext } from './lib/storage'
+import { registerToastHandler, showToast } from './lib/toast'
 import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
 import TransactionModal from './components/TransactionModal'
@@ -20,6 +22,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PWA_PROMPT_DISMISSED_KEY = 'pwa-install-prompt-dismissed'
+const DATA_LOAD_TIMEOUT_MS = 9000
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
@@ -28,12 +31,27 @@ function getYearMonth(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+function calcNet(items: Transaction[]) {
+  return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
+}
+
 const TABS = [
   { id: 'home' as Tab, label: '홈', Icon: LayoutDashboard },
   { id: 'transactions' as Tab, label: '내역', Icon: List },
   { id: 'analytics' as Tab, label: '분석', Icon: BarChart2 },
   { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
 ]
+
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4C12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.2 18.9 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.4 35 26.9 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.6 39.5 16.3 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-3 5.2-5.9 6.8l6.2 5.2C39.3 36.6 44 31 44 24c0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
+  )
+}
 
 export default function App() {
   const {
@@ -58,6 +76,15 @@ export default function App() {
   const hasInstallPromptRef = useRef(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [settingsVersion, setSettingsVersion] = useState(0)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
 
   useEffect(() => {
     return registerToastHandler((msg, duration = 2500) => {
@@ -69,12 +96,72 @@ export default function App() {
 
   const yearMonth = getYearMonth(currentDate)
 
-  useEffect(() => {
-    setTransactions(loadTransactions())
-    setMemos(loadMemos())
-    setBudgets(loadBudgets())
-    setRecurring(loadRecurring())
+  const hydrateData = useCallback(async () => {
+    const timeout = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error('data-load-timeout')), DATA_LOAD_TIMEOUT_MS)
+    })
+
+    const snapshot = await Promise.race([loadAllData(), timeout])
+    const { transactions: nextTransactions, memos: nextMemos, budgets: nextBudgets, recurring: nextRecurring } = snapshot
+
+    setTransactions(nextTransactions)
+    setMemos(nextMemos)
+    setBudgets(nextBudgets)
+    setRecurring(nextRecurring)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const hydrateWithGuard = async (failMessage: string) => {
+      try {
+        await hydrateData()
+      } catch {
+        showToast(failMessage)
+      } finally {
+        if (!cancelled) {
+          setAuthReady(true)
+        }
+      }
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      setUser(nextUser)
+      setIsSyncing(false)
+
+      if (!nextUser) {
+        setStorageContext('local', null)
+        setSettingsVersion((prev) => prev + 1)
+        await hydrateWithGuard('로컬 데이터를 불러오지 못했습니다.')
+        return
+      }
+
+      setStorageContext('firebase', nextUser.uid)
+      setSettingsVersion((prev) => prev + 1)
+
+      try {
+        if (hasLocalMigratableData()) {
+          const apply = window.confirm('로컬에 저장된 데이터를 Firebase 데이터와 병합할까요?\n확인을 누르면 병합 후 로컬 원본은 백업됩니다.')
+          if (apply) {
+            setIsSyncing(true)
+            const result = await mergeLocalIntoFirebase()
+            showToast(result.message)
+          }
+        }
+      } catch {
+        showToast('데이터 병합 중 오류가 발생했습니다.')
+      } finally {
+        setIsSyncing(false)
+      }
+
+      await hydrateWithGuard('Firebase 데이터를 불러오지 못했습니다.')
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [hydrateData])
 
   useEffect(() => {
     const dismissed = localStorage.getItem(PWA_PROMPT_DISMISSED_KEY) === '1'
@@ -156,6 +243,57 @@ export default function App() {
     setDeferredPrompt(null)
   }, [deferredPrompt])
 
+  const handleGoogleLogin = useCallback(async () => {
+    try {
+      await signInWithPopup(auth, googleProvider)
+      setShowAuthModal(false)
+    } catch {
+      showToast('로그인에 실패했습니다. 다시 시도해주세요.')
+    }
+  }, [])
+
+  const handleEmailAuth = useCallback(async () => {
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !password) {
+      showToast('이메일과 비밀번호를 입력해주세요.')
+      return
+    }
+    if (password.length < 6) {
+      showToast('비밀번호는 6자 이상이어야 합니다.')
+      return
+    }
+
+    setAuthBusy(true)
+    try {
+      if (authMode === 'signup') {
+        await createUserWithEmailAndPassword(auth, trimmedEmail, password)
+        showToast('회원가입이 완료되었습니다.')
+      } else {
+        await signInWithEmailAndPassword(auth, trimmedEmail, password)
+        showToast('로그인되었습니다.')
+      }
+      setPassword('')
+      setShowAuthModal(false)
+    } catch {
+      showToast(authMode === 'signup' ? '회원가입에 실패했습니다.' : '이메일 로그인에 실패했습니다.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }, [authMode, email, password])
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut(auth)
+      showToast('로그아웃되었습니다. 로컬 모드로 전환합니다.')
+    } catch {
+      showToast('로그아웃에 실패했습니다. 다시 시도해주세요.')
+    }
+  }, [])
+
+  const persist = useCallback((task: Promise<void>, failMsg: string) => {
+    void task.catch(() => showToast(failMsg))
+  }, [])
+
   // ── 거래 내역 ────────────────────────────────────────
   const handleSaveTransaction = useCallback(
     (data: Omit<Transaction, 'id' | 'createdAt'>) => {
@@ -163,7 +301,7 @@ export default function App() {
         const next = editingTransaction
           ? prev.map((t) => t.id === editingTransaction.id ? { ...t, ...data } : t)
           : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
-        saveTransactions(next)
+        persist(saveTransactions(next), '거래 저장에 실패했습니다.')
         return next
       })
       setShowModal(false)
@@ -174,26 +312,26 @@ export default function App() {
 
   const handleDeleteTransaction = useCallback((id: string) => {
     if (!confirm('이 내역을 삭제할까요?')) return
-    setTransactions((prev) => { const next = prev.filter((t) => t.id !== id); saveTransactions(next); return next })
-  }, [])
+    setTransactions((prev) => { const next = prev.filter((t) => t.id !== id); persist(saveTransactions(next), '거래 삭제 저장에 실패했습니다.'); return next })
+  }, [persist])
 
   const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
     setTransactions((prev) => {
       const next = [...prev, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
-      saveTransactions(next)
+      persist(saveTransactions(next), '가져오기 저장에 실패했습니다.')
       return next
     })
-  }, [])
+  }, [persist])
 
   // ── 예산 ─────────────────────────────────────────────
   const handleBudgetsChange = useCallback((b: Budget[]) => {
-    setBudgets(b); saveBudgets(b)
-  }, [])
+    setBudgets(b); persist(saveBudgets(b), '예산 저장에 실패했습니다.')
+  }, [persist])
 
   // ── 정기 지출 ─────────────────────────────────────────
   const handleRecurringSave = useCallback((items: RecurringTransaction[]) => {
-    setRecurring(items); saveRecurring(items)
-  }, [])
+    setRecurring(items); persist(saveRecurring(items), '정기내역 저장에 실패했습니다.')
+  }, [persist])
 
   const handleApplyRecurring = useCallback((pending: RecurringTransaction[]) => {
     // 정기 항목을 이번 달 거래 내역으로 등록
@@ -208,39 +346,39 @@ export default function App() {
     }))
     setTransactions((prev) => {
       const next = [...prev, ...newTx]
-      saveTransactions(next)
+      persist(saveTransactions(next), '정기내역 적용 저장에 실패했습니다.')
       return next
     })
     // lastAppliedMonth 업데이트
     setRecurring((prev) => {
       const pendingIds = new Set(pending.map((r) => r.id))
       const next = prev.map((r) => pendingIds.has(r.id) ? { ...r, lastAppliedMonth: yearMonth } : r)
-      saveRecurring(next)
+      persist(saveRecurring(next), '정기내역 상태 저장에 실패했습니다.')
       return next
     })
-  }, [yearMonth])
+  }, [persist, yearMonth])
 
   // ── 메모 ─────────────────────────────────────────────
   const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
     setMemos((prev) => {
       const now = Date.now()
       const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, amount, transactionType, category }]
-      saveMemos(next); return next
+      persist(saveMemos(next), '메모 저장에 실패했습니다.'); return next
     })
-  }, [])
+  }, [persist])
 
   const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
-    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, amount, transactionType, category } : m); saveMemos(next); return next })
-  }, [])
+    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, amount, transactionType, category } : m); persist(saveMemos(next), '메모 수정 저장에 실패했습니다.'); return next })
+  }, [persist])
 
   const handleDeleteMemo = useCallback((id: string) => {
     if (!confirm('이 메모를 삭제할까요?')) return
-    setMemos((prev) => { const next = prev.filter((m) => m.id !== id); saveMemos(next); return next })
-  }, [])
+    setMemos((prev) => { const next = prev.filter((m) => m.id !== id); persist(saveMemos(next), '메모 삭제 저장에 실패했습니다.'); return next })
+  }, [persist])
 
   const handleTogglePin = useCallback((id: string) => {
-    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, pinned: !m.pinned } : m); saveMemos(next); return next })
-  }, [])
+    setMemos((prev) => { const next = prev.map((m) => m.id === id ? { ...m, pinned: !m.pinned } : m); persist(saveMemos(next), '메모 고정 상태 저장에 실패했습니다.'); return next })
+  }, [persist])
 
   // ── 월 이동 ──────────────────────────────────────────
   const prevMonth = () => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
@@ -252,10 +390,20 @@ export default function App() {
 
   // 헤더 월 요약
   const monthlyTx = transactions.filter((t) => t.date.startsWith(yearMonth))
+  const openingBalance = calcNet(transactions.filter((t) => t.date < `${yearMonth}-01`))
   const monthIncome = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const monthExpense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const monthBalance = openingBalance + (monthIncome - monthExpense)
 
   const showFAB = tab === 'home' || tab === 'transactions'
+
+  if (!authReady || isSyncing) {
+    return (
+      <div className="min-h-screen bg-[#181818] flex items-center justify-center px-6">
+        <p className="text-sm text-[#8B95A1] font-semibold">데이터를 불러오는 중...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#181818] pb-nav-safe">
@@ -279,30 +427,66 @@ export default function App() {
         <div className="max-w-lg mx-auto px-5 pt-5 pb-3">
           <div className="flex items-center justify-between">
             <h1 className="text-[20px] font-extrabold text-white tracking-tight">가계부</h1>
-            <button
-              onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#3D8EF8] bg-[#3D8EF8]/10 hover:bg-[#3D8EF8]/20 transition-colors border border-[#3D8EF8]/15"
-            >
-              <FileDown size={13} />
-              가져오기
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowImport(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#3D8EF8] bg-[#3D8EF8]/10 hover:bg-[#3D8EF8]/20 transition-colors border border-[#3D8EF8]/15"
+              >
+                <FileDown size={13} />
+                가져오기
+              </button>
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#1E2236] border border-white/10 max-w-[150px]">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt="profile"
+                        className="w-5 h-5 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-[#3D8EF8]/25 text-[#79B2FF] text-[10px] font-bold flex items-center justify-center">
+                        {(user.email?.[0] ?? 'U').toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-[11px] text-[#C8D1DC] truncate">{user.email?.split("@")[0] ?? '로그인 사용자'}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    aria-label="로그아웃"
+                    title="로그아웃"
+                    className="w-8 h-8 rounded-xl text-[#F5BE3A] bg-[#F5BE3A]/10 hover:bg-[#F5BE3A]/20 transition-colors border border-[#F5BE3A]/15 flex items-center justify-center"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15"
+                >
+                  로그인
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 월 선택기 */}
           <div className="flex items-center justify-center gap-3 mt-4">
             <button onClick={prevMonth}
-              className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/[0.06] flex items-center justify-center active:scale-95 transition-transform">
+              className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
               <ChevronLeft size={16} className="text-[#8B95A1]" />
             </button>
             <button onClick={() => setCurrentDate(new Date())}
               className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth()
                   ? 'bg-white text-[#0D0F14]'
-                  : 'bg-[#1E2236] text-[#8B95A1] border border-white/[0.06]'
+                  : 'bg-[#1E2236] text-[#8B95A1] border border-white/6'
                 }`}>
               {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
             </button>
             <button onClick={nextMonth}
-              className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/[0.06] flex items-center justify-center active:scale-95 transition-transform">
+              className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
               <ChevronRight size={16} className="text-[#8B95A1]" />
             </button>
           </div>
@@ -315,14 +499,14 @@ export default function App() {
               <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
               <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
               <span className={`text-xs font-bold num ${monthIncome - monthExpense >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-                {(monthIncome - monthExpense).toLocaleString()}원
+                {monthBalance.toLocaleString()}원
               </span>
             </div>
           )}
         </div>
 
         {/* 헤더 구분선 */}
-        <div className="h-px bg-white/[0.04] mx-5" />
+        <div className="h-px bg-white/4 mx-5" />
       </header>
 
       {/* ── 컨텐츠 ── */}
@@ -332,6 +516,7 @@ export default function App() {
             transactions={transactions}
             budgets={budgets}
             recurring={recurring}
+            settingsVersion={settingsVersion}
             yearMonth={yearMonth}
             onBudgetsChange={handleBudgetsChange}
             onRecurringSave={handleRecurringSave}
@@ -459,6 +644,70 @@ export default function App() {
           onSave={handleSaveTransaction}
           onClose={() => { setShowModal(false); setEditingTransaction(null) }}
         />
+      )}
+
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+          <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white text-base font-bold">계정 로그인</h3>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-xs font-bold text-[#8B95A1]"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAuthMode('login')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${authMode === 'login' ? 'bg-[#3D8EF8] text-white' : 'bg-[#1E2236] text-[#8B95A1]'}`}
+              >
+                이메일 로그인
+              </button>
+              <button
+                onClick={() => setAuthMode('signup')}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${authMode === 'signup' ? 'bg-[#3D8EF8] text-white' : 'bg-[#1E2236] text-[#8B95A1]'}`}
+              >
+                회원가입
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="이메일"
+                className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]"
+              />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="비밀번호 (6자 이상)"
+                className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]"
+              />
+            </div>
+
+            <button
+              onClick={handleEmailAuth}
+              disabled={authBusy}
+              className="w-full py-2.5 rounded-xl bg-[#3D8EF8] disabled:opacity-50 text-white text-sm font-bold"
+            >
+              {authBusy ? '처리 중...' : authMode === 'signup' ? '이메일 회원가입' : '이메일 로그인'}
+            </button>
+
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full py-2.5 rounded-xl bg-[#2ACF6A]/15 border border-[#2ACF6A]/30 text-[#2ACF6A] text-sm font-bold flex items-center justify-center gap-2"
+            >
+              <GoogleIcon />
+              구글 로그인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -192,7 +192,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                         >
                           {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
                         </span>
-                        <div className="hidden group-hover:flex gap-0.5 ml-1">
+                        <div className="flex gap-0.5 ml-1">
                           <button
                             onClick={() => onEdit(t)}
                             aria-label={`${t.category} 내역 수정`}

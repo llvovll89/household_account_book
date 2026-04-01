@@ -13,6 +13,7 @@ interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
+  settingsVersion: number
   yearMonth: string
   onBudgetsChange: (b: Budget[]) => void
   onRecurringSave: (items: RecurringTransaction[]) => void
@@ -29,7 +30,11 @@ function fmtShort(n: number) {
   return n.toLocaleString()
 }
 
-export default function Dashboard({ transactions, budgets, recurring, yearMonth, onBudgetsChange, onRecurringSave, onApplyRecurring }: Props) {
+function calcNet(items: Transaction[]) {
+  return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
+}
+
+export default function Dashboard({ transactions, budgets, recurring, settingsVersion, yearMonth, onBudgetsChange, onRecurringSave, onApplyRecurring }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | null>(null)
@@ -39,9 +44,18 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
 
   useEffect(() => {
-    const settings = loadSettings()
-    setPayday(settings.payday)
-  }, [])
+    let cancelled = false
+
+    void loadSettings().then((settings) => {
+      if (!cancelled) {
+        setPayday(settings.payday)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [settingsVersion])
 
   function handleSavePayday() {
     const val = parseInt(paydayInput, 10)
@@ -51,7 +65,7 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     }
     setPaydayError('')
     setPayday(val)
-    saveSettings({ payday: val })
+    void saveSettings({ payday: val })
     setEditingPayday(false)
   }
 
@@ -78,9 +92,10 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
 
     const [y, m] = yearMonth.split('-').map(Number)
     const monthlyTx = transactions.filter((t) => t.date.startsWith(yearMonth))
+    const openingBalance = calcNet(transactions.filter((t) => t.date < `${yearMonth}-01`))
     const income = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const expense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    const remaining = income - expense
+    const remaining = openingBalance + (income - expense)
 
     const daysInMonth = new Date(y, m, 0).getDate()
     const daysRemaining = Math.max(1, daysInMonth - todayNum + 1)
@@ -101,7 +116,11 @@ export default function Dashboard({ transactions, budgets, recurring, yearMonth,
     () => monthly.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
     [monthly]
   )
-  const balance = income - expense
+  const openingBalance = useMemo(
+    () => calcNet(transactions.filter((t) => t.date < `${yearMonth}-01`)),
+    [transactions, yearMonth]
+  )
+  const balance = openingBalance + (income - expense)
   const savingsRate = income > 0 ? Math.round(((income - expense) / income) * 100) : null
 
   const expenseByCategory = useMemo(() => {

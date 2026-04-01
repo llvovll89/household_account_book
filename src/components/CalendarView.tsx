@@ -200,7 +200,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                       >
                         {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
                       </span>
-                      <div className="hidden group-hover:flex gap-0.5 ml-1">
+                      <div className="flex gap-0.5 ml-1">
                         <button
                           onClick={() => onEdit(t)}
                           className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
