@@ -392,9 +392,9 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
           </div>
           {paydayInfo.remaining > 0 && (
             <div className="flex items-center gap-2 mt-1">
-              <div className="h-px flex-1 bg-white/[0.05]" />
+              <div className="h-px flex-1 bg-white/5" />
               <span className="text-xs text-[#4E5968]">오늘 쓸 수 있는 금액</span>
-              <div className="h-px flex-1 bg-white/[0.05]" />
+              <div className="h-px flex-1 bg-white/5" />
             </div>
           )}
           {paydayInfo.dailyBudget > 0 ? (
@@ -410,13 +410,13 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
 
       {/* 예산 관리 카드 */}
       <div className="bg-[#1E2236] rounded-3xl p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[15px] font-bold text-white">예산 관리</p>
-          <div className="flex gap-2">
+          <div className="w-full grid grid-cols-2 gap-2 sm:w-auto sm:flex sm:gap-2">
             {budgets.length > 0 && (
               <button
                 onClick={() => setBudgetView(v => v === 'list' ? 'gauge' : 'list')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
                 title={budgetView === 'list' ? '게이지 보기' : '목록 보기'}
               >
                 {budgetView === 'list' ? <Gauge size={12} /> : <LayoutList size={12} />}
@@ -424,21 +424,21 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
             )}
             <button
               onClick={onOpenCategoryModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <Tag size={11} />
               카테고리
             </button>
             <button
               onClick={() => setShowRecurring(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <RefreshCw size={11} />
               정기
             </button>
             <button
               onClick={() => setShowBudget(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <Settings2 size={12} />
               설정
