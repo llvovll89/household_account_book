@@ -10,7 +10,7 @@ const sections = [
     color: '#3D8EF8',
     title: '홈',
     items: [
-      '이번 달 수입·지출·잔액을 한눈에 확인해요.',
+      '이번 달 수입·지출과 이월 잔액을 한눈에 확인해요.',
       '카테고리별 예산을 설정하고 사용률을 추적할 수 있어요.',
       '월세·구독료 같은 정기 지출을 등록하면 매달 자동으로 반영돼요.',
       '급여일을 설정하면 남은 일일 예산을 계산해줘요.',
@@ -23,7 +23,7 @@ const sections = [
     items: [
       '우측 하단 + 버튼을 눌러 수입·지출을 기록해요.',
       '금액, 카테고리, 날짜, 설명을 입력할 수 있어요.',
-      '내역을 길게 누르거나 편집 아이콘을 눌러 수정할 수 있어요.',
+      '등록한 내역은 수정/삭제 버튼으로 바로 편집할 수 있어요.',
     ],
   },
   {
@@ -33,7 +33,7 @@ const sections = [
     items: [
       '이번 달 모든 거래 내역을 날짜순으로 보여줘요.',
       '카테고리 필터로 원하는 항목만 골라볼 수 있어요.',
-      '스와이프하거나 휴지통 아이콘으로 삭제할 수 있어요.',
+      '각 항목의 수정/삭제 버튼으로 거래를 관리할 수 있어요.',
     ],
   },
   {
@@ -57,12 +57,32 @@ const sections = [
     ],
   },
   {
+    icon: TrendingUp,
+    color: '#60A5FA',
+    title: '주식',
+    items: [
+      '주식 탭은 로그인한 경우에만 표시돼요.',
+      '매수/매도 거래를 기록하고 거래 내역을 관리할 수 있어요.',
+      '주식 데이터는 로그인 계정의 Firebase에 저장돼요.',
+    ],
+  },
+  {
     icon: FileDown,
     color: '#34D399',
     title: '가져오기',
     items: [
       '상단 가져오기 버튼으로 CSV 파일을 불러올 수 있어요.',
       '은행 앱에서 내보낸 거래 내역을 한 번에 등록해요.',
+    ],
+  },
+  {
+    icon: LayoutDashboard,
+    color: '#22C55E',
+    title: '로그인/동기화',
+    items: [
+      '비로그인 상태에서는 이 기기(local) 저장소를 사용해요.',
+      '로그인하면 Firebase와 동기화되어 계정별로 데이터를 관리해요.',
+      '로그인 시 로컬 데이터 병합 여부를 선택할 수 있어요.',
     ],
   },
 ]
@@ -73,7 +93,7 @@ export default function HelpModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06]">
+      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -109,7 +129,7 @@ export default function HelpModal({ onClose }: Props) {
               <ul className="space-y-2">
                 {items.map((item, i) => (
                   <li key={i} className="flex items-start gap-2">
-                    <span className="mt-[5px] w-1 h-1 rounded-full bg-[#4E5968] shrink-0" />
+                    <span className="mt-1.25 w-1 h-1 rounded-full bg-[#4E5968] shrink-0" />
                     <span className="text-[13px] text-[#8B95A1] leading-relaxed">{item}</span>
                   </li>
                 ))}
@@ -121,7 +141,7 @@ export default function HelpModal({ onClose }: Props) {
           <div className="bg-[#3D8EF8]/10 border border-[#3D8EF8]/20 rounded-2xl p-4 flex gap-3">
             <TrendingUp size={17} className="text-[#3D8EF8] shrink-0 mt-0.5" />
             <p className="text-[13px] text-[#8B95A1] leading-relaxed">
-              데이터는 모두 이 기기에만 저장돼요. 앱을 홈 화면에 추가하면 오프라인에서도 사용할 수 있어요.
+              비로그인 데이터는 이 기기에 저장되고, 로그인 데이터는 Firebase 계정에 저장돼요. 앱을 홈 화면에 추가하면 오프라인에서도 사용할 수 있어요.
             </p>
           </div>
         </div>

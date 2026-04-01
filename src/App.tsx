@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, TrendingUp } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade } from './types'
@@ -101,6 +101,16 @@ export default function App() {
   }, [])
 
   const yearMonth = getYearMonth(currentDate)
+  const visibleTabs = useMemo(() => {
+    if (user) return TABS
+    return TABS.filter((t) => t.id !== 'stocks')
+  }, [user])
+
+  useEffect(() => {
+    if (!user && tab === 'stocks') {
+      setTab('home')
+    }
+  }, [tab, user])
 
   const hydrateData = useCallback(async () => {
     const timeout = new Promise<never>((_, reject) => {
@@ -401,7 +411,7 @@ export default function App() {
               </button>
               {user ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#1E2236] border border-white/10 max-w-[150px]">
+                  <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#1E2236] border border-white/10 max-w-37.5">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt="profile" className="w-5 h-5 rounded-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
@@ -534,7 +544,7 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 z-40">
         <div className="max-w-lg mx-auto bg-[#0D0F14] border-t border-white/6">
           <div className="flex pb-safe">
-            {TABS.map(({ id, label, Icon }) => (
+            {visibleTabs.map(({ id, label, Icon }) => (
               <button key={id} onClick={() => setTab(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors relative">
                 {tab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#3D8EF8] rounded-full" />}
                 <Icon size={21} strokeWidth={tab === id ? 2.5 : 1.8} className={tab === id ? 'text-[#3D8EF8]' : 'text-white/40'} />
