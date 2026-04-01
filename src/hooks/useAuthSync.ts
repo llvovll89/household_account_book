@@ -176,7 +176,12 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     try {
       if (authMode === 'signup') {
         await createUserWithEmailAndPassword(auth, trimmedEmail, password)
-        showToast('회원가입이 완료되었습니다.')
+        // Firebase는 회원가입 직후 자동 로그인되므로, 명시적으로 로그아웃해 로그인 플로우를 분리합니다.
+        await signOut(auth)
+        setAuthMode('login')
+        setPassword('')
+        showToast('회원가입이 완료되었습니다. 이제 로그인해주세요.')
+        return
       } else {
         await signInWithEmailAndPassword(auth, trimmedEmail, password)
         showToast('로그인되었습니다.')
