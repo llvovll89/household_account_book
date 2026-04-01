@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { Transaction, Memo, Budget, RecurringTransaction } from '../types'
+import type { Budget, Memo, RecurringTransaction, StockTrade, Transaction } from '../types'
 
 function safeSave(key: string, value: unknown): void {
   try {
@@ -18,15 +18,23 @@ const TRANSACTIONS_KEY = 'hb_transactions'
 const MEMOS_KEY = 'hb_memos'
 const BUDGETS_KEY = 'hb_budgets'
 const RECURRING_KEY = 'hb_recurring'
+const STOCK_TRADES_KEY = 'hb_stock_trades'
 const SETTINGS_KEY = 'hb_settings'
 
 type StorageMode = 'local' | 'firebase'
+
+export interface AppSettings {
+  payday: number | 'last' | null
+  customExpenseCategories: string[]
+  customIncomeCategories: string[]
+}
 
 interface RemoteState {
   transactions: Transaction[]
   memos: Memo[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
+  stockTrades: StockTrade[]
   settings: AppSettings
 }
 
@@ -35,6 +43,8 @@ export interface AppDataSnapshot {
   memos: Memo[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
+  stockTrades: StockTrade[]
+  settings: AppSettings
 }
 
 interface MergeResult {
@@ -45,17 +55,22 @@ interface MergeResult {
     memos: number
     budgets: number
     recurring: number
+    stockTrades: number
   }
 }
 
 let storageMode: StorageMode = 'local'
 let storageUid: string | null = null
 
-const DEFAULT_SETTINGS: AppSettings = { payday: null }
+const DEFAULT_SETTINGS: AppSettings = {
+  payday: null,
+  customExpenseCategories: [],
+  customIncomeCategories: [],
+}
 
 function parseJSON<T>(value: string | null, fallback: T): T {
   try {
-    return value ? JSON.parse(value) : fallback
+    return value ? JSON.parse(value) as T : fallback
   } catch {
     return fallback
   }
@@ -77,12 +92,16 @@ function loadLocalRecurring(): RecurringTransaction[] {
   return parseJSON(localStorage.getItem(RECURRING_KEY), [])
 }
 
+function loadLocalStockTrades(): StockTrade[] {
+  return parseJSON(localStorage.getItem(STOCK_TRADES_KEY), [])
+}
+
 function loadLocalSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) }
 }
 
-function hasValidPayday(value: number | null): boolean {
-  return Number.isInteger(value) && value !== null && value >= 1 && value <= 31
+function hasValidPayday(value: number | 'last' | null): boolean {
+  return value === 'last' || (Number.isInteger(value) && value !== null && value >= 1 && value <= 31)
 }
 
 function getUserDocRef(uid: string) {
@@ -103,6 +122,7 @@ function normalizeRemoteState(raw: unknown): RemoteState {
       memos: [],
       budgets: [],
       recurring: [],
+      stockTrades: [],
       settings: { ...DEFAULT_SETTINGS },
     }
   }
@@ -117,6 +137,7 @@ function normalizeRemoteState(raw: unknown): RemoteState {
     memos: Array.isArray(data.memos) ? data.memos : [],
     budgets: Array.isArray(data.budgets) ? data.budgets : [],
     recurring: Array.isArray(data.recurring) ? data.recurring : [],
+    stockTrades: Array.isArray(data.stockTrades) ? data.stockTrades : [],
     settings,
   }
 }
@@ -143,6 +164,7 @@ function localSnapshot(): RemoteState {
     memos: loadLocalMemos(),
     budgets: loadLocalBudgets(),
     recurring: loadLocalRecurring(),
+    stockTrades: loadLocalStockTrades(),
     settings: loadLocalSettings(),
   }
 }
@@ -157,6 +179,10 @@ function memoKey(m: Memo): string {
 
 function recurringKey(r: RecurringTransaction): string {
   return [r.dayOfMonth, r.amount, r.category, r.type, r.description].join('|')
+}
+
+function stockKey(t: StockTrade): string {
+  return [t.ticker, t.tradeType, t.quantity, t.price, t.fee, t.currency, t.date, t.note].join('|')
 }
 
 function mergeUniqueByKey<T>(base: T[], incoming: T[], keyFn: (item: T) => string): T[] {
@@ -176,28 +202,21 @@ function mergeBudgets(remote: Budget[], local: Budget[]): Budget[] {
 function mergeRecurring(remote: RecurringTransaction[], local: RecurringTransaction[]): RecurringTransaction[] {
   const byId = new Map<string, RecurringTransaction>()
   for (const item of remote) byId.set(item.id, item)
-  for (const item of local) {
-    if (byId.has(item.id)) {
-      byId.set(item.id, item)
-      continue
-    }
-    byId.set(item.id, item)
-  }
-
-  const merged = Array.from(byId.values())
-  return mergeUniqueByKey([], merged, recurringKey)
+  for (const item of local) byId.set(item.id, item)
+  return mergeUniqueByKey([], Array.from(byId.values()), recurringKey)
 }
 
 function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
-  if (hasValidPayday(local.payday)) {
-    return { payday: local.payday }
+  return {
+    payday: hasValidPayday(local.payday) ? local.payday : remote.payday,
+    customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
+    customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
   }
-  return { payday: remote.payday ?? null }
 }
 
 function backupAndClearLocalData(): void {
   const backupPrefix = `hb_backup_${Date.now()}`
-  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, SETTINGS_KEY]
+  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, STOCK_TRADES_KEY, SETTINGS_KEY]
 
   for (const key of keys) {
     const value = localStorage.getItem(key)
@@ -219,7 +238,10 @@ export function hasLocalMigratableData(): boolean {
     || snapshot.memos.length > 0
     || snapshot.budgets.length > 0
     || snapshot.recurring.length > 0
+    || snapshot.stockTrades.length > 0
     || hasValidPayday(snapshot.settings.payday)
+    || snapshot.settings.customExpenseCategories.length > 0
+    || snapshot.settings.customIncomeCategories.length > 0
   )
 }
 
@@ -228,18 +250,17 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     return {
       merged: false,
       message: '로그인 상태에서만 병합할 수 있습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 },
     }
   }
 
   const uid = getStorageUid()
   const local = localSnapshot()
-  const hasLocalData = hasLocalMigratableData()
-  if (!hasLocalData) {
+  if (!hasLocalMigratableData()) {
     return {
       merged: false,
       message: '로컬 데이터가 없어 병합을 건너뛰었습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 },
     }
   }
 
@@ -249,6 +270,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     memos: mergeUniqueByKey(remote.memos, local.memos, memoKey),
     budgets: mergeBudgets(remote.budgets, local.budgets),
     recurring: mergeRecurring(remote.recurring, local.recurring),
+    stockTrades: mergeUniqueByKey(remote.stockTrades, local.stockTrades, stockKey),
     settings: mergeSettings(remote.settings, local.settings),
   }
 
@@ -263,6 +285,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
       memos: merged.memos.length,
       budgets: merged.budgets.length,
       recurring: merged.recurring.length,
+      stockTrades: merged.stockTrades.length,
     },
   }
 }
@@ -275,6 +298,8 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       memos: local.memos,
       budgets: local.budgets,
       recurring: local.recurring,
+      stockTrades: local.stockTrades,
+      settings: local.settings,
     }
   }
 
@@ -284,6 +309,8 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
     memos: remote.memos,
     budgets: remote.budgets,
     recurring: remote.recurring,
+    stockTrades: remote.stockTrades,
+    settings: remote.settings,
   }
 }
 
@@ -291,6 +318,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
   if (storageMode === 'local') return loadLocalTransactions()
   return (await loadRemoteState(getStorageUid())).transactions
 }
+
 export async function saveTransactions(t: Transaction[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(TRANSACTIONS_KEY, t)
@@ -303,6 +331,7 @@ export async function loadMemos(): Promise<Memo[]> {
   if (storageMode === 'local') return loadLocalMemos()
   return (await loadRemoteState(getStorageUid())).memos
 }
+
 export async function saveMemos(m: Memo[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(MEMOS_KEY, m)
@@ -315,6 +344,7 @@ export async function loadBudgets(): Promise<Budget[]> {
   if (storageMode === 'local') return loadLocalBudgets()
   return (await loadRemoteState(getStorageUid())).budgets
 }
+
 export async function saveBudgets(b: Budget[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(BUDGETS_KEY, b)
@@ -327,6 +357,7 @@ export async function loadRecurring(): Promise<RecurringTransaction[]> {
   if (storageMode === 'local') return loadLocalRecurring()
   return (await loadRemoteState(getStorageUid())).recurring
 }
+
 export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(RECURRING_KEY, r)
@@ -335,13 +366,24 @@ export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
   await saveRemotePatch(getStorageUid(), { recurring: r })
 }
 
-export interface AppSettings {
-  payday: number | null // 1-31
+export async function loadStockTrades(): Promise<StockTrade[]> {
+  if (storageMode === 'local') return loadLocalStockTrades()
+  return (await loadRemoteState(getStorageUid())).stockTrades
 }
+
+export async function saveStockTrades(trades: StockTrade[]): Promise<void> {
+  if (storageMode === 'local') {
+    safeSave(STOCK_TRADES_KEY, trades)
+    return
+  }
+  await saveRemotePatch(getStorageUid(), { stockTrades: trades })
+}
+
 export async function loadSettings(): Promise<AppSettings> {
   if (storageMode === 'local') return loadLocalSettings()
   return (await loadRemoteState(getStorageUid())).settings
 }
+
 export async function saveSettings(s: AppSettings): Promise<void> {
   if (storageMode === 'local') {
     safeSave(SETTINGS_KEY, s)

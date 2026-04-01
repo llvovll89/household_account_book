@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { fmt } from '../lib/format'
 
 interface Props {
   transactions: Transaction[]
@@ -11,8 +12,6 @@ interface Props {
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-
-function fmt(n: number) { return n.toLocaleString('ko-KR') }
 
 export default function CalendarView({ transactions, yearMonth, onEdit, onDelete }: Props) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)

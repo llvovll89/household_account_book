@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight } 
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI } from '../types'
 import { useMonthlyData } from '../lib/useMonthlyData'
+import { fmtShort as fmt } from '../lib/format'
 import TrendAreaChart from './charts/TrendAreaChart'
 import WeekdayBarChart from './charts/WeekdayBarChart'
 import DonutChart from './charts/DonutChart'
@@ -13,12 +14,6 @@ import CashflowChart from './charts/CashflowChart'
 interface Props {
   transactions: Transaction[]
   yearMonth: string
-}
-
-function fmt(n: number) {
-  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
-  if (n >= 10_000) return `${Math.round(n / 10_000)}만`
-  return n.toLocaleString()
 }
 
 function getYM(year: number, month: number) {

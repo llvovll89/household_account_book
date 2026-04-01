@@ -48,6 +48,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        clientsClaim: true,
+        skipWaiting: true,
         // 폰트 등 외부 리소스는 네트워크 우선, 나머지는 캐시 우선
         runtimeCaching: [
           {
