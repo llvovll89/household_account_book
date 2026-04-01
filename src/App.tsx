@@ -2,11 +2,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, TrendingUp } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade } from './types'
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, type User } from 'firebase/auth'
-import { auth, googleProvider } from './firebase/firebase'
-import { hasLocalMigratableData, loadAllData, loadSettings, mergeLocalIntoFirebase, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveTransactions, setStorageContext } from './lib/storage'
+import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveTransactions } from './lib/storage'
 import { generateId } from './lib/format'
 import { usePWAInstall } from './hooks/usePWAInstall'
+import { useAuthSync } from './hooks/useAuthSync'
 import { registerToastHandler, showToast } from './lib/toast'
 import Dashboard from './components/Dashboard'
 import TransactionList from './components/TransactionList'
@@ -79,18 +78,10 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false)
   const [showStockModal, setShowStockModal] = useState(false)
   const [editingTrade, setEditingTrade] = useState<StockTrade | null>(null)
+  const [memoAddTrigger, setMemoAddTrigger] = useState(0)
 
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [user, setUser] = useState<User | null>(null)
-  const [authReady, setAuthReady] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [settingsVersion, setSettingsVersion] = useState(0)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [authBusy, setAuthBusy] = useState(false)
 
   useEffect(() => {
     return registerToastHandler((msg, duration = 2500) => {
@@ -101,17 +92,6 @@ export default function App() {
   }, [])
 
   const yearMonth = getYearMonth(currentDate)
-  const visibleTabs = useMemo(() => {
-    if (user) return TABS
-    return TABS.filter((t) => t.id !== 'stocks')
-  }, [user])
-
-  useEffect(() => {
-    if (!user && tab === 'stocks') {
-      setTab('home')
-    }
-  }, [tab, user])
-
   const hydrateData = useCallback(async () => {
     const timeout = new Promise<never>((_, reject) => {
       window.setTimeout(() => reject(new Error('data-load-timeout')), DATA_LOAD_TIMEOUT_MS)
@@ -127,105 +107,30 @@ export default function App() {
     setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
+  const {
+    user,
+    authReady,
+    isSyncing,
+    settingsVersion,
+    showAuthModal,
+    authMode,
+    email,
+    password,
+    authBusy,
+    setShowAuthModal,
+    setAuthMode,
+    setEmail,
+    setPassword,
+    handleGoogleLogin,
+    handleEmailAuth,
+    handleLogout,
+  } = useAuthSync({ hydrateData })
 
-    const hydrateWithGuard = async (failMessage: string) => {
-      try {
-        await hydrateData()
-      } catch {
-        showToast(failMessage)
-      } finally {
-        if (!cancelled) {
-          setAuthReady(true)
-        }
-      }
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
-      setUser(nextUser)
-      setIsSyncing(false)
-
-      if (!nextUser) {
-        setStorageContext('local', null)
-        setSettingsVersion((prev) => prev + 1)
-        await hydrateWithGuard('로컬 데이터를 불러오지 못했습니다.')
-        return
-      }
-
-      setStorageContext('firebase', nextUser.uid)
-      setSettingsVersion((prev) => prev + 1)
-
-      try {
-        if (hasLocalMigratableData()) {
-          const apply = window.confirm('로컬에 저장된 데이터를 Firebase 데이터와 병합할까요?\n확인을 누르면 병합 후 로컬 원본은 백업됩니다.')
-          if (apply) {
-            setIsSyncing(true)
-            const result = await mergeLocalIntoFirebase()
-            showToast(result.message)
-          }
-        }
-      } catch {
-        showToast('데이터 병합 중 오류가 발생했습니다.')
-      } finally {
-        setIsSyncing(false)
-      }
-
-      await hydrateWithGuard('Firebase 데이터를 불러오지 못했습니다.')
-    })
-
-    return () => {
-      cancelled = true
-      unsubscribe()
-    }
-  }, [hydrateData])
-
-  const handleGoogleLogin = useCallback(async () => {
-    try {
-      await signInWithPopup(auth, googleProvider)
-      setShowAuthModal(false)
-    } catch {
-      showToast('로그인에 실패했습니다. 다시 시도해주세요.')
-    }
-  }, [])
-
-  const handleEmailAuth = useCallback(async () => {
-    const trimmedEmail = email.trim()
-    if (!trimmedEmail || !password) {
-      showToast('이메일과 비밀번호를 입력해주세요.')
-      return
-    }
-    if (password.length < 6) {
-      showToast('비밀번호는 6자 이상이어야 합니다.')
-      return
-    }
-
-    setAuthBusy(true)
-    try {
-      if (authMode === 'signup') {
-        await createUserWithEmailAndPassword(auth, trimmedEmail, password)
-        showToast('회원가입이 완료되었습니다.')
-      } else {
-        await signInWithEmailAndPassword(auth, trimmedEmail, password)
-        showToast('로그인되었습니다.')
-      }
-      setPassword('')
-      setShowAuthModal(false)
-    } catch {
-      showToast(authMode === 'signup' ? '회원가입에 실패했습니다.' : '이메일 로그인에 실패했습니다.')
-    } finally {
-      setAuthBusy(false)
-    }
-  }, [authMode, email, password])
-
-  const handleLogout = useCallback(async () => {
-    try {
-      await signOut(auth)
-      showToast('로그아웃되었습니다. 로컬 모드로 전환합니다.')
-    } catch {
-      showToast('로그아웃에 실패했습니다. 다시 시도해주세요.')
-    }
-  }, [])
+  const visibleTabs = useMemo(() => {
+    if (user) return TABS
+    return TABS.filter((t) => t.id !== 'stocks')
+  }, [user])
+  const activeTab: Tab = !user && tab === 'stocks' ? 'home' : tab
 
   const persist = useCallback((task: Promise<void>, failMsg: string) => {
     void task.catch(() => showToast(failMsg))
@@ -376,7 +281,7 @@ export default function App() {
   const monthExpense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
   const monthBalance = openingBalance + (monthIncome - monthExpense)
 
-  const showFAB = tab === 'home' || tab === 'transactions' || tab === 'stocks'
+  const showFAB = activeTab === 'home' || activeTab === 'transactions' || activeTab === 'memos' || activeTab === 'stocks'
 
   if (!authReady || isSyncing) {
     return (
@@ -461,7 +366,7 @@ export default function App() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-4">
-        {tab === 'home' && (
+        {activeTab === 'home' && (
           <Dashboard
             transactions={transactions}
             budgets={budgets}
@@ -475,7 +380,7 @@ export default function App() {
             onOpenCategoryModal={() => setShowCategoryModal(true)}
           />
         )}
-        {tab === 'transactions' && (
+        {activeTab === 'transactions' && (
           <TransactionList
             transactions={transactions}
             yearMonth={yearMonth}
@@ -483,17 +388,18 @@ export default function App() {
             onDelete={handleDeleteTransaction}
           />
         )}
-        {tab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} />}
-        {tab === 'memos' && (
+        {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} />}
+        {activeTab === 'memos' && (
           <MemoSection
             memos={memos}
             onAdd={handleAddMemo}
             onUpdate={handleUpdateMemo}
             onDelete={handleDeleteMemo}
             onTogglePin={handleTogglePin}
+            externalAddTrigger={memoAddTrigger}
           />
         )}
-        {tab === 'stocks' && (
+        {activeTab === 'stocks' && (
           <StockTradeList
             trades={stockTrades}
             onEdit={(t) => { setEditingTrade(t); setShowStockModal(true) }}
@@ -505,9 +411,11 @@ export default function App() {
       {showFAB && (
         <button
           onClick={() => {
-            if (tab === 'stocks') {
+            if (activeTab === 'stocks') {
               setEditingTrade(null)
               setShowStockModal(true)
+            } else if (activeTab === 'memos') {
+              setMemoAddTrigger((prev) => prev + 1)
             } else {
               setEditingTransaction(null)
               setShowModal(true)
@@ -546,9 +454,9 @@ export default function App() {
           <div className="flex pb-safe">
             {visibleTabs.map(({ id, label, Icon }) => (
               <button key={id} onClick={() => setTab(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors relative">
-                {tab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#3D8EF8] rounded-full" />}
-                <Icon size={21} strokeWidth={tab === id ? 2.5 : 1.8} className={tab === id ? 'text-[#3D8EF8]' : 'text-white/40'} />
-                <span className={`text-[10px] font-bold ${tab === id ? 'text-[#3D8EF8]' : 'text-white/40'}`}>{label}</span>
+                {activeTab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#3D8EF8] rounded-full" />}
+                <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={activeTab === id ? 'text-[#3D8EF8]' : 'text-white/40'} />
+                <span className={`text-[10px] font-bold ${activeTab === id ? 'text-[#3D8EF8]' : 'text-white/40'}`}>{label}</span>
               </button>
             ))}
           </div>
@@ -629,7 +537,7 @@ export default function App() {
               {authBusy ? '처리 중...' : authMode === 'signup' ? '이메일 회원가입' : '이메일 로그인'}
             </button>
 
-            <button onClick={handleGoogleLogin} className="w-full py-2.5 rounded-xl bg-[#2ACF6A]/15 border border-[#2ACF6A]/30 text-[#2ACF6A] text-sm font-bold flex items-center justify-center gap-2">
+            <button onClick={handleGoogleLogin} className="w-full py-2.5 rounded-xl bg-[#09f]/80 text-white text-sm font-bold flex items-center justify-center gap-2">
               <GoogleIcon />
               구글 로그인
             </button>

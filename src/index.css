@@ -7,36 +7,68 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body {
+html,
+body {
   background-color: #0D0F14;
   color: #F1F3F6;
   overscroll-behavior: none;
 }
 
-button {
+button, input {
+  outline: none;
+  border: none;
   cursor: pointer;
 }
 
-::-webkit-scrollbar { display: none; }
+::-webkit-scrollbar {
+  display: none;
+}
 
 /* 가로 스크롤 테이블용 — 스크롤바 표시 */
-.table-h-scroll::-webkit-scrollbar { display: block; height: 4px; }
-.table-h-scroll::-webkit-scrollbar-track { background: transparent; }
-.table-h-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
-.table-h-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
-.table-h-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+.table-h-scroll::-webkit-scrollbar {
+  display: block;
+  height: 4px;
+}
+
+.table-h-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-h-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+}
+
+.table-h-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.table-h-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
 
 /* 탭 전환 애니메이션 */
 .tab-content {
   animation: fadeUp 0.16s ease-out;
 }
+
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* 숫자 정렬 */
-.num { font-variant-numeric: tabular-nums; }
+.num {
+  font-variant-numeric: tabular-nums;
+}
 
 /* date input 스타일 */
 input[type="date"]::-webkit-calendar-picker-indicator {
@@ -54,12 +86,15 @@ select option {
 .pb-nav-safe {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
+
 .bottom-fab-safe {
   bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
 }
+
 .bottom-banner-safe {
   bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
 }
+
 .bottom-toast-safe {
   bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
 }
@@ -78,6 +113,7 @@ textarea:focus-visible {
   .tab-content {
     animation: none;
   }
+
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;

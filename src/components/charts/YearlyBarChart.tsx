@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
@@ -10,6 +11,38 @@ import {
 interface Props {
   data: MonthlyDataPoint[]
   currentYM: string
+}
+
+interface YearlyTooltipEntry {
+  dataKey?: string | number
+  value?: number | string
+}
+
+interface YearlyTooltipProps {
+  active?: boolean
+  payload?: YearlyTooltipEntry[]
+  label?: string | number
+}
+
+function YearlyTooltip({ active, payload, label }: YearlyTooltipProps) {
+  if (!active || !payload?.length) return null
+
+  return (
+    <div style={TOOLTIP_CONTENT_STYLE as CSSProperties}>
+      <p style={TOOLTIP_LABEL_STYLE as CSSProperties}>{label}월</p>
+      {payload.map((entry) => {
+        const isIncome = entry.dataKey === 'income'
+        const textColor = isIncome ? CHART_COLORS.income : CHART_COLORS.expense
+        const value = typeof entry.value === 'number' ? entry.value : Number(entry.value ?? 0)
+
+        return (
+          <p key={String(entry.dataKey)} style={{ margin: 0, color: textColor, fontSize: 12, fontWeight: 600 }}>
+            {isIncome ? '수입' : '지출'}: {value.toLocaleString()}원
+          </p>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function YearlyBarChart({ data, currentYM }: Props) {
@@ -42,13 +75,8 @@ export default function YearlyBarChart({ data, currentYM }: Props) {
         />
         <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
         <Tooltip
-          contentStyle={TOOLTIP_CONTENT_STYLE}
           cursor={TOOLTIP_CURSOR_STYLE}
-          labelStyle={TOOLTIP_LABEL_STYLE}
-          formatter={(value, name) => [
-            `${Number(value).toLocaleString()}원`,
-            name === 'income' ? '수입' : '지출',
-          ]}
+          content={<YearlyTooltip />}
         />
         <Bar dataKey="income" radius={[4, 4, 0, 0]} barSize={8} animationDuration={600}>
           {data.map((m, i) => (
