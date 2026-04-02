@@ -37,7 +37,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06]">
+      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -60,7 +60,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
                   className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
                   style={{ backgroundColor: color.bg }}
                 >
-                  {CATEGORY_EMOJI[cat]}
+                  {CATEGORY_EMOJI[cat] ?? '📦'}
                 </div>
                 <span className="text-sm font-semibold text-white flex-1">{cat}</span>
                 <div className="flex items-center gap-1.5">
@@ -79,7 +79,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
           })}
         </div>
 
-        <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0">
+        <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0">
           <button
             onClick={handleSave}
             className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"

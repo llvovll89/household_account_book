@@ -27,6 +27,7 @@ export interface AppSettings {
   payday: number | 'last' | null
   customExpenseCategories: string[]
   customIncomeCategories: string[]
+  stockWatchlist: string[]
 }
 
 interface RemoteState {
@@ -66,6 +67,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   payday: null,
   customExpenseCategories: [],
   customIncomeCategories: [],
+  stockWatchlist: [],
 }
 
 function parseJSON<T>(value: string | null, fallback: T): T {
@@ -211,6 +213,7 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
     payday: hasValidPayday(local.payday) ? local.payday : remote.payday,
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
+    stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,
   }
 }
 
@@ -242,6 +245,7 @@ export function hasLocalMigratableData(): boolean {
     || hasValidPayday(snapshot.settings.payday)
     || snapshot.settings.customExpenseCategories.length > 0
     || snapshot.settings.customIncomeCategories.length > 0
+    || snapshot.settings.stockWatchlist.length > 0
   )
 }
 

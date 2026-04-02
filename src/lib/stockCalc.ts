@@ -87,3 +87,34 @@ export function calcTotalRealizedPnL(trades: StockTrade[]): number {
 export function calcTotalFee(trades: StockTrade[]): number {
   return trades.reduce((s, t) => s + t.fee, 0)
 }
+
+export function calcRealizedPnLByTicker(trades: StockTrade[]): Record<string, number> {
+  const sorted = [...trades].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt
+  )
+
+  const queues: Record<string, { qty: number; unitCost: number }[]> = {}
+  const realized: Record<string, number> = {}
+
+  for (const trade of sorted) {
+    const { ticker, tradeType, quantity, price, fee } = trade
+    if (!queues[ticker]) queues[ticker] = []
+    if (!realized[ticker]) realized[ticker] = 0
+
+    if (tradeType === 'buy') {
+      queues[ticker].push({ qty: quantity, unitCost: price + (quantity > 0 ? fee / quantity : 0) })
+    } else {
+      let remaining = quantity
+      while (remaining > 0 && queues[ticker].length > 0) {
+        const lot = queues[ticker][0]
+        const used = Math.min(lot.qty, remaining)
+        realized[ticker] += (price - lot.unitCost) * used - fee * (used / quantity)
+        lot.qty -= used
+        remaining -= used
+        if (lot.qty <= 0.00001) queues[ticker].shift()
+      }
+    }
+  }
+
+  return realized
+}

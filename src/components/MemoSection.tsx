@@ -262,7 +262,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                   <span className="text-[10px] text-[#4E5968]">
                     {memo.date ? formatMemoDate(memo.date) : formatDate(memo.updatedAt)}
                   </span>
-                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onTogglePin(memo.id)}
                       className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
                       <Pin size={10} className={memo.pinned ? 'text-[#F5BE3A]' : 'text-[#4E5968]'} />
@@ -311,7 +311,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                     key={idx}
                     onClick={() => {
                       if (!cell.date) return
-                      setSelectedDate((prev) => (prev === cell.date ? null : cell.date))
+                      setSelectedDate(cell.date)
                     }}
                     disabled={!cell.date}
                     className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 min-h-14.5 border-r border-b border-white/4 transition-colors ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-[#3D8EF8]/15' : cell.date ? 'hover:bg-white/4' : ''}`}
@@ -337,53 +337,67 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             </div>
           </div>
 
-          {selectedDate && (
-            <div className="bg-[#1E2236] rounded-3xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between">
-                <p className="text-sm font-bold text-white">{formatSelectedDateLabel(selectedDate)} 일정</p>
-                <span className="text-xs font-semibold text-[#8B95A1]">{selectedDateMemos.length}개</span>
-              </div>
+        </div>
+      )}
 
-              {selectedDateMemos.length === 0 ? (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-[#4E5968]">이 날짜에는 메모가 없어요</p>
-                </div>
-              ) : (
-                <div>
-                  {selectedDateMemos.map((memo, idx) => {
-                    const catColor = memo.category ? (CATEGORY_COLOR[memo.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }) : null
-                    return (
-                      <div key={memo.id} className={`px-4 py-3 ${idx < selectedDateMemos.length - 1 ? 'border-b border-white/4' : ''}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{memo.title || '(제목 없음)'}</p>
-                            {memo.content && <p className="text-xs text-[#8B95A1] mt-1 whitespace-pre-wrap line-clamp-3">{memo.content}</p>}
-                            {memo.category && catColor && (
-                              <div className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-lg" style={{ backgroundColor: catColor.bg }}>
-                                <span className="text-[11px]">{CATEGORY_EMOJI[memo.category] ?? '📦'}</span>
-                                <span className="text-[10px] font-bold" style={{ color: catColor.text }}>{memo.category}</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <button onClick={() => onTogglePin(memo.id)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
-                              <Pin size={11} className={memo.pinned ? 'text-[#F5BE3A]' : 'text-[#4E5968]'} />
-                            </button>
-                            <button onClick={() => openEdit(memo)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
-                              <Pencil size={11} className="text-[#4E5968]" />
-                            </button>
-                            <button onClick={() => onDelete(memo.id)} className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors">
-                              <Trash2 size={11} className="text-[#F25260]" />
-                            </button>
-                          </div>
+      {selectedDate && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedDate(null)}>
+          <div className="w-full max-w-md bg-[#1E2236] rounded-3xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between shrink-0">
+              <p className="text-sm font-bold text-white">{formatSelectedDateLabel(selectedDate)} 일정</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-[#8B95A1]">{selectedDateMemos.length}개</span>
+                <button onClick={() => setSelectedDate(null)} className="w-7 h-7 rounded-full bg-[#252A3F] flex items-center justify-center" aria-label="상세 닫기">
+                  <X size={12} className="text-[#8B95A1]" />
+                </button>
+              </div>
+            </div>
+
+            {selectedDateMemos.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-[#4E5968]">이 날짜에는 메모가 없어요</p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto">
+                {selectedDateMemos.map((memo, idx) => {
+                  const catColor = memo.category ? (CATEGORY_COLOR[memo.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }) : null
+                  return (
+                    <div key={memo.id} className={`px-4 py-3 ${idx < selectedDateMemos.length - 1 ? 'border-b border-white/4' : ''}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{memo.title || '(제목 없음)'}</p>
+                          {memo.content && <p className="text-xs text-[#8B95A1] mt-1 whitespace-pre-wrap line-clamp-3">{memo.content}</p>}
+                          {memo.category && catColor && (
+                            <div className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-lg" style={{ backgroundColor: catColor.bg }}>
+                              <span className="text-[11px]">{CATEGORY_EMOJI[memo.category] ?? '📦'}</span>
+                              <span className="text-[10px] font-bold" style={{ color: catColor.text }}>{memo.category}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => onTogglePin(memo.id)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
+                            <Pin size={11} className={memo.pinned ? 'text-[#F5BE3A]' : 'text-[#4E5968]'} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedDate(null)
+                              openEdit(memo)
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                          >
+                            <Pencil size={11} className="text-[#4E5968]" />
+                          </button>
+                          <button onClick={() => onDelete(memo.id)} className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors">
+                            <Trash2 size={11} className="text-[#F25260]" />
+                          </button>
                         </div>
                       </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -92,7 +92,7 @@ select option {
 }
 
 .bottom-fab-safe {
-  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-banner-safe {

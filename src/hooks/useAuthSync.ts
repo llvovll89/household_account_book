@@ -21,6 +21,7 @@ interface UseAuthSyncResult {
   authReady: boolean
   isSyncing: boolean
   settingsVersion: number
+  showMergeModal: boolean
   showAuthModal: boolean
   authMode: 'login' | 'signup'
   email: string
@@ -30,6 +31,8 @@ interface UseAuthSyncResult {
   setAuthMode: (value: 'login' | 'signup') => void
   setEmail: (value: string) => void
   setPassword: (value: string) => void
+  handleMergeConfirm: () => Promise<void>
+  handleMergeCancel: () => Promise<void>
   handleGoogleLogin: () => Promise<void>
   handleEmailAuth: () => Promise<void>
   handleLogout: () => Promise<void>
@@ -92,11 +95,40 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
   const [authReady, setAuthReady] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
+  const [showMergeModal, setShowMergeModal] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
+
+  const applyPostLoginSync = useCallback(async (shouldMerge: boolean) => {
+    setShowMergeModal(false)
+    setIsSyncing(true)
+
+    try {
+      if (shouldMerge) {
+        const result = await mergeLocalIntoFirebase()
+        showToast(result.message)
+      }
+    } catch {
+      showToast('데이터 병합 중 오류가 발생했습니다.')
+    } finally {
+      await hydrateData().catch(() => {
+        showToast('Firebase 데이터를 불러오지 못했습니다.')
+      })
+      setIsSyncing(false)
+      setAuthReady(true)
+    }
+  }, [hydrateData])
+
+  const handleMergeConfirm = useCallback(async () => {
+    await applyPostLoginSync(true)
+  }, [applyPostLoginSync])
+
+  const handleMergeCancel = useCallback(async () => {
+    await applyPostLoginSync(false)
+  }, [applyPostLoginSync])
 
   useEffect(() => {
     let cancelled = false
@@ -127,19 +159,10 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       setStorageContext('firebase', nextUser.uid)
       setSettingsVersion((prev) => prev + 1)
 
-      try {
-        if (hasLocalMigratableData()) {
-          const apply = window.confirm('로컬에 저장된 데이터를 Firebase 데이터와 병합할까요?\n확인을 누르면 병합 후 로컬 원본은 백업됩니다.')
-          if (apply) {
-            setIsSyncing(true)
-            const result = await mergeLocalIntoFirebase()
-            showToast(result.message)
-          }
-        }
-      } catch {
-        showToast('데이터 병합 중 오류가 발생했습니다.')
-      } finally {
-        setIsSyncing(false)
+      if (hasLocalMigratableData()) {
+        setShowMergeModal(true)
+        setAuthReady(true)
+        return
       }
 
       await hydrateWithGuard('Firebase 데이터를 불러오지 못했습니다.')
@@ -210,6 +233,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     authReady,
     isSyncing,
     settingsVersion,
+    showMergeModal,
     showAuthModal,
     authMode,
     email,
@@ -219,6 +243,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     setAuthMode,
     setEmail,
     setPassword,
+    handleMergeConfirm,
+    handleMergeCancel,
     handleGoogleLogin,
     handleEmailAuth,
     handleLogout,

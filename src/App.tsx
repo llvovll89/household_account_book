@@ -1,24 +1,22 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, TrendingUp, Wallet } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade } from './types'
+import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveTransactions } from './lib/storage'
 import { generateId } from './lib/format'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
 import { registerToastHandler, showToast } from './lib/toast'
-import Dashboard from './components/Dashboard'
-import TransactionList from './components/TransactionList'
 import TransactionModal from './components/TransactionModal'
-import MemoSection from './components/MemoSection'
-import Analytics from './components/Analytics'
 import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
-import StockTradeList from './components/StockTradeList'
 import StockTradeModal from './components/StockTradeModal'
 import CategoryModal from './components/CategoryModal'
-
-type Tab = 'home' | 'transactions' | 'analytics' | 'memos' | 'stocks'
+import LedgerWorkspace from './components/workspaces/LedgerWorkspace'
+import StocksWorkspace from './components/workspaces/StocksWorkspace'
+import BottomNavigation from './components/layout/BottomNavigation'
+import MergeLocalDataModal from './components/MergeLocalDataModal'
 
 const DATA_LOAD_TIMEOUT_MS = 9000
 
@@ -30,12 +28,11 @@ function calcNet(items: Transaction[]) {
     return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
 }
 
-const TABS = [
+const LEDGER_TABS = [
     { id: 'home' as Tab, label: '홈', Icon: LayoutDashboard },
     { id: 'transactions' as Tab, label: '내역', Icon: List },
     { id: 'analytics' as Tab, label: '분석', Icon: BarChart2 },
     { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
-    { id: 'stocks' as Tab, label: '주식', Icon: TrendingUp },
 ]
 
 function GoogleIcon() {
@@ -60,10 +57,12 @@ export default function App() {
 
     const { showInstallBanner, isIosManualInstall, installGuideText, deferredPrompt, closeInstallBanner, handleInstallClick } = usePWAInstall()
 
+    const [mode, setMode] = useState<AppMode>('ledger')
     const [tab, setTab] = useState<Tab>('home')
     const [currentDate, setCurrentDate] = useState(new Date())
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [stockTrades, setStockTrades] = useState<StockTrade[]>([])
+    const [stockWatchlist, setStockWatchlist] = useState<string[]>([])
     const [memos, setMemos] = useState<Memo[]>([])
     const [budgets, setBudgets] = useState<Budget[]>([])
     const [recurring, setRecurring] = useState<RecurringTransaction[]>([])
@@ -78,6 +77,7 @@ export default function App() {
     const [showHelp, setShowHelp] = useState(false)
     const [showStockModal, setShowStockModal] = useState(false)
     const [editingTrade, setEditingTrade] = useState<StockTrade | null>(null)
+    const [stockSubTab, setStockSubTab] = useState<StockSubTab>('portfolio')
     const [memoAddTrigger, setMemoAddTrigger] = useState(0)
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
@@ -103,6 +103,7 @@ export default function App() {
         setBudgets(snapshot.budgets)
         setRecurring(snapshot.recurring)
         setStockTrades(snapshot.stockTrades)
+        setStockWatchlist(snapshot.settings.stockWatchlist ?? [])
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
     }, [])
@@ -112,6 +113,7 @@ export default function App() {
         authReady,
         isSyncing,
         settingsVersion,
+        showMergeModal,
         showAuthModal,
         authMode,
         email,
@@ -121,16 +123,16 @@ export default function App() {
         setAuthMode,
         setEmail,
         setPassword,
+        handleMergeConfirm,
+        handleMergeCancel,
         handleGoogleLogin,
         handleEmailAuth,
         handleLogout,
     } = useAuthSync({ hydrateData })
 
-    const visibleTabs = useMemo(() => {
-        if (user) return TABS
-        return TABS.filter((t) => t.id !== 'stocks')
-    }, [user])
-    const activeTab: Tab = !user && tab === 'stocks' ? 'home' : tab
+    const activeMode: AppMode = user ? mode : 'ledger'
+    const visibleTabs = LEDGER_TABS
+    const activeTab: Tab = activeMode === 'stocks' ? 'stocks' : (tab === 'stocks' ? 'home' : tab)
 
     const persist = useCallback((task: Promise<void>, failMsg: string) => {
         void task.catch(() => showToast(failMsg))
@@ -234,6 +236,38 @@ export default function App() {
         )
     }, [persist])
 
+    const handleAddWatchTicker = useCallback((ticker: string) => {
+        const normalized = ticker.trim().toUpperCase()
+        if (!normalized) return
+
+        setStockWatchlist((prev) => {
+            if (prev.includes(normalized)) return prev
+            const next = [...prev, normalized]
+            persist(
+                (async () => {
+                    const current = await loadSettings()
+                    await saveSettings({ ...current, stockWatchlist: next })
+                })(),
+                '관심종목 저장에 실패했습니다.'
+            )
+            return next
+        })
+    }, [persist])
+
+    const handleRemoveWatchTicker = useCallback((ticker: string) => {
+        setStockWatchlist((prev) => {
+            const next = prev.filter((item) => item !== ticker)
+            persist(
+                (async () => {
+                    const current = await loadSettings()
+                    await saveSettings({ ...current, stockWatchlist: next })
+                })(),
+                '관심종목 저장에 실패했습니다.'
+            )
+            return next
+        })
+    }, [persist])
+
     const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
         setMemos((prev) => {
             const now = Date.now()
@@ -280,13 +314,27 @@ export default function App() {
     const monthIncome = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const monthExpense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     const monthBalance = openingBalance + (monthIncome - monthExpense)
+    const stockTickerCount = useMemo(() => new Set(stockTrades.map((t) => t.ticker)).size, [stockTrades])
 
-    const showFAB = activeTab === 'home' || activeTab === 'transactions' || activeTab === 'memos' || activeTab === 'stocks'
+    const showFAB = activeMode === 'stocks'
+        ? stockSubTab === 'portfolio' || stockSubTab === 'trades'
+        : activeTab === 'home' || activeTab === 'transactions' || activeTab === 'memos'
 
     if (!authReady || isSyncing) {
         return (
-            <div className="min-h-screen bg-[#181818] flex items-center justify-center px-6">
-                <p className="text-sm text-[#8B95A1] font-semibold">데이터를 불러오는 중...</p>
+            <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1F2F4A_0%,#151A26_42%,#0E1119_100%)] flex items-center justify-center px-6">
+                <div className="w-full max-w-sm rounded-3xl bg-[#1E2236]/90 border border-[#3D8EF8]/20 shadow-2xl shadow-[#3D8EF8]/10 p-6 text-center">
+                    <div className="mx-auto w-11 h-11 rounded-2xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/35 flex items-center justify-center">
+                        <Wallet size={20} className="text-[#79B2FF]" />
+                    </div>
+                    <h2 className="mt-4 text-[17px] font-extrabold text-[#9BC6FF] tracking-tight">잔고플랜 준비 중</h2>
+                    <p className="mt-1 text-sm text-[#AAB6C5] font-medium">데이터를 안전하게 불러오고 있어요</p>
+                    <div className="mt-4 flex items-center justify-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF] animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF]/80 animate-pulse [animation-delay:180ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF]/65 animate-pulse [animation-delay:360ms]" />
+                    </div>
+                </div>
             </div>
         )
     }
@@ -312,13 +360,15 @@ export default function App() {
                             <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/30 flex items-center justify-center">
                                 <Wallet size={14} className="text-[#79B2FF]" />
                             </span>
-                            <h1 className="text-[20px] font-extrabold text-white tracking-tight">잔고플랜</h1>
+                            <h1 className="text-[20px] font-extrabold text-[#9BC6FF] tracking-tight">잔고플랜</h1>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#3D8EF8] bg-[#3D8EF8]/10 hover:bg-[#3D8EF8]/20 transition-colors border border-[#3D8EF8]/15">
-                                <FileDown size={13} />
-                                가져오기
-                            </button>
+                            {activeMode === 'ledger' && (
+                                <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#3D8EF8] bg-[#3D8EF8]/10 hover:bg-[#3D8EF8]/20 transition-colors border border-[#3D8EF8]/15">
+                                    <FileDown size={13} />
+                                    가져오기
+                                </button>
+                            )}
                             {user ? (
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#1E2236] border border-white/10 max-w-37.5">
@@ -343,27 +393,66 @@ export default function App() {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-center gap-3 mt-4">
-                        <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
-                            <ChevronLeft size={16} className="text-[#8B95A1]" />
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[#1E2236] border border-white/6 p-1.5">
+                        <button
+                            onClick={() => {
+                                setMode('ledger')
+                                if (tab === 'stocks') setTab('home')
+                            }}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'ledger' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1] hover:bg-white/5'}`}
+                        >
+                            가계부
                         </button>
-                        <button onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#0D0F14]' : 'bg-[#1E2236] text-[#8B95A1] border border-white/6'}`}>
-                            {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-                        </button>
-                        <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
-                            <ChevronRight size={16} className="text-[#8B95A1]" />
+                        <button
+                            onClick={() => {
+                                if (!user) {
+                                    setShowAuthModal(true)
+                                    showToast('주식 모드는 로그인 후 사용할 수 있어요.')
+                                    return
+                                }
+                                setMode('stocks')
+                                setTab('stocks')
+                                setStockSubTab('portfolio')
+                            }}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'stocks' ? 'bg-[#F5BE3A] text-[#0D0F14]' : 'text-[#8B95A1] hover:bg-white/5'}`}
+                        >
+                            주식
                         </button>
                     </div>
 
-                    {(monthIncome > 0 || monthExpense > 0) && (
-                        <div className="flex items-center justify-center gap-4 mt-3 pb-1">
-                            <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
-                            <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
-                            <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
-                            <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
-                            <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-                                {monthBalance.toLocaleString()}원
-                            </span>
+                    {activeMode === 'ledger' ? (
+                        <>
+                            <div className="flex items-center justify-center gap-3 mt-3">
+                                <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
+                                    <ChevronLeft size={16} className="text-[#8B95A1]" />
+                                </button>
+                                <button onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#0D0F14]' : 'bg-[#1E2236] text-[#8B95A1] border border-white/6'}`}>
+                                    {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+                                </button>
+                                <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
+                                    <ChevronRight size={16} className="text-[#8B95A1]" />
+                                </button>
+                            </div>
+
+                            {(monthIncome > 0 || monthExpense > 0) && (
+                                <div className="flex items-center justify-center gap-4 mt-3 pb-1">
+                                    <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
+                                    <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
+                                    <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
+                                    <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
+                                    <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+                                        {monthBalance.toLocaleString()}원
+                                    </span>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="mt-3 pb-1 bg-[#1E2236] rounded-2xl border border-white/6 p-4">
+                            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">투자 워크스페이스</p>
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm font-bold text-[#F5F7FA]">총 거래 {stockTrades.length.toLocaleString()}건</p>
+                                <p className="text-xs font-semibold text-[#8B95A1]">보유 종목 {stockTickerCount}개</p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -371,44 +460,39 @@ export default function App() {
             </header>
 
             <main className="max-w-lg mx-auto px-4 py-4">
-                {activeTab === 'home' && (
-                    <Dashboard
+                {activeMode === 'ledger' && (
+                    <LedgerWorkspace
+                        activeTab={activeTab}
                         transactions={transactions}
                         budgets={budgets}
                         recurring={recurring}
                         settingsVersion={settingsVersion}
                         yearMonth={yearMonth}
                         customExpenseCategories={customExpenseCategories}
+                        memos={memos}
+                        memoAddTrigger={memoAddTrigger}
                         onBudgetsChange={handleBudgetsChange}
                         onRecurringSave={handleRecurringSave}
                         onApplyRecurring={handleApplyRecurring}
                         onOpenCategoryModal={() => setShowCategoryModal(true)}
-                    />
-                )}
-                {activeTab === 'transactions' && (
-                    <TransactionList
-                        transactions={transactions}
-                        yearMonth={yearMonth}
-                        onEdit={(t) => { setEditingTransaction(t); setShowModal(true) }}
-                        onDelete={handleDeleteTransaction}
-                    />
-                )}
-                {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} />}
-                {activeTab === 'memos' && (
-                    <MemoSection
-                        memos={memos}
-                        onAdd={handleAddMemo}
-                        onUpdate={handleUpdateMemo}
-                        onDelete={handleDeleteMemo}
-                        onTogglePin={handleTogglePin}
-                        externalAddTrigger={memoAddTrigger}
+                        onTransactionEdit={(t) => { setEditingTransaction(t); setShowModal(true) }}
+                        onTransactionDelete={handleDeleteTransaction}
+                        onMemoAdd={handleAddMemo}
+                        onMemoUpdate={handleUpdateMemo}
+                        onMemoDelete={handleDeleteMemo}
+                        onMemoTogglePin={handleTogglePin}
                     />
                 )}
                 {activeTab === 'stocks' && (
-                    <StockTradeList
-                        trades={stockTrades}
-                        onEdit={(t) => { setEditingTrade(t); setShowStockModal(true) }}
-                        onDelete={handleDeleteStockTrade}
+                    <StocksWorkspace
+                        stockSubTab={stockSubTab}
+                        stockTrades={stockTrades}
+                        stockWatchlist={stockWatchlist}
+                        onStockSubTabChange={setStockSubTab}
+                        onTradeEdit={(t) => { setEditingTrade(t); setShowStockModal(true) }}
+                        onTradeDelete={handleDeleteStockTrade}
+                        onWatchAdd={handleAddWatchTicker}
+                        onWatchRemove={handleRemoveWatchTicker}
                     />
                 )}
             </main>
@@ -418,7 +502,7 @@ export default function App() {
                     {showFAB && (
                         <button
                             onClick={() => {
-                                if (activeTab === 'stocks') {
+                                if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
                                     setEditingTrade(null)
                                     setShowStockModal(true)
                                 } else if (activeTab === 'memos') {
@@ -458,19 +542,14 @@ export default function App() {
                 </div>
             )}
 
-            <nav className="fixed bottom-0 left-0 right-0 z-40">
-                <div className="max-w-lg mx-auto bg-[#0D0F14] border-t border-white/6">
-                    <div className="flex pb-safe">
-                        {visibleTabs.map(({ id, label, Icon }) => (
-                            <button key={id} onClick={() => setTab(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors relative">
-                                {activeTab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#3D8EF8] rounded-full" />}
-                                <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={activeTab === id ? 'text-[#3D8EF8]' : 'text-white/40'} />
-                                <span className={`text-[10px] font-bold ${activeTab === id ? 'text-[#3D8EF8]' : 'text-white/40'}`}>{label}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </nav>
+            <BottomNavigation
+                activeMode={activeMode}
+                ledgerTabs={visibleTabs}
+                activeTab={activeTab}
+                stockSubTab={stockSubTab}
+                onLedgerTabChange={setTab}
+                onStockSubTabChange={setStockSubTab}
+            />
 
             {toastMsg && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm pointer-events-none">
@@ -512,6 +591,10 @@ export default function App() {
                     onSave={handleSaveCategories}
                     onClose={() => setShowCategoryModal(false)}
                 />
+            )}
+
+            {showMergeModal && (
+                <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} />
             )}
 
             {showAuthModal && (
