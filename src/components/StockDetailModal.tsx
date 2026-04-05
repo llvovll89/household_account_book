@@ -1,18 +1,19 @@
 import { useMemo } from 'react'
 import { ChevronLeft, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
-import type { StockTrade, StockHolding } from '../types'
-import { fmt, fmtQty, formatDate } from '../lib/format'
+import type { StockTrade, StockHolding, StockQuote } from '../types'
+import { fmt, fmtQty, fmtPrice, formatDate } from '../lib/format'
 
 interface Props {
   ticker: string
   trades: StockTrade[]
   holding: StockHolding | null
+  quote?: StockQuote | null
   onEdit: (trade: StockTrade) => void
   onDelete: (id: string) => void
   onClose: () => void
 }
 
-export default function StockDetailModal({ ticker, trades, holding, onEdit, onDelete, onClose }: Props) {
+export default function StockDetailModal({ ticker, trades, holding, quote = null, onEdit, onDelete, onClose }: Props) {
   const sorted = useMemo(
     () => [...trades].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
     [trades]
@@ -54,6 +55,58 @@ export default function StockDetailModal({ ticker, trades, holding, onEdit, onDe
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
+        {/* 실시간 시세 카드 */}
+        {quote && (
+          <div className="bg-[#1E2236] rounded-3xl p-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold text-[#4E5968] mb-1 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#2ACF6A] animate-pulse inline-block" />
+                  실시간 시세
+                </p>
+                <p className="text-[28px] font-extrabold text-white num leading-none">
+                  {fmtPrice(quote.currentPrice, quote.currency)}
+                </p>
+              </div>
+              <div className={`text-right ${quote.changePct >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                <p className="text-[18px] font-bold num">
+                  {quote.changePct >= 0 ? '▲' : '▼'} {Math.abs(quote.changePct).toFixed(2)}%
+                </p>
+                <p className="text-[13px] font-semibold num">
+                  {quote.change >= 0 ? '+' : ''}{fmtPrice(quote.change, quote.currency)}
+                </p>
+              </div>
+            </div>
+            {holding && (
+              <div className="mt-4 pt-3 border-t border-white/[0.06] grid grid-cols-2 gap-3">
+                {(() => {
+                  const marketValue = quote.currentPrice * holding.quantity
+                  const unrealizedPnL = marketValue - holding.totalCost
+                  const unrealizedPct = holding.totalCost > 0 ? (unrealizedPnL / holding.totalCost) * 100 : 0
+                  const color = unrealizedPnL > 0 ? 'text-[#2ACF6A]' : unrealizedPnL < 0 ? 'text-[#F25260]' : 'text-[#8B95A1]'
+                  return (
+                    <>
+                      <div>
+                        <p className="text-[10px] text-[#4E5968] mb-0.5">평가금액</p>
+                        <p className="text-[15px] font-bold text-white num">{fmtPrice(marketValue, quote.currency)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[#4E5968] mb-0.5">평가손익</p>
+                        <p className={`text-[15px] font-bold num ${color}`}>
+                          {unrealizedPnL >= 0 ? '+' : ''}{fmtPrice(unrealizedPnL, quote.currency)}
+                        </p>
+                        <p className={`text-[10px] font-semibold ${color}`}>
+                          ({unrealizedPct >= 0 ? '+' : ''}{unrealizedPct.toFixed(2)}%)
+                        </p>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 보유 현황 카드 */}
         {holding ? (
           <div className="bg-[#1E2236] rounded-3xl p-5">

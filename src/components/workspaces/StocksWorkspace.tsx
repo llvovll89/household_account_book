@@ -1,5 +1,9 @@
+import { useMemo } from 'react'
+import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import type { StockTrade } from '../../types'
 import type { StockSubTab } from '../../types/navigation'
+import { calcHoldings } from '../../lib/stockCalc'
+import useStockPrice from '../../hooks/useStockPrice'
 import StockPortfolio from '../StockPortfolio'
 import StockWatchlist from '../StockWatchlist'
 import StockTradeList from '../StockTradeList'
@@ -26,8 +30,22 @@ export default function StocksWorkspace({
   onWatchAdd,
   onWatchRemove,
 }: Props) {
+  // 보유 종목 + 관심 종목 티커 전체 수집 (중복 제거)
+  const allTickers = useMemo(() => {
+    const holdingTickers = calcHoldings(stockTrades).map(h => h.ticker)
+    return [...new Set([...holdingTickers, ...stockWatchlist])]
+  }, [stockTrades, stockWatchlist])
+
+  const { prices, loading, error, lastUpdated, refresh } = useStockPrice(allTickers)
+
+  // 마지막 업데이트 시각 포맷 (HH:MM:SS)
+  const lastUpdatedStr = lastUpdated
+    ? new Date(lastUpdated).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : null
+
   return (
     <>
+      {/* 탭 네비게이션 */}
       <div className="bg-[#1E2236] rounded-2xl p-1 flex gap-1 mb-3">
         <button
           onClick={() => onStockSubTabChange('portfolio')}
@@ -55,9 +73,44 @@ export default function StocksWorkspace({
         </button>
       </div>
 
+      {/* 실시간 시세 상태 바 */}
+      {allTickers.length > 0 && (
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex items-center gap-1.5">
+            {error ? (
+              <WifiOff size={11} className="text-[#F25260]" />
+            ) : loading ? (
+              <div className="w-2 h-2 rounded-full bg-[#F5BE3A] animate-pulse" />
+            ) : (
+              <Wifi size={11} className="text-[#2ACF6A]" />
+            )}
+            <span className="text-[10px] text-[#4E5968]">
+              {error
+                ? '시세 오류'
+                : loading
+                ? '시세 불러오는 중...'
+                : lastUpdatedStr
+                ? `${lastUpdatedStr} 업데이트`
+                : '시세 대기 중'}
+            </span>
+          </div>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="flex items-center gap-1 text-[10px] text-[#4E5968] hover:text-white transition-colors disabled:opacity-40"
+            aria-label="시세 새로고침"
+          >
+            <RefreshCw size={10} className={loading ? 'animate-spin' : ''} />
+            새로고침
+          </button>
+        </div>
+      )}
+
+      {/* 서브 탭 컨텐츠 */}
       {stockSubTab === 'portfolio' && (
         <StockPortfolio
           trades={stockTrades}
+          prices={prices}
           onEdit={onTradeEdit}
           onDelete={onTradeDelete}
         />
@@ -66,6 +119,7 @@ export default function StocksWorkspace({
         <StockWatchlist
           trades={stockTrades}
           watchlist={stockWatchlist}
+          prices={prices}
           onAdd={onWatchAdd}
           onRemove={onWatchRemove}
         />

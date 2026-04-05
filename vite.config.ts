@@ -5,6 +5,16 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      // 개발환경 CORS 우회: /yf-api/* → https://query1.finance.yahoo.com/*
+      '/yf-api': {
+        target: 'https://query1.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yf-api/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

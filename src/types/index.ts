@@ -89,6 +89,19 @@ export interface StockHolding {
   totalFee: number
 }
 
+export interface StockQuote {
+  symbol: string
+  ticker: string
+  currentPrice: number
+  prevClose: number
+  change: number
+  changePct: number
+  currency: string
+  marketState: string
+  shortName: string
+  lastUpdated: number
+}
+
 export interface MonthlyDataPoint {
   ym: string
   label: string

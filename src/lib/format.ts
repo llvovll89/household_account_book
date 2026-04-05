@@ -29,6 +29,13 @@ export function formatDate(dateStr: string): string {
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${wd})`
 }
 
+/** 통화별 가격 포맷 (KRW: 정수 + 원, USD: $ + 소수점 2자리) */
+export function fmtPrice(price: number, currency: string): string {
+  if (currency === 'KRW') return `${Math.round(price).toLocaleString('ko-KR')}원`
+  if (currency === 'USD') return `$${price.toFixed(2)}`
+  return `${price.toFixed(2)} ${currency}`
+}
+
 /** 고유 ID 생성 */
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
