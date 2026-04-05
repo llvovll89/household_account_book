@@ -43,6 +43,81 @@ function buildUrl(yahoPath: string): string {
   return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${yahoPath}`)}`
 }
 
+// ─── 차트 데이터 ────────────────────────────────────────────────
+
+export type ChartRange = '1d' | '5d' | '1mo' | '3mo' | '1y'
+
+export const RANGE_CONFIG: Record<ChartRange, { interval: string; pollMs: number }> = {
+  '1d':  { interval: '2m',  pollMs: 60_000 },
+  '5d':  { interval: '5m',  pollMs: 120_000 },
+  '1mo': { interval: '1h',  pollMs: 300_000 },
+  '3mo': { interval: '1d',  pollMs: 300_000 },
+  '1y':  { interval: '1d',  pollMs: 300_000 },
+}
+
+export interface ChartPoint {
+  timestamp: number
+  time: string   // X축 표시용 포맷
+  price: number
+}
+
+export interface StockChartData {
+  symbol: string
+  currency: string
+  prevClose: number
+  points: ChartPoint[]
+}
+
+function formatTimestamp(tsSeconds: number, range: ChartRange): string {
+  const d = new Date(tsSeconds * 1000)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  if (range === '1d') return `${hh}:${mm}`
+  if (range === '5d') return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`
+  return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
+/**
+ * Yahoo Finance v8 Chart API로 가격 히스토리를 가져옴
+ */
+export async function fetchChart(ticker: string, range: ChartRange): Promise<StockChartData> {
+  const symbol = toYahooSymbol(ticker)
+  const { interval } = RANGE_CONFIG[range]
+
+  const path =
+    `/v8/finance/chart/${encodeURIComponent(symbol)}` +
+    `?interval=${interval}&range=${range}&includePrePost=false`
+
+  const res = await fetch(buildUrl(path), {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!res.ok) throw new Error(`차트 데이터 오류: HTTP ${res.status}`)
+
+  const data: any = await res.json()
+  const result = data?.chart?.result?.[0]
+  if (!result) throw new Error('차트 데이터 없음')
+
+  const timestamps: number[] = result.timestamp ?? []
+  const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? []
+  const currency: string = result.meta?.currency ?? 'KRW'
+  const prevClose: number =
+    result.meta?.chartPreviousClose ?? result.meta?.previousClose ?? 0
+
+  const points: ChartPoint[] = timestamps
+    .map((ts, i) => ({ ts, close: closes[i] }))
+    .filter(({ close }) => close != null && !isNaN(close as number))
+    .map(({ ts, close }) => ({
+      timestamp: ts,
+      time: formatTimestamp(ts, range),
+      price: close as number,
+    }))
+
+  return { symbol, currency, prevClose, points }
+}
+
+// ─── Quote 데이터 ────────────────────────────────────────────────
+
 /**
  * Yahoo Finance에서 주어진 티커 목록의 시세를 가져옴
  * @returns ticker → StockQuote 맵 (조회 실패 티커는 포함되지 않음)

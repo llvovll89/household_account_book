@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ChevronLeft, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-react'
 import type { StockTrade, StockHolding, StockQuote } from '../types'
 import { fmt, fmtQty, fmtPrice, formatDate } from '../lib/format'
+import StockPriceChart from './StockPriceChart'
 
 interface Props {
   ticker: string
@@ -106,6 +107,9 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
             )}
           </div>
         )}
+
+        {/* 실시간 가격 차트 */}
+        <StockPriceChart ticker={ticker} />
 
         {/* 보유 현황 카드 */}
         {holding ? (
