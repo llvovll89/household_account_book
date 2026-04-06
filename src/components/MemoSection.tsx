@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pin, Pencil, Trash2, X, Check, ChevronDown, Calendar, CalendarDays, LayoutGrid } from 'lucide-react'
+import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid } from 'lucide-react'
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
   memos: Memo[]
@@ -437,14 +438,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
                   <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">날짜</p>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={12} className="text-[#4E5968] shrink-0" />
-                    <input
-                      type="date" value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="flex-1 min-w-0 bg-transparent text-[13px] font-semibold text-white focus:outline-none"
-                    />
-                  </div>
+                  <FancyDatePicker value={date} onChange={setDate} size="sm" />
                 </div>
 
                 <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">

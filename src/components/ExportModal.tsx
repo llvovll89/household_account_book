@@ -3,6 +3,7 @@ import { X, Download, FileText } from 'lucide-react'
 import type { Transaction } from '../types'
 import { exportTransactionsCSV } from '../lib/exportCsv'
 import { showToast } from '../lib/toast'
+import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
   transactions: Transaction[]
@@ -80,7 +81,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/[0.06]">
+      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -118,20 +119,20 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
-                <input
-                  type="date"
+                <FancyDatePicker
                   value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className="w-full bg-transparent text-sm font-semibold text-white focus:outline-none"
+                  onChange={setCustomFrom}
+                  max={customTo}
+                  size="sm"
                 />
               </div>
               <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
-                <input
-                  type="date"
+                <FancyDatePicker
                   value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className="w-full bg-transparent text-sm font-semibold text-white focus:outline-none"
+                  onChange={setCustomTo}
+                  min={customFrom}
+                  size="sm"
                 />
               </div>
             </div>

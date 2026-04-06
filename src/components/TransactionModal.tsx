@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, ChevronDown } from 'lucide-react'
 import type { Transaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
   transaction?: Transaction | null
@@ -56,7 +57,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/[0.06]">
+      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -112,12 +113,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             {/* 날짜 */}
             <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">날짜</p>
-              <input
-                type="date" value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                className="w-full bg-transparent text-[14px] font-semibold text-white focus:outline-none"
-              />
+              <FancyDatePicker value={date} onChange={setDate} />
             </div>
 
             {/* 카테고리 */}

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "react-datepicker/dist/react-datepicker.css";
 
 * {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
@@ -74,6 +75,88 @@ button, input {
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.6);
   cursor: pointer;
+}
+
+/* react-datepicker 커스텀 테마 */
+.fancy-date-popper {
+  z-index: 80;
+}
+
+.fancy-date-calendar {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  background: linear-gradient(180deg, #171b2a 0%, #121723 100%) !important;
+  color: #f1f3f6 !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif !important;
+}
+
+.fancy-date-calendar .react-datepicker__header {
+  background: linear-gradient(180deg, #171b2a 0%, #141a27 100%) !important;
+  border-bottom: 0 !important;
+  padding-top: 0 !important;
+}
+
+.fancy-date-calendar .react-datepicker__current-month {
+  color: #f1f3f6 !important;
+}
+
+.fancy-date-calendar .react-datepicker__month {
+  margin: 0.5rem 0.5rem 0.65rem;
+}
+
+.fancy-date-calendar .react-datepicker__day-names {
+  margin-top: 0.4rem;
+}
+
+.fancy-date-calendar .react-datepicker__day-name {
+  color: #8b95a1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fancy-date-calendar .react-datepicker__day,
+.fancy-date-calendar .react-datepicker__day-name {
+  width: 2rem;
+  line-height: 2rem;
+  margin: 0.12rem;
+}
+
+.fancy-date-calendar .react-datepicker__day {
+  border-radius: 10px;
+  font-size: 12px;
+  color: #d9deea;
+  transition: all 0.12s ease;
+}
+
+.fancy-date-calendar .react-datepicker__day:hover {
+  background: rgba(61, 142, 248, 0.24);
+  color: #fff;
+}
+
+.fancy-date-calendar .react-datepicker__day--keyboard-selected {
+  background: rgba(61, 142, 248, 0.3);
+  color: #fff;
+}
+
+.fancy-date-calendar .react-datepicker__day--selected,
+.fancy-date-calendar .react-datepicker__day--in-range {
+  background: #3d8ef8;
+  color: #fff;
+}
+
+.fancy-date-calendar .react-datepicker__day--today {
+  border: 1px solid rgba(61, 142, 248, 0.6);
+  font-weight: 800;
+}
+
+.fancy-date-calendar .react-datepicker__day--outside-month {
+  color: #5d6677;
+}
+
+.fancy-date-calendar .react-datepicker__triangle {
+  display: none;
 }
 
 /* select 스타일 */
