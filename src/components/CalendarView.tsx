@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, X } from 'lucide-react'
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt } from '../lib/format'
@@ -57,6 +57,10 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
     const d = new Date(date)
     const days = ['일', '월', '화', '수', '목', '금', '토']
     return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`
+  }
+
+  function closeModal() {
+    setSelectedDate(null)
   }
 
   return (
@@ -145,80 +149,100 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
         </div>
       </div>
 
-      {/* 선택된 날짜 내역 */}
+      {/* 선택된 날짜 내역 모달 */}
       {selectedDate && (
-        <div className="bg-[#1E2236] rounded-3xl overflow-hidden tab-content">
-          <div className="px-5 pt-4 pb-3 border-b border-white/[0.05]">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
-              {selectedTx.length > 0 && (
-                <span className={`text-sm font-bold num ${
-                  selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0) >= 0
-                    ? 'text-[#3D8EF8]' : 'text-[#F25260]'
-                }`}>
-                  {(() => {
-                    const net = selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0)
-                    return `${net >= 0 ? '+' : ''}${fmt(net)}원`
-                  })()}
-                </span>
-              )}
-            </div>
-          </div>
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <button
+            onClick={closeModal}
+            className="absolute inset-0 bg-black/60"
+            aria-label="날짜 내역 닫기"
+          />
 
-          {selectedTx.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm text-[#4E5968]">이 날은 내역이 없어요</p>
-            </div>
-          ) : (
-            <div>
-              {selectedTx.map((t, idx) => {
-                const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
-                return (
-                  <div
-                    key={t.id}
-                    className={`flex items-center gap-3 px-5 py-3.5 group ${
-                      idx < selectedTx.length - 1 ? 'border-b border-white/[0.04]' : ''
-                    }`}
+          <div className="relative w-full sm:max-w-lg max-h-[82vh] bg-[#1E2236] rounded-t-3xl sm:rounded-3xl overflow-hidden tab-content">
+            <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] sticky top-0 bg-[#1E2236] z-10">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
+                <div className="flex items-center gap-2">
+                  {selectedTx.length > 0 && (
+                    <span className={`text-sm font-bold num ${
+                      selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0) >= 0
+                        ? 'text-[#3D8EF8]' : 'text-[#F25260]'
+                    }`}>
+                      {(() => {
+                        const net = selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0)
+                        return `${net >= 0 ? '+' : ''}${fmt(net)}원`
+                      })()}
+                    </span>
+                  )}
+                  <button
+                    onClick={closeModal}
+                    className="p-1.5 rounded-xl text-[#8B95A1] hover:text-white hover:bg-white/[0.06]"
+                    aria-label="닫기"
                   >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {selectedTx.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-[#4E5968]">이 날은 내역이 없어요</p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto max-h-[calc(82vh-56px)]">
+                {selectedTx.map((t, idx) => {
+                  const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                  return (
                     <div
-                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
-                      style={{ backgroundColor: color.bg }}
+                      key={t.id}
+                      className={`flex items-center gap-3 px-5 py-3.5 group ${
+                        idx < selectedTx.length - 1 ? 'border-b border-white/[0.04]' : ''
+                      }`}
                     >
-                      {CATEGORY_EMOJI[t.category] ?? '📦'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-white">{t.category}</p>
-                      {t.description && (
-                        <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span
-                        className="text-[14px] font-bold num"
-                        style={{ color: t.type === 'income' ? '#2ACF6A' : '#F1F3F6' }}
+                      <div
+                        className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
+                        style={{ backgroundColor: color.bg }}
                       >
-                        {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
-                      </span>
-                      <div className="flex gap-0.5 ml-1">
-                        <button
-                          onClick={() => onEdit(t)}
-                          className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
+                        {CATEGORY_EMOJI[t.category] ?? '📦'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-semibold text-white">{t.category}</p>
+                        {t.description && (
+                          <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span
+                          className="text-[14px] font-bold num"
+                          style={{ color: t.type === 'income' ? '#2ACF6A' : '#F1F3F6' }}
                         >
-                          <Pencil size={12} />
-                        </button>
-                        <button
-                          onClick={() => onDelete(t.id)}
-                          className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                          {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
+                        </span>
+                        <div className="flex gap-0.5 ml-1">
+                          <button
+                            onClick={() => {
+                              closeModal()
+                              onEdit(t)
+                            }}
+                            className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => onDelete(t.id)}
+                            className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
