@@ -4,6 +4,7 @@ import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
+import FancyDatePicker from './FancyDatePicker'
 import { fmt } from '../lib/format'
 
 interface Props {
@@ -16,17 +17,60 @@ interface Props {
 type ViewMode = 'list' | 'calendar'
 
 type FilterType = 'all' | 'income' | 'expense'
+type PeriodMode = 'day' | 'week' | 'month'
 
 export default function TransactionList({ transactions, yearMonth, onEdit, onDelete }: Props) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showExport, setShowExport] = useState(false)
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month')
+  const [baseDate, setBaseDate] = useState(`${yearMonth}-01`)
+
+  const monthTx = useMemo(
+    () => transactions.filter((t) => t.date.startsWith(yearMonth)),
+    [transactions, yearMonth]
+  )
+
+  const latestMonthDate = useMemo(() => {
+    if (monthTx.length === 0) return `${yearMonth}-01`
+    return monthTx.reduce((latest, t) => (t.date > latest ? t.date : latest), monthTx[0].date)
+  }, [monthTx, yearMonth])
+
+  const normalizedBaseDate = useMemo(() => {
+    const [y, m] = yearMonth.split('-').map(Number)
+    const defaultDate = `${yearMonth}-01`
+    if (!baseDate || !baseDate.startsWith(yearMonth)) return latestMonthDate || defaultDate
+
+    const day = Number(baseDate.slice(8, 10))
+    const daysInMonth = new Date(y, m, 0).getDate()
+    const safeDay = Number.isFinite(day) ? Math.min(Math.max(day, 1), daysInMonth) : 1
+    return `${yearMonth}-${String(safeDay).padStart(2, '0')}`
+  }, [baseDate, yearMonth, latestMonthDate])
+
+  const weekRange = useMemo(() => {
+    const d = new Date(normalizedBaseDate)
+    const start = new Date(d)
+    start.setDate(d.getDate() - d.getDay())
+    const end = new Date(start)
+    end.setDate(start.getDate() + 6)
+    const toYmd = (date: Date) => date.toISOString().slice(0, 10)
+    return { start: toYmd(start), end: toYmd(end) }
+  }, [normalizedBaseDate])
+
+  const monthLastDate = useMemo(() => {
+    const [y, m] = yearMonth.split('-').map(Number)
+    return `${yearMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+  }, [yearMonth])
 
   const monthly = useMemo(
     () =>
-      transactions
-        .filter((t) => t.date.startsWith(yearMonth))
+      monthTx
+        .filter((t) => {
+          if (periodMode === 'day') return t.date === normalizedBaseDate
+          if (periodMode === 'week') return t.date >= weekRange.start && t.date <= weekRange.end
+          return true
+        })
         .filter((t) => filter === 'all' || t.type === filter)
         .filter((t) =>
           !search ||
@@ -34,7 +78,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           t.description.toLowerCase().includes(search.toLowerCase())
         )
         .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
-    [transactions, yearMonth, filter, search]
+    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, search]
   )
 
   const grouped = useMemo(() => {
@@ -61,6 +105,12 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
     const inc = list.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
     const exp = list.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     return inc - exp
+  }
+
+  function formatWeekRangeLabel(startDate: string, endDate: string) {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`
   }
 
   return (
@@ -105,6 +155,50 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
 
       {/* 목록 뷰 */}
       {viewMode === 'list' && <>
+
+      <div className="bg-[#1E2236] rounded-2xl p-2 space-y-2">
+        <div className="flex gap-1">
+          {([
+            { key: 'day', label: '일' },
+            { key: 'week', label: '주' },
+            { key: 'month', label: '월' },
+          ] as { key: PeriodMode; label: string }[]).map((mode) => (
+            <button
+              key={mode.key}
+              onClick={() => {
+                setPeriodMode(mode.key)
+                setBaseDate(latestMonthDate)
+              }}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                periodMode === mode.key
+                  ? 'bg-[#3D8EF8] text-white'
+                  : 'text-[#4E5968] hover:text-[#8B95A1]'
+              }`}
+            >
+              {mode.label} 단위
+            </button>
+          ))}
+        </div>
+
+        {periodMode !== 'month' && (
+          <div className="flex items-center justify-between gap-2 px-1">
+            <div className="w-48 shrink-0">
+              <FancyDatePicker
+                value={normalizedBaseDate}
+                onChange={setBaseDate}
+                min={`${yearMonth}-01`}
+                max={monthLastDate}
+                size="sm"
+              />
+            </div>
+            {periodMode === 'day' ? (
+              <span className="text-xs text-[#8B95A1] font-semibold">선택한 하루만 표시</span>
+            ) : (
+              <span className="text-xs text-[#8B95A1] font-semibold">{formatWeekRangeLabel(weekRange.start, weekRange.end)}</span>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 검색 */}
       <div className="relative">
@@ -167,7 +261,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                     <div
                       key={t.id}
                       className={`flex items-center gap-3 px-5 py-3.5 group ${
-                        idx < list.length - 1 ? 'border-b border-white/[0.04]' : ''
+                        idx < list.length - 1 ? 'border-b border-white/4' : ''
                       }`}
                     >
                       <div
