@@ -12,6 +12,12 @@ interface Props {
   customIncomeCategories?: string[]
 }
 
+function parseHashtags(text: string): string[] {
+  const matches = text.match(/#([^\s#]+)/g)
+  if (!matches) return []
+  return [...new Set(matches.map((m) => m.slice(1)))]
+}
+
 export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [] }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
@@ -19,6 +25,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+
+  const tags = parseHashtags(description)
 
   const categories = type === 'income'
     ? [...INCOME_CATEGORIES, ...customIncomeCategories]
@@ -42,12 +50,21 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     e.preventDefault()
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return
-    onSave({ type, amount: parsed, category, description, date })
+    onSave({ type, amount: parsed, category, description, tags, date })
   }
 
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
     setAmount(digits ? Number(digits).toLocaleString() : '')
+  }
+
+  function removeTag(tag: string) {
+    // Remove the #tag from description
+    const newDesc = description
+      .replace(new RegExp(`#${tag}(?=\\s|$)`, 'g'), '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    setDescription(newDesc)
   }
 
   const color = CATEGORY_COLOR[category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
@@ -138,15 +155,37 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
           </div>
 
-          {/* 설명 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-4">
-            <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">설명 (선택)</p>
+          {/* 설명 + 해시태그 */}
+          <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
+            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
+              설명 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
+            </p>
             <input
               type="text" value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="어디서 사용했나요?"
+              placeholder="어디서 사용했나요? (예: 점심 #식비 #카페)"
               className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none"
             />
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
+                  >
+                    #{tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      aria-label={`#${tag} 태그 삭제`}
+                      className="hover:text-white transition-colors"
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <button type="submit"
