@@ -110,7 +110,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
     const daysRemaining = Math.max(1, daysInMonth - todayNum + 1)
     const dailyBudget = remaining > 0 ? Math.floor(remaining / daysRemaining) : 0
 
-    return { daysLeft, remaining, dailyBudget }
+    return { daysLeft, remaining, dailyBudget, openingBalance, income, expense, daysRemaining }
   }, [payday, transactions, yearMonth])
 
   const monthly = useMemo(
@@ -391,20 +391,44 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
             </button>
           </div>
           {paydayInfo.remaining > 0 && (
-            <div className="flex items-center gap-2 mt-1">
-              <div className="h-px flex-1 bg-white/5" />
-              <span className="text-xs text-[#4E5968]">오늘 쓸 수 있는 금액</span>
-              <div className="h-px flex-1 bg-white/5" />
-            </div>
+            <>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="h-px flex-1 bg-white/5" />
+                <span className="text-xs text-[#4E5968]">오늘 쓸 수 있는 금액</span>
+                <div className="h-px flex-1 bg-white/5" />
+              </div>
+              {paydayInfo.dailyBudget > 0 && (
+                <p className="text-center text-[22px] font-extrabold text-[#3D8EF8] num mt-1.5">
+                  {paydayInfo.dailyBudget.toLocaleString()}
+                  <span className="text-sm font-semibold text-[#4E5968] ml-1">원</span>
+                </p>
+              )}
+              <div className="mt-2 rounded-xl bg-[#252A3F] px-3 py-2 space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#4E5968]">이월잔액</span>
+                  <span className={`num font-semibold ${paydayInfo.openingBalance >= 0 ? 'text-[#8B95A1]' : 'text-[#F25260]'}`}>
+                    {paydayInfo.openingBalance >= 0 ? '+' : ''}{paydayInfo.openingBalance.toLocaleString()}원
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#4E5968]">이번 달 수입</span>
+                  <span className="num font-semibold text-[#2ACF6A]">+{paydayInfo.income.toLocaleString()}원</span>
+                </div>
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#4E5968]">이번 달 지출</span>
+                  <span className="num font-semibold text-[#F25260]">-{paydayInfo.expense.toLocaleString()}원</span>
+                </div>
+                <div className="h-px bg-white/5 my-0.5" />
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#4E5968]">잔액 ÷ 남은 {paydayInfo.daysRemaining}일</span>
+                  <span className="num font-semibold text-[#8B95A1]">{paydayInfo.remaining.toLocaleString()}원</span>
+                </div>
+              </div>
+            </>
           )}
-          {paydayInfo.dailyBudget > 0 ? (
-            <p className="text-center text-[22px] font-extrabold text-[#3D8EF8] num mt-1.5">
-              {paydayInfo.dailyBudget.toLocaleString()}
-              <span className="text-sm font-semibold text-[#4E5968] ml-1">원</span>
-            </p>
-          ) : paydayInfo.remaining <= 0 ? (
+          {paydayInfo.remaining <= 0 && (
             <p className="text-center text-sm font-semibold text-[#F25260] mt-1.5">이번 달 예산을 초과했어요</p>
-          ) : null}
+          )}
         </div>
       )}
 
