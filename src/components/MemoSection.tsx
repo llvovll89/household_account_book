@@ -1,16 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid } from 'lucide-react'
+import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, CalendarRange, Plus } from 'lucide-react'
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
   memos: Memo[]
-  onAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
-  onUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
+  onAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
+  onUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onDelete: (id: string) => void
   onTogglePin: (id: string) => void
   externalAddTrigger?: number
+}
+
+type MemoQueueItem = {
+  title: string
+  content: string
+  amount?: number
+  transactionType?: TransactionType
+  category?: string
+  date: string
+  dateEnd?: string
 }
 
 function formatDate(ts: number) {
@@ -25,9 +35,12 @@ function formatDate(ts: number) {
     : `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')}`
 }
 
-function formatMemoDate(dateStr: string) {
+function formatMemoDate(dateStr: string, dateEndStr?: string) {
   const [, m, d] = dateStr.split('-')
-  return `${parseInt(m)}.${d}`
+  const start = `${parseInt(m)}.${d}`
+  if (!dateEndStr) return start
+  const [, em, ed] = dateEndStr.split('-')
+  return `${start}~${parseInt(em)}.${ed}`
 }
 
 // 다크 파스텔 배경
@@ -45,6 +58,23 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// 두 날짜 사이의 모든 YYYY-MM-DD 생성 (최대 366일)
+function dateRange(start: string, end: string): string[] {
+  const result: string[] = []
+  const s = new Date(start)
+  const e = new Date(end)
+  if (e < s) return [start]
+  const limit = 366
+  let count = 0
+  const cur = new Date(s)
+  while (cur <= e && count < limit) {
+    result.push(cur.toISOString().slice(0, 10))
+    cur.setDate(cur.getDate() + 1)
+    count++
+  }
+  return result
+}
+
 export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onTogglePin, externalAddTrigger = 0 }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [viewMode, setViewMode] = useState<'cards' | 'calendar'>('cards')
@@ -57,6 +87,9 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const [txType, setTxType] = useState<TransactionType>('expense')
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0])
   const [date, setDate] = useState(todayStr())
+  const [dateEnd, setDateEnd] = useState('')
+  const [showDateEnd, setShowDateEnd] = useState(false)
+  const [queue, setQueue] = useState<MemoQueueItem[]>([])
   const prevExternalAddTriggerRef = useRef(externalAddTrigger)
 
   const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
@@ -69,12 +102,16 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const memoByDate = useMemo(() => {
     const map = new Map<string, Memo[]>()
     for (const memo of memos) {
-      const key = memo.date ?? new Date(memo.updatedAt).toISOString().slice(0, 10)
-      const prev = map.get(key)
-      if (prev) {
-        prev.push(memo)
-      } else {
-        map.set(key, [memo])
+      const startKey = memo.date ?? new Date(memo.updatedAt).toISOString().slice(0, 10)
+      const keys = memo.dateEnd ? dateRange(startKey, memo.dateEnd) : [startKey]
+      for (const key of keys) {
+        const prev = map.get(key)
+        if (prev) {
+          // 중복 방지 (range로 인해 같은 메모가 여러 날짜에 등록)
+          if (!prev.find((m) => m.id === memo.id)) prev.push(memo)
+        } else {
+          map.set(key, [memo])
+        }
       }
     }
     for (const [, arr] of map) {
@@ -115,7 +152,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   function openNew() {
     setEditingId(null); setTitle(''); setContent('')
     setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
-    setDate(todayStr())
+    setDate(todayStr()); setDateEnd(''); setShowDateEnd(false)
+    setQueue([])
     setShowForm(true)
   }
 
@@ -133,6 +171,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     setTxType(m.transactionType ?? 'expense')
     setCategory(m.category ?? (m.transactionType === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]))
     setDate(m.date ?? todayStr())
+    if (m.dateEnd) { setDateEnd(m.dateEnd); setShowDateEnd(true) } else { setDateEnd(''); setShowDateEnd(false) }
+    setQueue([])
     setShowForm(true)
   }
 
@@ -146,25 +186,67 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     setCategory(t === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0])
   }
 
-  function handleSave() {
-    if (!title.trim() && !content.trim()) return
-    const parsedAmount = amountStr ? parseInt(amountStr.replace(/,/g, ''), 10) : undefined
-    const txTypeVal = parsedAmount ? txType : undefined
-    const categoryVal = category || undefined
-    if (editingId) {
-      onUpdate(editingId, title, content, parsedAmount, txTypeVal, categoryVal, date)
+  function toggleDateEnd() {
+    if (showDateEnd) {
+      setShowDateEnd(false)
+      setDateEnd('')
     } else {
-      onAdd(title, content, parsedAmount, txTypeVal, categoryVal, date)
+      setShowDateEnd(true)
+      setDateEnd(date)
     }
-    setShowForm(false); setTitle(''); setContent('')
+  }
+
+  function buildCurrentItem(): MemoQueueItem | null {
+    if (!title.trim() && !content.trim()) return null
+    const parsedAmount = amountStr ? parseInt(amountStr.replace(/,/g, ''), 10) : undefined
+    return {
+      title, content,
+      amount: parsedAmount,
+      transactionType: parsedAmount ? txType : undefined,
+      category: category || undefined,
+      date,
+      dateEnd: (showDateEnd && dateEnd) ? dateEnd : undefined,
+    }
+  }
+
+  function handleAddToQueue() {
+    const item = buildCurrentItem()
+    if (!item) return
+    setQueue((prev) => [...prev, item])
+    setTitle(''); setContent('')
     setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
-    setDate(todayStr()); setEditingId(null)
+    setDateEnd(''); setShowDateEnd(false)
+    // 날짜 유지
+  }
+
+  function handleSave() {
+    const current = buildCurrentItem()
+    const isEdit = !!editingId
+
+    if (isEdit) {
+      if (!current) return
+      onUpdate(editingId!, current.title, current.content, current.amount, current.transactionType, current.category, current.date, current.dateEnd)
+    } else {
+      const all = current ? [...queue, current] : queue
+      if (all.length === 0) return
+      for (const item of all) {
+        onAdd(item.title, item.content, item.amount, item.transactionType, item.category, item.date, item.dateEnd)
+      }
+    }
+
+    setShowForm(false); resetForm()
+  }
+
+  function resetForm() {
+    setTitle(''); setContent('')
+    setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
+    setDate(todayStr()); setDateEnd(''); setShowDateEnd(false)
+    setEditingId(null); setQueue([])
   }
 
   function handleCancel() {
-    setShowForm(false); setTitle(''); setContent('')
-    setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
-    setDate(todayStr()); setEditingId(null)
+    setShowForm(false)
+    resetForm()
   }
 
   const color = CATEGORY_COLOR[category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
@@ -261,7 +343,9 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
                   <span className="text-[10px] text-[#4E5968]">
-                    {memo.date ? formatMemoDate(memo.date) : formatDate(memo.updatedAt)}
+                    {memo.date
+                      ? formatMemoDate(memo.date, memo.dateEnd)
+                      : formatDate(memo.updatedAt)}
                   </span>
                   <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onTogglePin(memo.id)}
@@ -374,6 +458,11 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                               <span className="text-[10px] font-bold" style={{ color: catColor.text }}>{memo.category}</span>
                             </div>
                           )}
+                          {memo.dateEnd && (
+                            <p className="text-[10px] text-[#3D8EF8] mt-1 font-semibold">
+                              {formatMemoDate(memo.date ?? selectedDate, memo.dateEnd)} 기간
+                            </p>
+                          )}
                         </div>
                         <div className="flex gap-1 shrink-0">
                           <button onClick={() => onTogglePin(memo.id)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
@@ -404,18 +493,46 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
-          <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
+          <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6">
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-9 h-1 bg-white/10 rounded-full" />
             </div>
 
             <div className="overflow-y-auto flex-1 px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between pt-1">
-                <h3 className="text-[17px] font-bold text-white">{editingId ? '메모 수정' : '새 메모'}</h3>
+                <div>
+                  <h3 className="text-[17px] font-bold text-white">{editingId ? '메모 수정' : '새 메모'}</h3>
+                  {queue.length > 0 && (
+                    <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">대기 중 {queue.length}건</p>
+                  )}
+                </div>
                 <button onClick={handleCancel} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
                   <X size={14} className="text-[#8B95A1]" />
                 </button>
               </div>
+
+              {/* 대기열 */}
+              {queue.length > 0 && (
+                <div className="bg-[#252A3F] rounded-2xl overflow-hidden">
+                  {queue.map((item, idx) => (
+                    <div key={idx} className={`flex items-center gap-2 px-3 py-2.5 ${idx < queue.length - 1 ? 'border-b border-white/4' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-white truncate">{item.title || '(제목 없음)'}</p>
+                        <p className="text-[10px] text-[#4E5968]">
+                          {item.dateEnd ? `${item.date}~${item.dateEnd}` : item.date}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setQueue((prev) => prev.filter((_, i) => i !== idx))}
+                        className="w-5 h-5 rounded-full bg-[#F25260]/15 flex items-center justify-center shrink-0"
+                        aria-label="대기열에서 제거"
+                      >
+                        <X size={10} className="text-[#F25260]" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
                 placeholder="제목" autoFocus
@@ -435,31 +552,81 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
               <div className="h-px bg-white/6" />
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">날짜</p>
-                  <FancyDatePicker value={date} onChange={setDate} size="sm" />
+              {/* 날짜 섹션 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide">날짜</p>
+                  <button
+                    type="button"
+                    onClick={toggleDateEnd}
+                    className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${
+                      showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#252A3F] text-[#4E5968] hover:text-[#8B95A1]'
+                    }`}
+                  >
+                    <CalendarRange size={10} />
+                    기간 설정
+                  </button>
                 </div>
 
-                <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
-                  <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
-                      style={{ backgroundColor: color.bg }}>
-                      {CATEGORY_EMOJI[category] ?? '📦'}
+                {!showDateEnd ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">날짜</p>
+                      <FancyDatePicker value={date} onChange={setDate} size="sm" />
                     </div>
-                    <div className="relative flex-1 min-w-0">
-                      <select value={category} onChange={(e) => setCategory(e.target.value)}
-                        className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
-                        style={{ color: color.text }}>
-                        {categories.map((c) => (
-                          <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
+                          style={{ backgroundColor: color.bg }}>
+                          {CATEGORY_EMOJI[category] ?? '📦'}
+                        </div>
+                        <div className="relative flex-1 min-w-0">
+                          <select value={category} onChange={(e) => setCategory(e.target.value)}
+                            className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
+                            style={{ color: color.text }}>
+                            {categories.map((c) => (
+                              <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                        <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">시작일</p>
+                        <FancyDatePicker value={date} onChange={setDate} size="sm" />
+                      </div>
+                      <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                        <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">종료일</p>
+                        <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} size="sm" />
+                      </div>
+                    </div>
+                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
+                          style={{ backgroundColor: color.bg }}>
+                          {CATEGORY_EMOJI[category] ?? '📦'}
+                        </div>
+                        <div className="relative flex-1 min-w-0">
+                          <select value={category} onChange={(e) => setCategory(e.target.value)}
+                            className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
+                            style={{ color: color.text }}>
+                            {categories.map((c) => (
+                              <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="h-px bg-white/6" />
@@ -501,9 +668,19 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#4E5968] bg-[#252A3F] hover:bg-[#2D3352] transition-colors">
                   <X size={13} /> 취소
                 </button>
+                {!editingId && (
+                  <button
+                    type="button"
+                    onClick={handleAddToQueue}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#8B95A1] bg-[#252A3F] hover:bg-[#2D3352] transition-colors"
+                  >
+                    <Plus size={13} /> 항목 추가
+                  </button>
+                )}
                 <button onClick={handleSave}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
-                  <Check size={13} /> 저장
+                  <Check size={13} />
+                  {editingId ? '저장' : queue.length > 0 ? `전체 저장 (${queue.length + ((title.trim() || content.trim()) ? 1 : 0)}건)` : '저장'}
                 </button>
               </div>
             </div>

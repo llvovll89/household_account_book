@@ -364,6 +364,11 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           {t.description && (
                             <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
                           )}
+                          {t.dateEnd && (
+                            <p className="text-[10px] text-[#3D8EF8] font-semibold mt-0.5">
+                              ~ {(() => { const [,m,d] = t.dateEnd.split('-'); return `${parseInt(m)}.${d}` })()}까지
+                            </p>
+                          )}
                           {tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {tags.map((tag) => (

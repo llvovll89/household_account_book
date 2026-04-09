@@ -139,11 +139,18 @@ export default function App() {
     }, [])
 
     const handleSaveTransaction = useCallback(
-        (data: Omit<Transaction, 'id' | 'createdAt'>) => {
+        (items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
             setTransactions((prev) => {
-                const next = editingTransaction
-                    ? prev.map((t) => t.id === editingTransaction.id ? { ...t, ...data } : t)
-                    : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
+                let next = prev
+                if (editingTransaction && items.length > 0) {
+                    // 수정 모드: 첫 번째 항목으로 수정
+                    next = prev.map((t) => t.id === editingTransaction.id ? { ...t, ...items[0] } : t)
+                    // 나머지는 신규 추가
+                    const extra = items.slice(1).map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))
+                    next = [...next, ...extra]
+                } else {
+                    next = [...prev, ...items.map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))]
+                }
                 persist(saveTransactions(next), '거래 저장에 실패했습니다.')
                 return next
             })
@@ -268,18 +275,18 @@ export default function App() {
         })
     }, [persist])
 
-    const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
+    const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
         setMemos((prev) => {
             const now = Date.now()
-            const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, amount, transactionType, category }]
+            const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, dateEnd, amount, transactionType, category }]
             persist(saveMemos(next), '메모 저장에 실패했습니다.')
             return next
         })
     }, [persist])
 
-    const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => {
+    const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
         setMemos((prev) => {
-            const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, amount, transactionType, category } : m)
+            const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, dateEnd, amount, transactionType, category } : m)
             persist(saveMemos(next), '메모 수정 저장에 실패했습니다.')
             return next
         })

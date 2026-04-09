@@ -21,8 +21,8 @@ interface Props {
   onOpenCategoryModal: () => void
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
-  onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
-  onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string) => void
+  onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
+  onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoDelete: (id: string) => void
   onMemoTogglePin: (id: string) => void
 }

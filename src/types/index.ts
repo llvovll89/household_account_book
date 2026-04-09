@@ -7,7 +7,8 @@ export interface Transaction {
   category: string
   description: string
   tags?: string[]
-  date: string // YYYY-MM-DD
+  date: string    // YYYY-MM-DD (시작일)
+  dateEnd?: string // YYYY-MM-DD (종료일, 선택)
   createdAt: number
 }
 
@@ -18,7 +19,8 @@ export interface Memo {
   pinned: boolean
   createdAt: number
   updatedAt: number
-  date?: string // YYYY-MM-DD (사용자 지정 날짜)
+  date?: string    // YYYY-MM-DD (시작일, 사용자 지정)
+  dateEnd?: string // YYYY-MM-DD (종료일, 선택)
   amount?: number
   transactionType?: TransactionType
   category?: string
