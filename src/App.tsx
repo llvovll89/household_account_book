@@ -135,7 +135,10 @@ export default function App() {
     const activeTab: Tab = activeMode === 'stocks' ? 'stocks' : (tab === 'stocks' ? 'home' : tab)
 
     const persist = useCallback((task: Promise<void>, failMsg: string) => {
-        void task.catch(() => showToast(failMsg))
+        void task.catch((e) => {
+            console.error('[persist]', failMsg, e)
+            showToast(failMsg)
+        })
     }, [])
 
     const handleSaveTransaction = useCallback(

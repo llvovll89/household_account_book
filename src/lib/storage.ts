@@ -307,27 +307,43 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
     }
   }
 
-  const remote = await loadRemoteState(getStorageUid())
-  return {
-    transactions: remote.transactions,
-    memos: remote.memos,
-    budgets: remote.budgets,
-    recurring: remote.recurring,
-    stockTrades: remote.stockTrades,
-    settings: remote.settings,
+  try {
+    const remote = await loadRemoteState(getStorageUid())
+    return {
+      transactions: remote.transactions,
+      memos: remote.memos,
+      budgets: remote.budgets,
+      recurring: remote.recurring,
+      stockTrades: remote.stockTrades,
+      settings: remote.settings,
+    }
+  } catch {
+    // Firebase 실패 시 로컬스토리지 백업으로 폴백
+    const local = localSnapshot()
+    return {
+      transactions: local.transactions,
+      memos: local.memos,
+      budgets: local.budgets,
+      recurring: local.recurring,
+      stockTrades: local.stockTrades,
+      settings: local.settings,
+    }
   }
 }
 
 export async function loadTransactions(): Promise<Transaction[]> {
   if (storageMode === 'local') return loadLocalTransactions()
-  return (await loadRemoteState(getStorageUid())).transactions
+  try {
+    return (await loadRemoteState(getStorageUid())).transactions
+  } catch {
+    return loadLocalTransactions()
+  }
 }
 
 export async function saveTransactions(t: Transaction[]): Promise<void> {
-  if (storageMode === 'local') {
-    safeSave(TRANSACTIONS_KEY, t)
-    return
-  }
+  // 항상 로컬스토리지에 저장 (Firebase 실패 시 폴백용)
+  safeSave(TRANSACTIONS_KEY, t)
+  if (storageMode === 'local') return
   await saveRemotePatch(getStorageUid(), { transactions: t })
 }
 
