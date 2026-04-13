@@ -48,7 +48,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06]">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06]">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -58,14 +58,14 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
             <h2 className="text-[18px] font-bold text-white">카테고리 관리</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">사용자 정의 카테고리 추가/삭제</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
 
         {/* 탭 */}
         <div className="flex gap-2 px-6 pb-3 shrink-0">
-          <div className="flex gap-1 bg-[#252A3F] p-1 rounded-xl w-full">
+          <div className="flex gap-1 bg-[#2C2C2E] p-1 rounded-xl w-full">
             <button
               onClick={() => { setActiveTab('expense'); setInputVal(''); setError('') }}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'}`}
@@ -87,7 +87,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
             <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide mb-2">기본 카테고리</p>
             <div className="flex flex-wrap gap-2">
               {base.map((cat) => (
-                <span key={cat} className="px-3 py-1.5 rounded-xl bg-[#252A3F] text-xs font-semibold text-[#8B95A1]">
+                <span key={cat} className="px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-xs font-semibold text-[#8B95A1]">
                   {cat}
                 </span>
               ))}
@@ -127,7 +127,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
                 onChange={(e) => { setInputVal(e.target.value); setError('') }}
                 onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 placeholder="새 카테고리 이름"
-                className={`flex-1 bg-[#252A3F] text-white text-sm font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 placeholder-[#4E5968] ${error ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
+                className={`flex-1 bg-[#2C2C2E] text-white text-sm font-semibold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 placeholder-[#4E5968] ${error ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
               />
               <button
                 onClick={handleAdd}
@@ -140,7 +140,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
           </div>
 
           {/* 삭제 방법 안내 */}
-          <div className="flex items-start gap-2 px-3 py-2.5 bg-[#252A3F] rounded-xl">
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-[#2C2C2E] rounded-xl">
             <Trash2 size={12} className="text-[#4E5968] mt-0.5 shrink-0" />
             <p className="text-[11px] text-[#4E5968]">
               기본 카테고리는 삭제할 수 없어요. 추가한 카테고리의 <span className="text-white">×</span> 버튼을 눌러 삭제하세요.

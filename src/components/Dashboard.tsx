@@ -190,7 +190,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
 
       {/* 정기 지출 미적용 알림 */}
       {pendingRecurring.length > 0 && (
-        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <RefreshCw size={14} className="text-[#3D8EF8]" />
@@ -211,7 +211,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
               const color = CATEGORY_COLOR[r.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
               return (
                 <div key={r.id} className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: color.bg }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: color.bg }}>
                     {CATEGORY_EMOJI[r.category] ?? '📦'}
                   </div>
                   <span className="text-sm text-[#8B95A1] flex-1">{r.category}</span>
@@ -237,16 +237,16 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
       )}
 
       {/* 메인 잔액 카드 */}
-      <div className="rounded-3xl p-6 bg-linear-to-br from-[#1E2A4A] to-[#162040] border border-[#3D8EF8]/20">
+      <div className="rounded-2xl p-6 bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)]">
         <p className="text-sm font-medium text-[#8B95A1] mb-1">이번 달 잔액</p>
-        <p className={`text-[38px] font-extrabold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+        <p className={`text-[40px] font-black leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
           {balance < 0 ? '-' : ''}{fmt(Math.abs(balance))}
           <span className="text-[20px] font-bold ml-1 text-[#8B95A1]">원</span>
         </p>
 
         <div className="mt-5 pt-4 border-t border-white/[0.07] grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-[#2ACF6A]/15 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-[#2ACF6A]/10 flex items-center justify-center">
               <TrendingUp size={14} className="text-[#2ACF6A]" />
             </div>
             <div>
@@ -255,7 +255,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-[#F25260]/15 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-[#F25260]/10 flex items-center justify-center">
               <TrendingDown size={14} className="text-[#F25260]" />
             </div>
             <div>
@@ -267,7 +267,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
 
         {income > 0 && (
           <div className="mt-4">
-            <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden">
+            <div className="h-1.5 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700"
                 style={{
@@ -319,17 +319,17 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
       )}
 
       {editingPayday && (
-        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5 space-y-2">
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5 space-y-2">
           <div className="flex gap-2 mb-1">
             <button
               onClick={() => { setPaydayInput(paydayInput === 'last' ? '' : paydayInput); setPaydayError('') }}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput !== 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput !== 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
             >
               날짜 입력
             </button>
             <button
               onClick={() => { setPaydayInput('last'); setPaydayError('') }}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput === 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput === 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
             >
               매월 말일
             </button>
@@ -337,7 +337,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-white shrink-0">매월</span>
             {paydayInput === 'last' ? (
-              <div className="flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm">
+              <div className="flex-1 bg-[#2C2C2E] text-white text-center font-bold rounded-xl px-3 py-2 text-sm">
                 말일
               </div>
             ) : (
@@ -348,7 +348,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                 onKeyDown={(e) => e.key === 'Enter' && handleSavePayday()}
                 placeholder="15"
                 autoFocus
-                className={`flex-1 bg-[#252A3F] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 ${paydayError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
+                className={`flex-1 bg-[#2C2C2E] text-white text-center font-bold rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 ${paydayError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-[#3D8EF8]/40'}`}
               />
             )}
             <span className="text-sm font-semibold text-white shrink-0">이 월급날</span>
@@ -357,7 +357,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
               저장
             </button>
             <button onClick={() => { setEditingPayday(false); setPaydayError('') }}
-              className="px-3 py-2 rounded-xl bg-[#252A3F] text-[#8B95A1] text-xs font-bold transition-colors shrink-0">
+              className="px-3 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold transition-colors shrink-0">
               취소
             </button>
           </div>
@@ -368,7 +368,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
       )}
 
       {payday && !editingPayday && paydayInfo && (
-        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
@@ -398,12 +398,12 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                 <div className="h-px flex-1 bg-white/5" />
               </div>
               {paydayInfo.dailyBudget > 0 && (
-                <p className="text-center text-[22px] font-extrabold text-[#3D8EF8] num mt-1.5">
+                <p className="text-center text-[24px] font-black text-[#3D8EF8] num mt-1.5">
                   {paydayInfo.dailyBudget.toLocaleString()}
                   <span className="text-sm font-semibold text-[#4E5968] ml-1">원</span>
                 </p>
               )}
-              <div className="mt-2 rounded-xl bg-[#252A3F] px-3 py-2 space-y-1">
+              <div className="mt-2 rounded-xl bg-[#2C2C2E] px-3 py-2 space-y-1">
                 <div className="flex justify-between text-[11px]">
                   <span className="text-[#4E5968]">이월잔액</span>
                   <span className={`num font-semibold ${paydayInfo.openingBalance >= 0 ? 'text-[#8B95A1]' : 'text-[#F25260]'}`}>
@@ -433,14 +433,14 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
       )}
 
       {/* 예산 관리 카드 */}
-      <div className="bg-[#1E2236] rounded-3xl p-5">
+      <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[15px] font-bold text-white">예산 관리</p>
           <div className="w-full grid grid-cols-2 gap-2 sm:w-auto sm:flex sm:gap-2">
             {budgets.length > 0 && (
               <button
                 onClick={() => setBudgetView(v => v === 'list' ? 'gauge' : 'list')}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
                 title={budgetView === 'list' ? '게이지 보기' : '목록 보기'}
               >
                 {budgetView === 'list' ? <Gauge size={12} /> : <LayoutList size={12} />}
@@ -448,21 +448,21 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
             )}
             <button
               onClick={onOpenCategoryModal}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <Tag size={11} />
               카테고리
             </button>
             <button
               onClick={() => setShowRecurring(true)}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <RefreshCw size={11} />
               정기
             </button>
             <button
               onClick={() => setShowBudget(true)}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#252A3F] text-[#8B95A1] hover:text-white hover:bg-[#2D3352] text-xs font-semibold transition-colors whitespace-nowrap"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
             >
               <Settings2 size={12} />
               설정
@@ -521,7 +521,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                       <span className="text-xs text-[#4E5968] num"> / {fmt(budget.limit)}원</span>
                     </div>
                   </div>
-                  <div className="h-1.5 bg-[#252A3F] rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
@@ -539,7 +539,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
 
       {/* 카테고리별 지출 */}
       {expenseByCategory.length > 0 && (
-        <div className="bg-[#1E2236] rounded-3xl p-5">
+        <div className="bg-[#1C1C1E] rounded-2xl p-5">
           <p className="text-[15px] font-bold text-white mb-4">이번 달 지출 TOP</p>
           <div className="space-y-3">
             {expenseByCategory.map(([cat, amt]) => {
@@ -548,7 +548,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
               return (
                 <div key={cat} className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
                     style={{ backgroundColor: color.bg }}
                   >
                     {CATEGORY_EMOJI[cat] ?? '📦'}
@@ -558,7 +558,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                       <span className="text-sm font-semibold text-white">{cat}</span>
                       <span className="text-sm font-bold text-white num">{fmt(amt)}원</span>
                     </div>
-                    <div className="h-1 bg-[#252A3F] rounded-full overflow-hidden">
+                    <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${pct}%`, backgroundColor: color.text }}
@@ -574,7 +574,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
       )}
 
       {monthly.length === 0 && (
-        <div className="bg-[#1E2236] rounded-3xl p-12 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
           <p className="text-5xl mb-4">💸</p>
           <p className="font-bold text-white text-[15px]">내역이 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">+ 버튼으로 첫 내역을 추가해보세요</p>

@@ -134,7 +134,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
   return (
     <div className="space-y-3 tab-content">
       {/* 요약 카드 */}
-      <div className="bg-[#1E2236] rounded-3xl p-5">
+      <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-2">저축 목표 현황</p>
         {goals.length === 0 ? (
           <p className="text-[#8B95A1] text-sm">목표를 추가해 저축을 시작해보세요</p>
@@ -153,7 +153,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
               </div>
             </div>
             {/* 전체 진행률 바 */}
-            <div className="h-2 bg-[#252A3F] rounded-full overflow-hidden">
+            <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
@@ -168,7 +168,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
 
       {/* 목표 목록 */}
       {goals.length === 0 ? (
-        <div className="bg-[#1E2236] rounded-3xl p-10 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center">
           <p className="text-4xl mb-3">🎯</p>
           <p className="font-bold text-white text-[15px]">저축 목표가 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">여행, 비상금, 내 집 마련 등 목표를 세워보세요</p>
@@ -184,7 +184,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
             const days = g.deadline ? daysUntil(g.deadline) : null
 
             return (
-              <div key={g.id} className="bg-[#1E2236] rounded-2xl p-4">
+              <div key={g.id} className="bg-[#1C1C1E] rounded-2xl p-4">
                 {/* 헤더 */}
                 <div className="flex items-start gap-3 mb-3">
                   <div
@@ -208,17 +208,17 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                     {g.memo && <p className="text-[10px] text-[#4E5968] mt-0.5 truncate">{g.memo}</p>}
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => openEdit(g)} className="w-7 h-7 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
+                    <button onClick={() => openEdit(g)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
                       <Pencil size={11} />
                     </button>
-                    <button onClick={() => handleDelete(g.id)} className="w-7 h-7 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
+                    <button onClick={() => handleDelete(g.id)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
                       <Trash2 size={11} />
                     </button>
                   </div>
                 </div>
 
                 {/* 진행률 바 */}
-                <div className="h-2.5 bg-[#252A3F] rounded-full overflow-hidden mb-2">
+                <div className="h-2.5 bg-[#2C2C2E] rounded-full overflow-hidden mb-2">
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${pct}%`, backgroundColor: done ? '#2ACF6A' : g.color }}
@@ -236,7 +236,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => { setDepositGoal(g); setDepositMode('sub'); setDepositStr('') }}
-                        className="w-8 h-8 rounded-xl bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                        className="w-8 h-8 rounded-xl bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                       >
                         <Minus size={13} />
                       </button>
@@ -265,11 +265,11 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
           <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{depositGoal.emoji} {depositGoal.name}</p>
-              <button onClick={() => setDepositGoal(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252A3F] text-[#8B95A1]">
+              <button onClick={() => setDepositGoal(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]">
                 <X size={16} />
               </button>
             </div>
-            <div className="flex bg-[#252A3F] rounded-xl overflow-hidden">
+            <div className="flex bg-[#2C2C2E] rounded-xl overflow-hidden">
               {(['add', 'sub'] as const).map(m => (
                 <button
                   key={m}
@@ -291,7 +291,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                 value={depositStr}
                 onChange={e => setDepositStr(e.target.value)}
                 placeholder="금액 입력"
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-3 text-lg font-bold text-white placeholder-[#4E5968] focus:outline-none num"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-3 text-lg font-bold text-white placeholder-[#4E5968] focus:outline-none num"
                 autoFocus
               />
             </div>
@@ -314,7 +314,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
           <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{editing ? '목표 수정' : '목표 추가'}</p>
-              <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252A3F] text-[#8B95A1]">
+              <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]">
                 <X size={16} />
               </button>
             </div>
@@ -327,7 +327,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                   <button
                     key={e}
                     onClick={() => setForm(f => ({ ...f, emoji: e }))}
-                    className={`w-10 h-10 rounded-xl text-xl transition-all ${form.emoji === e ? 'bg-[#3D8EF8]/20 ring-2 ring-[#3D8EF8]' : 'bg-[#252A3F]'}`}
+                    className={`w-10 h-10 rounded-xl text-xl transition-all ${form.emoji === e ? 'bg-[#3D8EF8]/20 ring-2 ring-[#3D8EF8]' : 'bg-[#2C2C2E]'}`}
                   >
                     {e}
                   </button>
@@ -363,7 +363,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="예: 제주도 여행, 비상금 500만원"
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
               />
               {errors.name && <p className="text-[10px] text-[#F25260] mt-1">{errors.name}</p>}
             </div>
@@ -378,7 +378,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                   value={targetStr}
                   onChange={e => setTargetStr(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
+                  className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5968] text-sm">원</span>
               </div>
@@ -395,7 +395,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                   value={currentStr}
                   onChange={e => setCurrentStr(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
+                  className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5968] text-sm">원</span>
               </div>
@@ -408,7 +408,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                 type="date"
                 value={form.deadline}
                 onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
                 style={{ colorScheme: 'dark' }}
               />
             </div>
@@ -421,7 +421,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                 value={form.memo}
                 onChange={e => setForm(f => ({ ...f, memo: e.target.value }))}
                 placeholder="예: 내년 여름 목표"
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
               />
             </div>
 

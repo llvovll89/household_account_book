@@ -67,7 +67,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
   return (
     <div className="space-y-3">
       {/* 요일 헤더 */}
-      <div className="bg-[#1E2236] rounded-3xl overflow-hidden">
+      <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
         <div className="grid grid-cols-7 border-b border-white/[0.05]">
           {WEEKDAYS.map((d, i) => (
             <div
@@ -159,8 +159,8 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
             aria-label="날짜 내역 닫기"
           />
 
-          <div className="relative w-full sm:max-w-lg max-h-[82vh] bg-[#1E2236] rounded-t-3xl sm:rounded-3xl overflow-hidden tab-content">
-            <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] sticky top-0 bg-[#1E2236] z-10">
+          <div className="relative w-full sm:max-w-lg max-h-[82vh] bg-[#1C1C1E] rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content">
+            <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] sticky top-0 bg-[#1C1C1E] z-10">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
                 <div className="flex items-center gap-2">

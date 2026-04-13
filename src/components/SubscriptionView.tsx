@@ -123,7 +123,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   return (
     <div className="space-y-3 tab-content">
       {/* 월 합계 카드 */}
-      <div className="bg-[#1E2236] rounded-3xl p-5">
+      <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-1">월 구독 비용</p>
         {subscriptions.length === 0 ? (
           <p className="text-[#8B95A1] text-sm">구독 서비스를 추가해보세요</p>
@@ -142,7 +142,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
       {/* 구독 목록 */}
       {sorted.length === 0 ? (
-        <div className="bg-[#1E2236] rounded-3xl p-10 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center">
           <p className="text-4xl mb-3">💳</p>
           <p className="font-bold text-white text-[15px]">구독 서비스가 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">넷플릭스, 유튜브 프리미엄 등을 추가해보세요</p>
@@ -160,7 +160,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
             const days = daysUntilBilling(sub.billingDay)
             const catColor = CATEGORY_COLOR[sub.category]
             return (
-              <div key={sub.id} className="bg-[#1E2236] rounded-2xl px-4 py-3">
+              <div key={sub.id} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-3">
                   {/* 이니셜 아이콘 */}
                   <div
@@ -200,13 +200,13 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => openEdit(sub)}
-                      className="w-7 h-7 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                      className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                     >
                       <Pencil size={11} />
                     </button>
                     <button
                       onClick={() => handleDelete(sub.id)}
-                      className="w-7 h-7 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                      className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                     >
                       <Trash2 size={11} />
                     </button>
@@ -231,7 +231,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-1">
               <p className="text-base font-bold text-white">{editing ? '구독 수정' : '구독 추가'}</p>
-              <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252A3F] text-[#8B95A1]">
+              <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]">
                 <X size={16} />
               </button>
             </div>
@@ -256,7 +256,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 placeholder="예: 넷플릭스, 유튜브 프리미엄"
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
               />
               {errors.name && <p className="text-[10px] text-[#F25260] mt-1">{errors.name}</p>}
             </div>
@@ -271,9 +271,9 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                   value={amountStr}
                   onChange={e => setAmountStr(e.target.value)}
                   placeholder="0"
-                  className="flex-1 bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
+                  className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
                 />
-                <div className="flex bg-[#252A3F] rounded-xl overflow-hidden shrink-0">
+                <div className="flex bg-[#2C2C2E] rounded-xl overflow-hidden shrink-0">
                   {(['KRW', 'USD'] as const).map(cur => (
                     <button
                       key={cur}
@@ -296,7 +296,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                   <button
                     key={d}
                     onClick={() => setForm(f => ({ ...f, billingDay: d }))}
-                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-colors ${form.billingDay === d ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-colors ${form.billingDay === d ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
                   >
                     {d}일
                   </button>
@@ -309,7 +309,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                 max={31}
                 value={form.billingDay}
                 onChange={e => setForm(f => ({ ...f, billingDay: Math.min(31, Math.max(1, Number(e.target.value))) }))}
-                className="mt-2 w-full bg-[#252A3F] rounded-xl px-3 py-2 text-sm text-white focus:outline-none num"
+                className="mt-2 w-full bg-[#2C2C2E] rounded-xl px-3 py-2 text-sm text-white focus:outline-none num"
                 placeholder="직접 입력 (1-31)"
               />
             </div>
@@ -346,7 +346,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                 value={form.memo}
                 onChange={e => setForm(f => ({ ...f, memo: e.target.value }))}
                 placeholder="예: 가족 공유, 연간 결제"
-                className="w-full bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
               />
             </div>
 

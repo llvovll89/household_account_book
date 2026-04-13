@@ -81,7 +81,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -91,7 +91,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
             <h2 className="text-[18px] font-bold text-white">내역 내보내기</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">CSV 파일로 다운로드 (Excel 호환)</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -106,7 +106,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
                 className={`py-3 rounded-2xl text-sm font-bold transition-all ${
                   range === r.id
                     ? 'bg-[#3D8EF8] text-white'
-                    : 'bg-[#252A3F] text-[#8B95A1] hover:text-white'
+                    : 'bg-[#2C2C2E] text-[#8B95A1] hover:text-white'
                 }`}
               >
                 {r.label}
@@ -117,7 +117,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
           {/* 직접 설정 날짜 */}
           {range === 'custom' && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
+              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
                 <FancyDatePicker
                   value={customFrom}
@@ -126,7 +126,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
                   size="sm"
                 />
               </div>
-              <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
+              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
                 <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
                 <FancyDatePicker
                   value={customTo}
@@ -139,7 +139,7 @@ export default function ExportModal({ transactions, yearMonth, onClose }: Props)
           )}
 
           {/* 미리보기 */}
-          <div className="flex items-center gap-3 bg-[#252A3F] rounded-2xl px-4 py-3.5">
+          <div className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
             <FileText size={18} className="text-[#3D8EF8] shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{getFilename()}</p>

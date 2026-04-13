@@ -10,7 +10,7 @@
 
 html,
 body {
-  background-color: #0D0F14;
+  background-color: #111111;
   color: #F1F3F6;
   overscroll-behavior: none;
 }
@@ -86,15 +86,15 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 16px !important;
   overflow: hidden;
-  background: linear-gradient(180deg, #171b2a 0%, #121723 100%) !important;
+  background: #1C1C1E !important;
   color: #f1f3f6 !important;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45) !important;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6) !important;
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif !important;
 }
 
 .fancy-date-calendar .react-datepicker__header {
-  background: linear-gradient(180deg, #171b2a 0%, #141a27 100%) !important;
-  border-bottom: 0 !important;
+  background: #1C1C1E !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   padding-top: 0 !important;
 }
 
@@ -161,7 +161,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* select 스타일 */
 select option {
-  background: #1E2230;
+  background: #1C1C1E;
   color: #F1F3F6;
 }
 

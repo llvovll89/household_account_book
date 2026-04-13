@@ -87,7 +87,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
   return (
     <div className="space-y-3 tab-content">
-      <div className="bg-[#1E2236] rounded-2xl p-3">
+      <div className="bg-[#1C1C1E] rounded-2xl p-3">
         <p className="text-sm font-bold text-white mb-2">관심종목 추가</p>
         <div className="relative">
           <div className="flex gap-2">
@@ -105,7 +105,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
                 }
               }}
               placeholder="종목명 또는 코드 (예: SK하이닉스, AAPL, 005930)"
-              className="flex-1 bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+              className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
             />
             <button
               onClick={handleAdd}
@@ -118,13 +118,13 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
           {/* 자동완성 드롭다운 */}
           {suggestions.length > 0 && (
-            <ul className="absolute top-full left-0 right-10 mt-1 bg-[#252A3F] rounded-xl overflow-hidden z-10 shadow-lg border border-white/[0.06]">
+            <ul className="absolute top-full left-0 right-10 mt-1 bg-[#2C2C2E] rounded-xl overflow-hidden z-10 shadow-lg border border-white/[0.06]">
               {suggestions.map((s) => (
                 <li
                   key={s.symbol}
                   onMouseDown={(e) => e.preventDefault()} // input blur 방지
                   onClick={() => handleSelectSuggestion(s)}
-                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-[#1E2236] transition-colors"
+                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-[#1C1C1E] transition-colors"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">{s.shortName}</p>
@@ -151,7 +151,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
       </div>
 
       {watchItems.length === 0 ? (
-        <div className="bg-[#1E2236] rounded-3xl p-10 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center">
           <p className="text-4xl mb-3">⭐</p>
           <p className="font-bold text-white text-[15px]">관심종목이 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">종목을 추가해 빠르게 모아보세요</p>
@@ -164,7 +164,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
             const isUp = quote ? quote.changePct >= 0 : null
 
             return (
-              <div key={item.ticker} className="bg-[#1E2236] rounded-2xl px-4 py-3">
+              <div key={item.ticker} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-[#F5BE3A]/15 flex items-center justify-center shrink-0">
                     <Star size={16} className="text-[#F5BE3A]" />
@@ -199,7 +199,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
                   <button
                     onClick={() => onRemove(item.ticker)}
-                    className="w-7 h-7 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors shrink-0"
+                    className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors shrink-0"
                     aria-label={`${item.ticker} 삭제`}
                   >
                     <Trash2 size={12} />

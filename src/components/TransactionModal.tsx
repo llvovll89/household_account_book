@@ -123,7 +123,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -139,7 +139,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">대기 중 {queue.length}건</p>
             )}
           </div>
-          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -147,7 +147,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         <div className="overflow-y-auto flex-1">
           {/* 대기열 */}
           {queue.length > 0 && (
-            <div className="mx-6 mb-3 bg-[#252A3F] rounded-2xl overflow-hidden">
+            <div className="mx-6 mb-3 bg-[#2C2C2E] rounded-2xl overflow-hidden">
               {queue.map((item, idx) => {
                 const qColor = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                 const dateLabel = item.dateEnd
@@ -184,7 +184,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
-            <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#252A3F] p-1 rounded-2xl">
+            <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
               <button type="button" onClick={() => setType('income')}
                 aria-pressed={type === 'income'}
                 className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -202,7 +202,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 금액 */}
-            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
+            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
               <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
               <div className="flex items-baseline gap-2">
                 <input
@@ -226,7 +226,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   type="button"
                   onClick={toggleDateEnd}
                   className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${
-                    showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#252A3F] text-[#4E5968] hover:text-[#8B95A1]'
+                    showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
                   }`}
                 >
                   <CalendarRange size={11} />
@@ -235,11 +235,11 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </div>
               {!showDateEnd ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                     <FancyDatePicker value={date} onChange={setDate} />
                   </div>
                   {/* 카테고리 */}
-                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                     <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">카테고리</p>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
@@ -251,7 +251,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
-                            <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                            <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
                           ))}
                         </select>
                         <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
@@ -262,17 +262,17 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               ) : (
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                    <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                       <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
                       <FancyDatePicker value={date} onChange={setDate} />
                     </div>
-                    <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                    <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                       <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
                       <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
                     </div>
                   </div>
                   {/* 카테고리 (기간 모드일 때 별도 행) */}
-                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                     <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">카테고리</p>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
@@ -284,7 +284,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
-                            <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                            <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
                           ))}
                         </select>
                         <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
@@ -296,7 +296,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 설명 + 해시태그 */}
-            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
+            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
               <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
                 설명 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
               </p>
@@ -339,7 +339,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <button
                   type="button"
                   onClick={handleAddToQueue}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#252A3F] text-[#8B95A1] hover:bg-[#2D3352] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Plus size={15} />
                   항목 추가

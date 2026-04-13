@@ -55,7 +55,7 @@ export default function StockPriceChart({ ticker }: Props) {
   }
 
   return (
-    <div className="bg-[#1E2236] rounded-3xl p-4">
+    <div className="bg-[#1C1C1E] rounded-2xl p-4">
       {/* 기간 탭 */}
       <div className="flex gap-1 mb-4">
         {RANGES.map(r => (

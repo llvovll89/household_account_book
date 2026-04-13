@@ -93,7 +93,7 @@ export default function HelpModal({ onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -107,7 +107,7 @@ export default function HelpModal({ onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center"
           >
             <X size={16} className="text-[#8B95A1]" />
           </button>
@@ -116,7 +116,7 @@ export default function HelpModal({ onClose }: Props) {
         {/* 컨텐츠 */}
         <div className="overflow-y-auto flex-1 px-6 pb-8 space-y-3">
           {sections.map(({ icon: Icon, color, title, items }) => (
-            <div key={title} className="bg-[#252A3F] rounded-2xl p-4">
+            <div key={title} className="bg-[#2C2C2E] rounded-2xl p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"

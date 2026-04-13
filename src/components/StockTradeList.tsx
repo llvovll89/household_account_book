@@ -46,7 +46,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
   if (trades.length === 0) {
     return (
       <div className="space-y-3 tab-content">
-        <div className="bg-[#1E2236] rounded-3xl p-12 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
           <p className="text-5xl mb-4">📊</p>
           <p className="font-bold text-white text-[15px]">거래 내역이 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">+ 버튼으로 첫 거래를 추가해보세요</p>
@@ -60,7 +60,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
     <div className="space-y-3 tab-content">
       {/* 요약 카드 3개 */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
           <p className="text-[10px] text-[#4E5968] font-semibold mb-1">투자 원가</p>
           <p className="text-[13px] font-extrabold text-white num leading-tight">
             {totalHoldingCost >= 10_000
@@ -69,7 +69,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           </p>
           <p className="text-[9px] text-[#4E5968] mt-0.5">보유 중</p>
         </div>
-        <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
           <p className="text-[10px] text-[#4E5968] font-semibold mb-1">실현 손익</p>
           <p className={`text-[13px] font-extrabold num leading-tight ${
             totalRealizedPnL > 0 ? 'text-[#2ACF6A]' : totalRealizedPnL < 0 ? 'text-[#F25260]' : 'text-[#8B95A1]'
@@ -80,7 +80,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           </p>
           <p className="text-[9px] text-[#4E5968] mt-0.5">누적</p>
         </div>
-        <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
           <p className="text-[10px] text-[#4E5968] font-semibold mb-1">수수료</p>
           <p className="text-[13px] font-extrabold text-[#8B95A1] num leading-tight">
             {totalFee >= 10_000
@@ -93,7 +93,7 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
 
       {/* 보유 종목 */}
       {holdings.length > 0 && (
-        <div className="bg-[#1E2236] rounded-2xl px-4 py-3.5">
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <p className="text-sm font-bold text-white mb-3">보유 종목</p>
           <div className="space-y-2.5">
             {holdings.map((h) => (
@@ -128,12 +128,12 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
 
       {/* 필터 + 검색 */}
       <div className="space-y-2">
-        <div className="flex gap-1 bg-[#1E2236] p-1 rounded-xl">
+        <div className="flex gap-1 bg-[#1C1C1E] p-1 rounded-xl">
           {(['all', 'buy', 'sell'] as Filter[]).map((f) => (
             <button key={f}
               onClick={() => setFilter(f)}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                filter === f ? 'bg-[#252A3F] text-white' : 'text-[#4E5968]'
+                filter === f ? 'bg-[#2C2C2E] text-white' : 'text-[#4E5968]'
               }`}>
               {f === 'all' ? '전체' : f === 'buy' ? '매수' : '매도'}
             </button>
@@ -143,19 +143,19 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           type="text" value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="종목 검색"
-          className="w-full bg-[#1E2236] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+          className="w-full bg-[#1C1C1E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
         />
       </div>
 
       {/* 거래 내역 (날짜별 그룹) */}
       {grouped.length === 0 ? (
-        <div className="bg-[#1E2236] rounded-2xl p-8 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
           <p className="text-[#4E5968] text-sm">검색 결과가 없어요</p>
         </div>
       ) : (
         <div className="space-y-2">
           {grouped.map(([date, dayTrades]) => (
-            <div key={date} className="bg-[#1E2236] rounded-2xl overflow-hidden">
+            <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04]">
                 <span className="text-xs font-semibold text-[#4E5968]">{formatDate(date)}</span>
                 <span className="text-xs font-semibold text-[#4E5968]">
@@ -204,13 +204,13 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
                         <div className="hidden group-hover:flex items-center gap-1 ml-1">
                           <button
                             onClick={() => onEdit(t)}
-                            className="w-6 h-6 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                            className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                           >
                             <Pencil size={11} />
                           </button>
                           <button
                             onClick={() => onDelete(t.id)}
-                            className="w-6 h-6 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                            className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                           >
                             <Trash2 size={11} />
                           </button>

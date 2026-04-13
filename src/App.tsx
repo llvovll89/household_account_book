@@ -347,21 +347,21 @@ export default function App() {
 
     const showFAB = activeMode === 'stocks'
         ? stockSubTab === 'portfolio' || stockSubTab === 'trades'
-        : activeTab === 'home' || activeTab === 'transactions' || activeTab === 'memos'
+        : activeTab === 'home' || activeTab === 'transactions' || activeTab === 'memos' || activeTab === 'subscriptions' || activeTab === 'goals'
 
     if (!authReady || isSyncing) {
         return (
-            <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1F2F4A_0%,#151A26_42%,#0E1119_100%)] flex items-center justify-center px-6">
-                <div className="w-full max-w-sm rounded-3xl bg-[#1E2236]/90 border border-[#3D8EF8]/20 shadow-2xl shadow-[#3D8EF8]/10 p-6 text-center">
-                    <div className="mx-auto w-11 h-11 rounded-2xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/35 flex items-center justify-center">
-                        <Wallet size={20} className="text-[#79B2FF]" />
+            <div className="min-h-screen bg-[#111111] flex items-center justify-center px-6">
+                <div className="w-full max-w-sm rounded-3xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 p-6 text-center">
+                    <div className="mx-auto w-11 h-11 rounded-2xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
+                        <Wallet size={20} className="text-[#3D8EF8]" />
                     </div>
-                    <h2 className="mt-4 text-[17px] font-extrabold text-[#9BC6FF] tracking-tight">잔고플랜 준비 중</h2>
-                    <p className="mt-1 text-sm text-[#AAB6C5] font-medium">데이터를 안전하게 불러오고 있어요</p>
+                    <h2 className="mt-4 text-[17px] font-extrabold text-white tracking-tight">잔고플랜 준비 중</h2>
+                    <p className="mt-1 text-sm text-[#8B95A1] font-medium">데이터를 안전하게 불러오고 있어요</p>
                     <div className="mt-4 flex items-center justify-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF] animate-pulse" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF]/80 animate-pulse [animation-delay:180ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#79B2FF]/65 animate-pulse [animation-delay:360ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8] animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8]/80 animate-pulse [animation-delay:180ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8]/65 animate-pulse [animation-delay:360ms]" />
                     </div>
                 </div>
             </div>
@@ -369,10 +369,10 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen bg-[#181818] pb-nav-safe">
+        <div className="min-h-screen bg-[#111111] pb-nav-safe">
             {needRefresh && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
-                    <div className="flex items-center gap-3 bg-[#252A3F] border border-[#3D8EF8]/30 rounded-2xl px-4 py-3.5 shadow-xl">
+                    <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
                         <RefreshCw size={16} className="text-[#3D8EF8] shrink-0 animate-spin" style={{ animationDuration: '2s' }} />
                         <p className="text-sm font-semibold text-white flex-1">새 버전이 있어요!</p>
                         <button onClick={() => updateServiceWorker(true)} className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0">
@@ -382,25 +382,25 @@ export default function App() {
                 </div>
             )}
 
-            <header className="bg-[#0D0F14] sticky top-0 z-40">
+            <header className="bg-[#111111] sticky top-0 z-40">
                 <div className="max-w-lg mx-auto px-5 pt-header-safe pb-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/30 flex items-center justify-center">
-                                <Wallet size={14} className="text-[#79B2FF]" />
+                            <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
+                                <Wallet size={14} className="text-[#3D8EF8]" />
                             </span>
-                            <h1 className="text-[20px] font-extrabold text-[#9BC6FF] tracking-tight">잔고플랜</h1>
+                            <h1 className="text-[20px] font-extrabold text-white tracking-tight">잔고플랜</h1>
                         </div>
                         <div className="flex items-center gap-2">
                             {activeMode === 'ledger' && (
-                                <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#3D8EF8] bg-[#3D8EF8]/10 hover:bg-[#3D8EF8]/20 transition-colors border border-[#3D8EF8]/15">
+                                <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
                                     <FileDown size={13} />
                                     가져오기
                                 </button>
                             )}
                             {user ? (
                                 <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#1E2236] border border-white/10 max-w-37.5">
+                                    <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#2C2C2E] border border-[rgba(255,255,255,0.06)] max-w-37.5">
                                         {user.photoURL ? (
                                             <img src={user.photoURL} alt="profile" className="w-5 h-5 rounded-full object-cover" referrerPolicy="no-referrer" />
                                         ) : (
@@ -410,7 +410,7 @@ export default function App() {
                                         )}
                                         <span className="text-[11px] text-[#C8D1DC] truncate">{user.email?.split('@')[0] ?? '로그인 사용자'}</span>
                                     </div>
-                                    <button onClick={handleLogout} aria-label="로그아웃" title="로그아웃" className="w-8 h-8 rounded-xl text-[#F5BE3A] bg-[#F5BE3A]/10 hover:bg-[#F5BE3A]/20 transition-colors border border-[#F5BE3A]/15 flex items-center justify-center">
+                                    <button onClick={handleLogout} aria-label="로그아웃" title="로그아웃" className="w-8 h-8 rounded-xl text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center">
                                         <LogOut size={14} />
                                     </button>
                                 </div>
@@ -422,7 +422,7 @@ export default function App() {
                         </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[#1E2236] border border-white/6 p-1.5">
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] p-1.5">
                         <button
                             onClick={() => {
                                 setMode('ledger')
@@ -443,7 +443,7 @@ export default function App() {
                                 setTab('stocks')
                                 setStockSubTab('portfolio')
                             }}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'stocks' ? 'bg-[#F5BE3A] text-[#0D0F14]' : 'text-[#8B95A1] hover:bg-white/5'}`}
+                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'stocks' ? 'bg-[#F5BE3A] text-[#111111]' : 'text-[#8B95A1] hover:bg-white/5'}`}
                         >
                             주식
                         </button>
@@ -452,13 +452,13 @@ export default function App() {
                     {activeMode === 'ledger' ? (
                         <>
                             <div className="flex items-center justify-center gap-3 mt-3">
-                                <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
+                                <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
                                     <ChevronLeft size={16} className="text-[#8B95A1]" />
                                 </button>
-                                <button onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#0D0F14]' : 'bg-[#1E2236] text-[#8B95A1] border border-white/6'}`}>
+                                <button onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#111111]' : 'bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]'}`}>
                                     {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
                                 </button>
-                                <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1E2236] border border-white/6 flex items-center justify-center active:scale-95 transition-transform">
+                                <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
                                     <ChevronRight size={16} className="text-[#8B95A1]" />
                                 </button>
                             </div>
@@ -466,9 +466,9 @@ export default function App() {
                             {(monthIncome > 0 || monthExpense > 0) && (
                                 <div className="flex items-center justify-center gap-4 mt-3 pb-1">
                                     <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
-                                    <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
+                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
                                     <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
-                                    <div className="w-1 h-1 rounded-full bg-[#2D3352]" />
+                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
                                     <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
                                         {monthBalance.toLocaleString()}원
                                     </span>
@@ -476,7 +476,7 @@ export default function App() {
                             )}
                         </>
                     ) : (
-                        <div className="mt-3 pb-1 bg-[#1E2236] rounded-2xl border border-white/6 p-4">
+                        <div className="mt-3 pb-1 bg-[#1C1C1E] rounded-2xl border border-[rgba(255,255,255,0.06)] p-4">
                             <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">투자 워크스페이스</p>
                             <div className="flex items-center justify-between">
                                 <p className="text-sm font-bold text-[#F5F7FA]">총 거래 {stockTrades.length.toLocaleString()}건</p>
@@ -552,7 +552,7 @@ export default function App() {
                                 }
                             }}
                             aria-label="내역 추가"
-                            className="pointer-events-auto absolute right-5 bottom-fab-safe w-8 h-8 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-[#3D8EF8]/30 flex items-center justify-center transition-all"
+                            className="pointer-events-auto absolute right-5 bottom-fab-safe w-8 h-8 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-black/40 flex items-center justify-center transition-all"
                         >
                             <Plus size={20} />
                         </button>
@@ -566,13 +566,13 @@ export default function App() {
 
             {showInstallBanner && (
                 <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
-                    <div className="bg-[#252A3F] border border-[#3D8EF8]/25 rounded-2xl px-4 py-3.5 shadow-xl">
+                    <div className="bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
                         <p className="text-sm font-semibold text-white">앱처럼 빠르게 사용하려면 홈 화면에 추가하세요.</p>
                         <p className="text-[11px] text-[#8B95A1] mt-1">
                             {isIosManualInstall ? installGuideText : '설치 버튼을 눌러 잔고플랜 앱을 설치할 수 있어요.'}
                         </p>
                         <div className="mt-3 flex items-center justify-end gap-2">
-                            <button onClick={closeInstallBanner} className="px-3 py-1.5 rounded-xl bg-[#1E2236] text-[#8B95A1] text-xs font-bold">닫기</button>
+                            <button onClick={closeInstallBanner} className="px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold">닫기</button>
                             {!isIosManualInstall && deferredPrompt && (
                                 <button onClick={handleInstallClick} className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors">설치</button>
                             )}
@@ -592,7 +592,7 @@ export default function App() {
 
             {toastMsg && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm pointer-events-none">
-                    <div className="flex items-center gap-3 bg-[#252A3F] border border-white/10 rounded-2xl px-4 py-3 shadow-xl">
+                    <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">
                         <CheckCircle2 size={16} className="text-[#2ACF6A] shrink-0" />
                         <p className="text-sm font-semibold text-white">{toastMsg}</p>
                     </div>

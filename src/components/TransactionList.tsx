@@ -141,7 +141,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
     <div className="space-y-3 tab-content">
       {/* 뷰 전환 + 내보내기 */}
       <div className="flex items-center gap-2">
-        <div className="flex bg-[#1E2236] rounded-2xl p-1 gap-1">
+        <div className="flex bg-[#1C1C1E] rounded-2xl p-1 gap-1">
           <button
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
@@ -159,7 +159,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         </div>
         <button
           onClick={() => setShowExport(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1E2236] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
         >
           <FileDown size={13} /> 내보내기
         </button>
@@ -178,7 +178,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
       {/* 목록 뷰 */}
       {viewMode === 'list' && <>
 
-        <div className="bg-[#1E2236] rounded-2xl p-2 space-y-2">
+        <div className="bg-[#1C1C1E] rounded-2xl p-2 space-y-2">
           <div className="flex gap-1">
             {([
               { key: 'day', label: '일' },
@@ -229,7 +229,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="카테고리, 설명, #태그로 검색"
-            className="w-full bg-[#1E2236] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+            className="w-full bg-[#1C1C1E] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
           />
           {search && (
             <button onClick={() => setSearch('')} aria-label="검색어 지우기" className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -239,7 +239,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         </div>
 
         {/* 필터 탭 */}
-        <div className="bg-[#1E2236] rounded-2xl p-1 flex">
+        <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
           {(['all', 'income', 'expense'] as FilterType[]).map((f) => (
             <button
               key={f}
@@ -256,7 +256,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
 
         {/* 태그별 합계 */}
         {tagSummary.length > 0 && (
-          <div className="bg-[#1E2236] rounded-2xl overflow-hidden">
+          <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setShowTagSummary((v) => !v)}
               className="w-full flex items-center justify-between px-5 py-3.5 text-left"
@@ -284,7 +284,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                       onClick={() => handleTagClick(tag)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${isActive
                           ? 'bg-[#3D8EF8]/20 ring-1 ring-[#3D8EF8]/40'
-                          : 'bg-[#252A3F] hover:bg-[#2D3352]'
+                          : 'bg-[#2C2C2E] hover:bg-[#3A3A3C]'
                         }`}
                     >
                       <div className="flex items-center gap-2">
@@ -323,7 +323,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         )}
 
         {grouped.length === 0 ? (
-          <div className="bg-[#1E2236] rounded-3xl p-12 text-center">
+          <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
             <p className="text-5xl mb-4">{search || activeTag ? '🔍' : '📋'}</p>
             <p className="font-bold text-white text-[15px]">
               {activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
@@ -333,7 +333,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           grouped.map(([date, list]) => {
             const dayBalance = getDayBalance(list)
             return (
-              <div key={date} className="bg-[#1E2236] rounded-3xl overflow-hidden">
+              <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                 {/* 날짜 헤더 */}
                 <div className="flex items-center justify-between px-5 pt-4 pb-3">
                   <span className="text-sm font-bold text-white">{formatDate(date)}</span>
@@ -349,11 +349,11 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                     return (
                       <div
                         key={t.id}
-                        className={`flex items-center gap-3 px-5 py-3.5 group ${idx < list.length - 1 ? 'border-b border-white/4' : ''
+                        className={`flex items-center gap-3 px-5 py-3.5 group ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
                           }`}
                       >
                         <div
-                          className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                          className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0"
                           style={{ backgroundColor: color.bg }}
                         >
                           {CATEGORY_EMOJI[t.category] ?? '📦'}
@@ -377,7 +377,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                                   onClick={() => handleTagClick(tag)}
                                   className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all ${activeTag === tag
                                       ? 'bg-[#3D8EF8]/30 text-[#3D8EF8]'
-                                      : 'bg-[#252A3F] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
+                                      : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
                                     }`}
                                 >
                                   #{tag}

@@ -44,7 +44,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#1E2236] flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center shrink-0"
           >
             <ChevronLeft size={18} className="text-[#8B95A1]" />
           </button>
@@ -58,7 +58,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
       <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
         {/* 실시간 시세 카드 */}
         {quote && (
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold text-[#4E5968] mb-1 uppercase tracking-wide flex items-center gap-1.5">
@@ -113,7 +113,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
 
         {/* 보유 현황 카드 */}
         {holding ? (
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-xs font-semibold text-[#4E5968] mb-4 uppercase tracking-wide">보유 현황</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -138,7 +138,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
           </div>
         ) : (
           /* 전량 매도된 경우 */
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-xs font-semibold text-[#4E5968] mb-3 uppercase tracking-wide">거래 요약</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -156,11 +156,11 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
 
         {/* 통계 */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3">
             <p className="text-[10px] text-[#4E5968] mb-1">총 거래</p>
             <p className="text-[15px] font-extrabold text-white">{trades.length}<span className="text-xs font-normal text-[#4E5968] ml-0.5">건</span></p>
           </div>
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3">
             <p className="text-[10px] text-[#4E5968] mb-1">매수 / 매도</p>
             <p className="text-[13px] font-extrabold text-white">
               <span className="text-[#3D8EF8]">{trades.filter(t => t.tradeType === 'buy').length}</span>
@@ -168,7 +168,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
               <span className="text-[#F25260]">{trades.filter(t => t.tradeType === 'sell').length}</span>
             </p>
           </div>
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3">
             <p className="text-[10px] text-[#4E5968] mb-1">누적 수수료</p>
             <p className="text-[13px] font-extrabold text-[#8B95A1] num">
               {totalFee >= 10_000 ? `${Math.round(totalFee / 10_000)}만` : fmt(totalFee)}
@@ -181,7 +181,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
           <p className="text-sm font-bold text-white px-1 mb-2">거래 내역</p>
           <div className="space-y-2">
             {grouped.map(([date, dayTrades]) => (
-              <div key={date} className="bg-[#1E2236] rounded-2xl overflow-hidden">
+              <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04]">
                   <span className="text-xs font-semibold text-[#4E5968]">{formatDate(date)}</span>
                   <span className="text-xs font-semibold text-[#4E5968]">{dayTrades.length}건</span>
@@ -218,13 +218,13 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
                           <div className="hidden group-hover:flex items-center gap-1 ml-1">
                             <button
                               onClick={() => onEdit(t)}
-                              className="w-6 h-6 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                              className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                             >
                               <Pencil size={11} />
                             </button>
                             <button
                               onClick={() => onDelete(t.id)}
-                              className="w-6 h-6 rounded-lg bg-[#252A3F] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                              className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                             >
                               <Trash2 size={11} />
                             </button>

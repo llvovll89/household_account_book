@@ -46,7 +46,7 @@ export default function StocksWorkspace({
   return (
     <>
       {/* 탭 네비게이션 */}
-      <div className="bg-[#1E2236] rounded-2xl p-1 flex gap-1 mb-3">
+      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex gap-1 mb-3">
         <button
           onClick={() => onStockSubTabChange('portfolio')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${stockSubTab === 'portfolio' ? 'bg-[#F5BE3A] text-[#0D0F14]' : 'text-[#8B95A1]'}`}

@@ -68,7 +68,7 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
   if (trades.length === 0) {
     return (
       <div className="space-y-3 tab-content">
-        <div className="bg-[#1E2236] rounded-3xl p-12 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
           <p className="text-5xl mb-4">🧭</p>
           <p className="font-bold text-white text-[15px]">포트폴리오 데이터가 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">+ 버튼으로 거래를 추가하면 자동으로 구성돼요</p>
@@ -83,7 +83,7 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
         {/* 실시간 평가 요약 (가격 데이터 있을 때만 표시) */}
         {liveAggregate && (
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5 relative overflow-hidden">
+            <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5 relative overflow-hidden">
               <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#2ACF6A] animate-pulse" />
               <p className="text-[10px] text-[#4E5968] font-semibold mb-1">총 평가금액</p>
               <p className="text-[15px] font-extrabold text-white num">{fmt(liveAggregate.totalMarketValue)}원</p>
@@ -91,7 +91,7 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
                 <p className="text-[9px] text-[#4E5968] mt-0.5">* USD 종목 제외</p>
               )}
             </div>
-            <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5 relative overflow-hidden">
+            <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5 relative overflow-hidden">
               <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#2ACF6A] animate-pulse" />
               <p className="text-[10px] text-[#4E5968] font-semibold mb-1">미실현 손익</p>
               <p className={`text-[15px] font-extrabold num ${
@@ -110,11 +110,11 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
 
         {/* 기본 요약 카드 */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
             <p className="text-[10px] text-[#4E5968] font-semibold mb-1">총 투자원가</p>
             <p className="text-[15px] font-extrabold text-white num">{fmt(totalHoldingCost)}원</p>
           </div>
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
             <p className="text-[10px] text-[#4E5968] font-semibold mb-1">실현 손익</p>
             <p className={`text-[15px] font-extrabold num ${
               totalRealizedPnL > 0 ? 'text-[#2ACF6A]' : totalRealizedPnL < 0 ? 'text-[#F25260]' : 'text-[#8B95A1]'
@@ -122,24 +122,24 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
               {totalRealizedPnL >= 0 ? '+' : ''}{fmt(totalRealizedPnL)}원
             </p>
           </div>
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
             <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 수수료</p>
             <p className="text-[15px] font-extrabold text-[#8B95A1] num">{fmt(totalFee)}원</p>
           </div>
-          <div className="bg-[#1E2236] rounded-2xl px-3 py-3.5">
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-3.5">
             <p className="text-[10px] text-[#4E5968] font-semibold mb-1">보유 종목</p>
             <p className="text-[15px] font-extrabold text-white num">{holdings.length}개</p>
           </div>
         </div>
 
         {/* 보유 종목 리스트 */}
-        <div className="bg-[#1E2236] rounded-2xl p-3">
+        <div className="bg-[#1C1C1E] rounded-2xl p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-bold text-white">보유 비중</p>
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="bg-[#252A3F] text-[11px] font-semibold text-[#C8D1DC] rounded-lg px-2 py-1 focus:outline-none"
+              className="bg-[#2C2C2E] text-[11px] font-semibold text-[#C8D1DC] rounded-lg px-2 py-1 focus:outline-none"
             >
               <option value="costDesc">원가 큰 순</option>
               <option value="pnlDesc">실현손익 순</option>
@@ -168,7 +168,7 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
                 <button
                   key={h.ticker}
                   onClick={() => setSelectedTicker(h.ticker)}
-                  className="w-full text-left rounded-xl bg-[#252A3F] px-3 py-2.5 active:opacity-80 transition-opacity"
+                  className="w-full text-left rounded-xl bg-[#2C2C2E] px-3 py-2.5 active:opacity-80 transition-opacity"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-[#3D8EF8]/15 flex items-center justify-center shrink-0">

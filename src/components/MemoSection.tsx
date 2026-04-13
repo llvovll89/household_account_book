@@ -257,14 +257,14 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               setViewMode('cards')
               setSelectedDate(null)
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
           >
             <LayoutGrid size={12} />
             카드
           </button>
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#8B95A1]'}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
           >
             <CalendarDays size={12} />
             캘린더
@@ -273,7 +273,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
       </div>
 
       {viewMode === 'cards' && sorted.length === 0 && !showForm && (
-        <div className="bg-[#1E2236] rounded-3xl p-12 text-center tab-content">
+        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center tab-content">
           <p className="text-5xl mb-4">📝</p>
           <p className="font-bold text-white text-[15px]">메모가 없어요</p>
           <p className="text-[#4E5968] text-sm mt-1">예산 목표, 할 일 등을 기록해보세요</p>
@@ -286,7 +286,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             const bg = CARD_COLORS[idx % CARD_COLORS.length]
             const catColor = memo.category ? (CATEGORY_COLOR[memo.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }) : null
             return (
-              <div key={memo.id} className="rounded-3xl p-4 flex flex-col gap-2 relative group border border-white/4"
+              <div key={memo.id} className="rounded-2xl p-4 flex flex-col gap-2 relative group border border-white/4"
                 style={{ backgroundColor: bg }}>
                 {memo.pinned && (
                   <div className="absolute top-3.5 right-3.5">
@@ -352,11 +352,11 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
       {viewMode === 'calendar' && (
         <div className="space-y-3 tab-content">
-          <div className="bg-[#1E2236] rounded-3xl overflow-hidden">
+          <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
-              <button onClick={prevCalendarMonth} className="px-2.5 py-1 rounded-lg bg-[#252A3F] text-[#8B95A1] text-xs font-bold">이전</button>
+              <button onClick={prevCalendarMonth} className="px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold">이전</button>
               <span className="text-sm font-bold text-white">{calendarMonth.getFullYear()}년 {calendarMonth.getMonth() + 1}월</span>
-              <button onClick={nextCalendarMonth} className="px-2.5 py-1 rounded-lg bg-[#252A3F] text-[#8B95A1] text-xs font-bold">다음</button>
+              <button onClick={nextCalendarMonth} className="px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold">다음</button>
             </div>
 
             <div className="grid grid-cols-7 border-b border-white/6">
@@ -411,12 +411,12 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
       {selectedDate && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedDate(null)}>
-          <div className="w-full max-w-md bg-[#1E2236] rounded-3xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between shrink-0">
               <p className="text-sm font-bold text-white">{formatSelectedDateLabel(selectedDate)} 일정</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-[#8B95A1]">{selectedDateMemos.length}개</span>
-                <button onClick={() => setSelectedDate(null)} className="w-7 h-7 rounded-full bg-[#252A3F] flex items-center justify-center" aria-label="상세 닫기">
+                <button onClick={() => setSelectedDate(null)} className="w-7 h-7 rounded-full bg-[#2C2C2E] flex items-center justify-center" aria-label="상세 닫기">
                   <X size={12} className="text-[#8B95A1]" />
                 </button>
               </div>
@@ -477,7 +477,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
-          <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6">
+          <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6">
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-9 h-1 bg-white/10 rounded-full" />
             </div>
@@ -490,14 +490,14 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                     <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">대기 중 {queue.length}건</p>
                   )}
                 </div>
-                <button onClick={handleCancel} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+                <button onClick={handleCancel} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
                   <X size={14} className="text-[#8B95A1]" />
                 </button>
               </div>
 
               {/* 대기열 */}
               {queue.length > 0 && (
-                <div className="bg-[#252A3F] rounded-2xl overflow-hidden">
+                <div className="bg-[#2C2C2E] rounded-2xl overflow-hidden">
                   {queue.map((item, idx) => (
                     <div key={idx} className={`flex items-center gap-2 px-3 py-2.5 ${idx < queue.length - 1 ? 'border-b border-white/4' : ''}`}>
                       <div className="flex-1 min-w-0">
@@ -544,7 +544,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                     type="button"
                     onClick={toggleDateEnd}
                     className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${
-                      showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#252A3F] text-[#4E5968] hover:text-[#8B95A1]'
+                      showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
                     }`}
                   >
                     <CalendarRange size={10} />
@@ -554,11 +554,11 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
                 {!showDateEnd ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                    <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
                       <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">날짜</p>
                       <FancyDatePicker value={date} onChange={setDate} size="sm" />
                     </div>
-                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                    <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
                       <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
                       <div className="flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
@@ -570,7 +570,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                             className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                             style={{ color: color.text }}>
                             {categories.map((c) => (
-                              <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                              <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
                             ))}
                           </select>
                           <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
@@ -581,16 +581,16 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                 ) : (
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                      <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
                         <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">시작일</p>
                         <FancyDatePicker value={date} onChange={setDate} size="sm" />
                       </div>
-                      <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                      <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
                         <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">종료일</p>
                         <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} size="sm" />
                       </div>
                     </div>
-                    <div className="bg-[#252A3F] rounded-xl px-3 py-2.5">
+                    <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
                       <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">카테고리</p>
                       <div className="flex items-center gap-1.5">
                         <div className="w-5 h-5 rounded-lg flex items-center justify-center text-xs shrink-0"
@@ -602,7 +602,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                             className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                             style={{ color: color.text }}>
                             {categories.map((c) => (
-                              <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                              <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
                             ))}
                           </select>
                           <ChevronDown size={11} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
@@ -617,7 +617,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
               <div>
                 <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액 (선택)</p>
-                <div className="flex items-baseline gap-2 bg-[#252A3F] rounded-xl px-4 py-3 overflow-hidden cursor-text"
+                <div className="flex items-baseline gap-2 bg-[#2C2C2E] rounded-xl px-4 py-3 overflow-hidden cursor-text"
                   onClick={(e) => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}>
                   <input
                     type="text" inputMode="numeric"
@@ -631,7 +631,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               </div>
 
               {amountStr !== '' && (
-                <div className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
+                <div className="flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
                   <button type="button" onClick={() => handleTypeChange('income')}
                     className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
                       txType === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
@@ -649,14 +649,14 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
               <div className="flex justify-end gap-2 pt-1 border-t border-white/6">
                 <button onClick={handleCancel}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#4E5968] bg-[#252A3F] hover:bg-[#2D3352] transition-colors">
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#4E5968] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors">
                   <X size={13} /> 취소
                 </button>
                 {!editingId && (
                   <button
                     type="button"
                     onClick={handleAddToQueue}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#8B95A1] bg-[#252A3F] hover:bg-[#2D3352] transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors"
                   >
                     <Plus size={13} /> 항목 추가
                   </button>

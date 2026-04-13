@@ -154,7 +154,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
     <>
       <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
         onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06]">
+        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06]">
 
           {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
@@ -167,7 +167,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               <h2 className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
               <p className="text-xs text-[#4E5968] mt-0.5">CSV · PDF · 농협 · 대구 · 국민 · 신한 · 우리 · 하나</p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center mt-0.5">
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
               <X size={16} className="text-[#8B95A1]" />
             </button>
           </div>
@@ -179,7 +179,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               return (
                 <div key={s} className="flex items-center gap-1 flex-1">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    step === s ? 'bg-[#3D8EF8] text-white' : done ? 'bg-[#2ACF6A] text-white' : 'bg-[#252A3F] text-[#4E5968]'
+                    step === s ? 'bg-[#3D8EF8] text-white' : done ? 'bg-[#2ACF6A] text-white' : 'bg-[#2C2C2E] text-[#4E5968]'
                   }`}>{done ? '✓' : i + 1}</div>
                   <span className={`text-[11px] font-semibold ${step === s ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>
                     {s === 'upload' ? '파일' : s === 'mapping' ? '컬럼' : '확인'}
@@ -198,11 +198,11 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`rounded-3xl p-10 flex flex-col items-center gap-5 cursor-pointer transition-all border ${
-                  isDragging ? 'bg-[#3D8EF8]/10 border-[#3D8EF8]/40' : 'bg-[#252A3F] border-white/[0.05] hover:border-white/10'
+                className={`rounded-2xl p-10 flex flex-col items-center gap-5 cursor-pointer transition-all border ${
+                  isDragging ? 'bg-[#3D8EF8]/10 border-[#3D8EF8]/40' : 'bg-[#2C2C2E] border-white/[0.05] hover:border-white/10'
                 }`}
               >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDragging ? 'bg-[#3D8EF8]/20' : 'bg-[#2D3352]'}`}>
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDragging ? 'bg-[#3D8EF8]/20' : 'bg-[#3A3A3C]'}`}>
                   <Upload size={28} className={isDragging ? 'text-[#3D8EF8]' : 'text-[#4E5968]'} />
                 </div>
                 <div className="text-center">
@@ -211,7 +211,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 </div>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {['농협', '대구은행', '국민', '신한', '우리', '하나', 'IBK'].map((b) => (
-                    <span key={b} className="px-2.5 py-1 bg-[#2D3352] rounded-full text-xs font-medium text-[#8B95A1]">{b}</span>
+                    <span key={b} className="px-2.5 py-1 bg-[#3A3A3C] rounded-full text-xs font-medium text-[#8B95A1]">{b}</span>
                   ))}
                 </div>
                 <input ref={fileInputRef} type="file" accept=".csv,.pdf,.xls,.xlsx,.txt" className="hidden"
@@ -230,7 +230,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
           {/* ── STEP 2: 컬럼 매핑 ── */}
           {step === 'mapping' && (
             <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
-              <div className="bg-[#252A3F] rounded-2xl px-4 py-3">
+              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
                 <p className="text-sm text-[#8B95A1]">
                   <span className="font-bold text-white">{csvRows.length}개</span> 행을 읽었습니다. 컬럼을 지정해주세요.
                 </p>
@@ -256,7 +256,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 }}
               >
                 <table className="w-max text-xs table-auto">
-                  <thead className="bg-[#252A3F]">
+                  <thead className="bg-[#2C2C2E]">
                     <tr>
                       {csvHeaders.map((h) => (
                         <th
@@ -340,11 +340,11 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                     <p className="text-xl font-bold text-[#3D8EF8] num">{importCount}</p>
                     <p className="text-[10px] text-[#3D8EF8]/70 font-semibold mt-0.5">가져올 내역</p>
                   </div>
-                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#252A3F] border-white/[0.04]'}`}>
+                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#2C2C2E] border-white/[0.04]'}`}>
                     <p className={`text-xl font-bold num ${dupCount > 0 ? 'text-[#F5BE3A]' : 'text-[#4E5968]'}`}>{dupCount}</p>
                     <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-[#F5BE3A]/70' : 'text-[#4E5968]'}`}>중복 제외</p>
                   </div>
-                  <div className="bg-[#252A3F] rounded-2xl p-3 text-center border border-white/[0.04]">
+                  <div className="bg-[#2C2C2E] rounded-2xl p-3 text-center border border-white/[0.04]">
                     <p className="text-xl font-bold text-[#8B95A1] num">{previewRows.length}</p>
                     <p className="text-[10px] text-[#4E5968] font-semibold mt-0.5">전체</p>
                   </div>
@@ -371,7 +371,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 }}
               >
                 <table className="w-max min-w-full text-xs">
-                  <thead className="bg-[#252A3F] sticky top-0 z-10">
+                  <thead className="bg-[#2C2C2E] sticky top-0 z-10">
                     <tr>
                       <th className="px-3 py-2.5 w-10">
                         <input type="checkbox" checked={previewRows.length > 0 && previewRows.every((r) => !r.skip)}
@@ -417,7 +417,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               {/* 하단 버튼 */}
               <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0 flex gap-3">
                 <button onClick={() => setStep(isPDF ? 'upload' : 'mapping')}
-                  className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#252A3F] hover:bg-[#2D3352] transition-colors">
+                  className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors">
                   이전
                 </button>
                 <button onClick={handleImport} disabled={importCount === 0}
@@ -461,7 +461,7 @@ function MappingSelect({ label, value, headers, optional, onChange }: {
       <label className="block text-[11px] font-semibold text-[#4E5968] mb-1.5">{label}</label>
       <div className="relative">
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-[#252A3F] border border-white/[0.06] rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
+          className="w-full bg-[#2C2C2E] border border-white/[0.06] rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
           <option value="" className="text-[#4E5968]">{optional ? '없음' : '선택'}</option>
           {headers.map((h) => <option key={h} value={h}>{h}</option>)}
         </select>

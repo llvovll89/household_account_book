@@ -76,7 +76,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6">
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -87,14 +87,14 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
           <h2 className="text-[18px] font-bold text-white">
             {trade ? '거래 수정' : '거래 추가'}
           </h2>
-          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 pb-8 space-y-3">
           {/* 매수 / 매도 */}
-          <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#252A3F] p-1 rounded-2xl">
+          <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
             <button type="button" onClick={() => setTradeType('buy')}
               aria-pressed={tradeType === 'buy'}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -112,7 +112,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
           </div>
 
           {/* 종목명 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-4">
+          <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4">
             <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">종목명</p>
             <input
               ref={tickerRef}
@@ -127,13 +127,13 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             {/* 날짜 */}
-            <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">날짜</p>
               <FancyDatePicker value={date} onChange={setDate} />
             </div>
 
             {/* 통화 */}
-            <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">통화</p>
               <select
                 value={currency}
@@ -141,7 +141,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
                 className="w-full bg-transparent text-[14px] font-bold text-white focus:outline-none appearance-none"
               >
                 {CURRENCIES.map((c) => (
-                  <option key={c} value={c} className="bg-[#252A3F] text-white">{c}</option>
+                  <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
                 ))}
               </select>
             </div>
@@ -149,7 +149,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             {/* 주당 단가 */}
-            <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">주당 단가</p>
               <div className="flex items-baseline gap-1">
                 <input
@@ -165,7 +165,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
             </div>
 
             {/* 수량 */}
-            <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">수량</p>
               <div className="flex items-baseline gap-1">
                 <input
@@ -182,7 +182,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
           </div>
 
           {/* 수수료 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-3.5">
+          <div className="bg-[#2C2C2E] rounded-2xl px-5 py-3.5">
             <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">수수료 (선택)</p>
             <div className="flex items-baseline gap-1">
               <input
@@ -211,7 +211,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
           )}
 
           {/* 메모 */}
-          <div className="bg-[#252A3F] rounded-2xl px-5 py-4">
+          <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4">
             <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">메모 (선택)</p>
             <input
               type="text" value={note}

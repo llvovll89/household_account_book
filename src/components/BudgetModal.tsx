@@ -37,7 +37,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1E2236] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -46,7 +46,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
             <h2 className="text-[18px] font-bold text-white">예산 설정</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">카테고리별 월 예산을 입력하세요</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#252A3F] flex items-center justify-center">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -55,7 +55,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
           {[...EXPENSE_CATEGORIES, ...customExpenseCategories].map((cat) => {
             const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
             return (
-              <div key={cat} className="flex items-center gap-3 bg-[#252A3F] rounded-2xl px-4 py-3">
+              <div key={cat} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3">
                 <div
                   className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
                   style={{ backgroundColor: color.bg }}
@@ -70,7 +70,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
                     value={values[cat] ?? ''}
                     onChange={(e) => handleChange(cat, e.target.value)}
                     placeholder="제한 없음"
-                    className="w-28 bg-[#2D3352] text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/50 placeholder-[#4E5968] num"
+                    className="w-28 bg-[#3A3A3C] text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/50 placeholder-[#4E5968] num"
                   />
                   <span className="text-xs text-[#4E5968]">원</span>
                 </div>

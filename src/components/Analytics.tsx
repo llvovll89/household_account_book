@@ -144,7 +144,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
-      <div className="bg-[#1E2236] rounded-2xl p-1 flex">
+      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
         {(['monthly', 'yearly', 'cashflow', 'reduce'] as ViewMode[]).map((m) => (
           <button
             key={m}
@@ -162,7 +162,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
       {viewMode === 'monthly' && (
         <>
           {/* 인사이트 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Sparkles size={16} className="text-[#F5BE3A]" />
               <p className="text-[15px] font-bold text-white">이번 달 인사이트</p>
@@ -172,7 +172,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
             ) : (
               <div className="space-y-2.5">
                 {insights.map((ins, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-[#252A3F] rounded-2xl px-4 py-3">
+                  <div key={i} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3">
                     <span className="text-xl shrink-0">{ins.icon}</span>
                     <p className="text-sm font-medium" style={{ color: ins.color }}>{ins.text}</p>
                   </div>
@@ -182,7 +182,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 전월 대비 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-4">전월 대비</p>
             <div className="grid grid-cols-2 gap-3">
               <CompareCard label="수입" current={current.income} prev={prev.income} diff={incomeDiff} isIncome />
@@ -191,7 +191,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 6개월 트렌드 차트 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">최근 6개월 트렌드</p>
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5">
@@ -221,7 +221,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 이번 달 누적 잔액 흐름 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">이번 달 잔액 흐름</p>
             <p className="text-xs text-[#4E5968] mb-4">일별 누적 순잔액 변화</p>
             {currentMonthly.length === 0 ? (
@@ -232,7 +232,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 요일별 소비 패턴 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">요일별 소비 패턴</p>
             <p className="text-xs text-[#4E5968] mb-4">이번 달 요일별 총 지출</p>
             {weekdayData.every((d) => d.total === 0) ? (
@@ -242,7 +242,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
                 <WeekdayBarChart data={weekdayData} />
                 <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-2 gap-2">
                   {weekdayData.filter((d) => d.total > 0).sort((a, b) => b.total - a.total).slice(0, 4).map((d, i) => (
-                    <div key={i} className="flex items-center justify-between bg-[#252A3F] rounded-xl px-3 py-2">
+                    <div key={i} className="flex items-center justify-between bg-[#2C2C2E] rounded-xl px-3 py-2">
                       <span className="text-xs font-bold text-[#8B95A1]">{d.label}요일</span>
                       <span className="text-xs font-bold text-white num">{fmt(d.total)}원</span>
                     </div>
@@ -254,7 +254,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
 
           {/* 카테고리 비율 - 도넛 차트 */}
           {expenseByCategory.length > 0 && (
-            <div className="bg-[#1E2236] rounded-3xl p-5">
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
               <p className="text-[15px] font-bold text-white mb-4">카테고리 비율</p>
               <DonutChart data={expenseByCategory} />
             </div>
@@ -269,7 +269,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={() => setSelectedYear((y) => y - 1)}
-              className="w-9 h-9 rounded-full bg-[#1E2236] border border-white/[0.06] flex items-center justify-center"
+              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/[0.06] flex items-center justify-center"
             >
               <ChevronLeft size={16} className="text-[#8B95A1]" />
             </button>
@@ -277,27 +277,27 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
             <button
               onClick={() => setSelectedYear((y) => y + 1)}
               disabled={selectedYear >= new Date().getFullYear()}
-              className="w-9 h-9 rounded-full bg-[#1E2236] border border-white/[0.06] flex items-center justify-center disabled:opacity-30"
+              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/[0.06] flex items-center justify-center disabled:opacity-30"
             >
               <ChevronRight size={16} className="text-[#8B95A1]" />
             </button>
           </div>
 
           {/* 연간 합계 카드 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-4">{selectedYear}년 합계</p>
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-[#252A3F] rounded-2xl p-3.5 text-center">
+              <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">총 수입</p>
                 <p className="text-sm font-extrabold text-[#2ACF6A] num">{fmt(yearTotalIncome)}</p>
                 <p className="text-[10px] text-[#4E5968] mt-0.5">원</p>
               </div>
-              <div className="bg-[#252A3F] rounded-2xl p-3.5 text-center">
+              <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">총 지출</p>
                 <p className="text-sm font-extrabold text-[#F25260] num">{fmt(yearTotalExpense)}</p>
                 <p className="text-[10px] text-[#4E5968] mt-0.5">원</p>
               </div>
-              <div className="bg-[#252A3F] rounded-2xl p-3.5 text-center">
+              <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">순 저축</p>
                 <p className={`text-sm font-extrabold num ${yearTotalIncome - yearTotalExpense >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
                   {fmt(Math.abs(yearTotalIncome - yearTotalExpense))}
@@ -313,7 +313,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
                     {Math.round(Math.max(0, (yearTotalIncome - yearTotalExpense) / yearTotalIncome) * 100)}%
                   </span>
                 </div>
-                <div className="h-2 bg-[#252A3F] rounded-full overflow-hidden">
+                <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
@@ -327,7 +327,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 12개월 차트 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">월별 추이</p>
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5">
@@ -343,7 +343,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 월별 내역 테이블 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-4">월별 상세</p>
             <div className="space-y-2">
               {yearlyData.filter((m) => m.income > 0 || m.expense > 0).map((m) => {
@@ -381,7 +381,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
       {viewMode === 'cashflow' && (
         <>
           {/* 캐시플로 차트 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">6개월 캐시플로</p>
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1.5">
@@ -401,7 +401,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 월별 순이익 */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-4">월별 순이익</p>
             <div className="space-y-2">
               {monthlyData.map((m) => {
@@ -427,14 +427,14 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           {/* Best / Worst 월 */}
           {cashflowStats && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#1E2236] rounded-3xl p-4 text-center">
+              <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-2">최고의 달 🏆</p>
                 <p className="text-sm font-bold text-white">{cashflowStats.best.label}</p>
                 <p className="text-[13px] font-extrabold text-[#2ACF6A] num mt-1">
                   +{fmt(cashflowStats.best.balance)}원
                 </p>
               </div>
-              <div className="bg-[#1E2236] rounded-3xl p-4 text-center">
+              <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-2">아쉬운 달 😓</p>
                 <p className="text-sm font-bold text-white">{cashflowStats.worst.label}</p>
                 <p className="text-[13px] font-extrabold text-[#F25260] num mt-1">
@@ -456,7 +456,7 @@ function CompareCard({
 }) {
   const mainColor = isIncome ? '#2ACF6A' : '#F25260'
   return (
-    <div className="bg-[#252A3F] rounded-2xl p-4">
+    <div className="bg-[#2C2C2E] rounded-2xl p-4">
       <p className="text-xs text-[#4E5968] font-semibold mb-2">{label}</p>
       <p className="text-[17px] font-extrabold num" style={{ color: mainColor }}>
         {current.toLocaleString()}<span className="text-xs font-medium ml-0.5 text-[#4E5968]">원</span>

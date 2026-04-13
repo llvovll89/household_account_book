@@ -181,7 +181,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
     <div className="space-y-3 pb-6">
 
       {/* ── 기간 선택 ──────────────────────────────────────── */}
-      <div className="bg-[#1E2236] rounded-3xl p-5">
+      <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <p className="text-[15px] font-bold text-white mb-3">분석 기간</p>
 
         {/* 프리셋 칩 */}
@@ -193,7 +193,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
               className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 preset === p.key
                   ? 'bg-[#3D8EF8] text-white'
-                  : 'bg-[#252A3F] text-[#8B95A1] hover:text-white'
+                  : 'bg-[#2C2C2E] text-[#8B95A1] hover:text-white'
               }`}
             >
               {p.label}
@@ -210,7 +210,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
               value={startDate}
               max={endDate || undefined}
               onChange={(e) => handleStartChange(e.target.value)}
-              className="w-full bg-[#252A3F] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
+              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -221,7 +221,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
               value={endDate}
               min={startDate || undefined}
               onChange={(e) => handleEndChange(e.target.value)}
-              className="w-full bg-[#252A3F] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
+              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -230,7 +230,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
 
       {/* ── 날짜 미설정 시 안내 ─────────────────────────────── */}
       {!isValidRange && (
-        <div className="bg-[#1E2236] rounded-3xl p-8 text-center">
+        <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
           <p className="text-3xl mb-3">📅</p>
           <p className="text-sm text-[#8B95A1]">분석할 기간을 선택해주세요</p>
         </div>
@@ -239,12 +239,12 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
       {isValidRange && (
         <>
           {/* ── 요약 카드 ────────────────────────────────────── */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[15px] font-bold text-white">기간 요약</p>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#252A3F] text-xs text-[#8B95A1] hover:text-white transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2C2C2E] text-xs text-[#8B95A1] hover:text-white transition-colors"
               >
                 {copied ? <Check size={12} className="text-[#2ACF6A]" /> : <Copy size={12} />}
                 {copied ? '복사됨' : '복사'}
@@ -256,7 +256,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
             </p>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-[#252A3F] rounded-2xl p-3.5">
+              <div className="bg-[#2C2C2E] rounded-2xl p-3.5">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-1">총 지출</p>
                 <p className="text-[17px] font-extrabold text-[#F25260] num">
                   {fmt(totalExpense)}<span className="text-[11px] font-medium text-[#4E5968] ml-0.5">원</span>
@@ -267,7 +267,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                   </p>
                 )}
               </div>
-              <div className="bg-[#252A3F] rounded-2xl p-3.5">
+              <div className="bg-[#2C2C2E] rounded-2xl p-3.5">
                 <p className="text-[10px] text-[#4E5968] font-semibold mb-1">일평균 지출</p>
                 <p className="text-[17px] font-extrabold text-white num">
                   {fmt(days > 0 ? Math.round(totalExpense / days) : 0)}<span className="text-[11px] font-medium text-[#4E5968] ml-0.5">원</span>
@@ -288,7 +288,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                     <span className="font-normal text-[#4E5968]">  (수입 {fmt(totalIncome)}원)</span>
                   </span>
                 </div>
-                <div className="h-2 bg-[#252A3F] rounded-full overflow-hidden">
+                <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
@@ -305,11 +305,11 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
 
           {/* ── 카테고리 / 태그 분석 ─────────────────────────── */}
           {(categoryData.length > 0 || tagData.length > 0) && (
-            <div className="bg-[#1E2236] rounded-3xl p-5">
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[15px] font-bold text-white">카테고리 분석</p>
                 {hasTagData && (
-                  <div className="flex bg-[#252A3F] rounded-xl p-0.5">
+                  <div className="flex bg-[#2C2C2E] rounded-xl p-0.5">
                     <button
                       onClick={() => setShowCat('category')}
                       className={`px-3 py-1 rounded-[10px] text-[11px] font-bold transition-all ${
@@ -346,7 +346,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-[#252A3F] rounded-full overflow-hidden">
+                          <div className="flex-1 h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500"
                               style={{ width: `${item.pct}%`, backgroundColor: color }}
@@ -370,7 +370,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-[#252A3F] rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full bg-[#3D8EF8] transition-all duration-500"
                             style={{ width: `${item.pct}%` }}
@@ -386,7 +386,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
           )}
 
           {/* ── 절감 제안 ────────────────────────────────────── */}
-          <div className="bg-[#1E2236] rounded-3xl p-5">
+          <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-4">절감 제안</p>
 
             {suggestions.length === 0 ? (
@@ -403,7 +403,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                   return (
                     <div
                       key={s.id}
-                      className="bg-[#252A3F] rounded-2xl overflow-hidden"
+                      className="bg-[#2C2C2E] rounded-2xl overflow-hidden"
                       style={{ borderLeft: `3px solid ${borderColor}` }}
                     >
                       <button
@@ -432,7 +432,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                         <div className="px-4 pb-4 space-y-2">
                           <p className="text-sm text-[#8B95A1] leading-relaxed">{s.body}</p>
                           {s.savingHint && (
-                            <div className="flex items-center gap-2 bg-[#1E2236] rounded-xl px-3 py-2">
+                            <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-xl px-3 py-2">
                               <span className="text-base">💡</span>
                               <p className="text-xs font-semibold text-[#F5BE3A]">{s.savingHint}</p>
                             </div>
@@ -448,7 +448,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
 
           {/* ── 절약 시뮬레이터 ──────────────────────────────── */}
           {categoryData.length > 0 && (
-            <div className="bg-[#1E2236] rounded-3xl p-5">
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
               <p className="text-[15px] font-bold text-white mb-1">절약 시뮬레이터</p>
               <p className="text-xs text-[#4E5968] mb-4">특정 카테고리를 줄이면 얼마나 절약할 수 있는지 계산해요</p>
 
@@ -462,7 +462,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                       key={item.cat}
                       onClick={() => setSimCat(item.cat)}
                       className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        isSelected ? 'text-white' : 'bg-[#252A3F] text-[#4E5968] border-transparent'
+                        isSelected ? 'text-white' : 'bg-[#2C2C2E] text-[#4E5968] border-transparent'
                       }`}
                       style={isSelected ? { backgroundColor: `${color}25`, borderColor: color, color } : {}}
                     >
@@ -480,7 +480,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                     key={pct}
                     onClick={() => setSimPct(pct)}
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                      simPct === pct ? 'bg-[#3D8EF8] text-white' : 'bg-[#252A3F] text-[#4E5968]'
+                      simPct === pct ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#4E5968]'
                     }`}
                   >
                     -{pct}%
@@ -490,7 +490,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
 
               {/* 결과 */}
               {simCatData && (
-                <div className="bg-[#252A3F] rounded-2xl p-4 space-y-3">
+                <div className="bg-[#2C2C2E] rounded-2xl p-4 space-y-3">
                   <p className="text-sm text-[#8B95A1]">
                     {CATEGORY_EMOJI[simCatData.cat] ?? '📦'} <span className="text-white font-semibold">{simCatData.cat}</span>을(를){' '}
                     <span className="text-[#3D8EF8] font-bold">{simPct}%</span> 줄인다면...

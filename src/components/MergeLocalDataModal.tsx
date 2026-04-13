@@ -20,7 +20,7 @@ export default function MergeLocalDataModal({ onConfirm, onCancel, counts }: Pro
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={(e) => e.target === e.currentTarget && onCancel()}>
-      <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
+      <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <span className="w-9 h-9 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/25 flex items-center justify-center shrink-0">
@@ -33,13 +33,13 @@ export default function MergeLocalDataModal({ onConfirm, onCancel, counts }: Pro
               </p>
             </div>
           </div>
-          <button onClick={onCancel} className="w-7 h-7 rounded-full bg-[#1E2236] text-[#8B95A1] flex items-center justify-center shrink-0" aria-label="닫기">
+          <button onClick={onCancel} className="w-7 h-7 rounded-full bg-[#1C1C1E] text-[#8B95A1] flex items-center justify-center shrink-0" aria-label="닫기">
             <X size={14} />
           </button>
         </div>
 
         {items.length > 0 && (
-          <div className="bg-[#1E2236] rounded-2xl px-4 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
+          <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
             {items.map(({ key, label }) => (
               <span key={key} className="text-xs text-[#8B95A1]">
                 {label} <span className="text-white font-bold num">{counts[key]}</span>건
@@ -53,7 +53,7 @@ export default function MergeLocalDataModal({ onConfirm, onCancel, counts }: Pro
         </p>
 
         <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-[#1E2236] text-[#8B95A1] text-sm font-bold">
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-sm font-bold">
             삭제 후 계속
           </button>
           <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-[#3D8EF8] text-white text-sm font-bold hover:bg-[#5AA0FF] transition-colors">
