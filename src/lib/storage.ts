@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { Budget, Memo, RecurringTransaction, StockTrade, Transaction } from '../types'
+import type { Budget, Memo, RecurringTransaction, StockTrade, Subscription, Transaction } from '../types'
 
 function safeSave(key: string, value: unknown): void {
   try {
@@ -19,6 +19,7 @@ const MEMOS_KEY = 'hb_memos'
 const BUDGETS_KEY = 'hb_budgets'
 const RECURRING_KEY = 'hb_recurring'
 const STOCK_TRADES_KEY = 'hb_stock_trades'
+const SUBSCRIPTIONS_KEY = 'hb_subscriptions'
 const SETTINGS_KEY = 'hb_settings'
 
 type StorageMode = 'local' | 'firebase'
@@ -36,6 +37,7 @@ interface RemoteState {
   budgets: Budget[]
   recurring: RecurringTransaction[]
   stockTrades: StockTrade[]
+  subscriptions: Subscription[]
   settings: AppSettings
 }
 
@@ -45,6 +47,7 @@ export interface AppDataSnapshot {
   budgets: Budget[]
   recurring: RecurringTransaction[]
   stockTrades: StockTrade[]
+  subscriptions: Subscription[]
   settings: AppSettings
 }
 
@@ -98,6 +101,10 @@ function loadLocalStockTrades(): StockTrade[] {
   return parseJSON(localStorage.getItem(STOCK_TRADES_KEY), [])
 }
 
+function loadLocalSubscriptions(): Subscription[] {
+  return parseJSON(localStorage.getItem(SUBSCRIPTIONS_KEY), [])
+}
+
 function loadLocalSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) }
 }
@@ -140,6 +147,7 @@ function normalizeRemoteState(raw: unknown): RemoteState {
     budgets: Array.isArray(data.budgets) ? data.budgets : [],
     recurring: Array.isArray(data.recurring) ? data.recurring : [],
     stockTrades: Array.isArray(data.stockTrades) ? data.stockTrades : [],
+    subscriptions: Array.isArray(data.subscriptions) ? data.subscriptions : [],
     settings,
   }
 }
@@ -167,6 +175,7 @@ function localSnapshot(): RemoteState {
     budgets: loadLocalBudgets(),
     recurring: loadLocalRecurring(),
     stockTrades: loadLocalStockTrades(),
+    subscriptions: loadLocalSubscriptions(),
     settings: loadLocalSettings(),
   }
 }
@@ -326,6 +335,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       budgets: local.budgets,
       recurring: local.recurring,
       stockTrades: local.stockTrades,
+      subscriptions: local.subscriptions,
       settings: local.settings,
     }
   }
@@ -338,10 +348,10 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       budgets: remote.budgets,
       recurring: remote.recurring,
       stockTrades: remote.stockTrades,
+      subscriptions: remote.subscriptions,
       settings: remote.settings,
     }
   } catch {
-    // Firebase 실패 시 로컬스토리지 백업으로 폴백
     const local = localSnapshot()
     return {
       transactions: local.transactions,
@@ -349,6 +359,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       budgets: local.budgets,
       recurring: local.recurring,
       stockTrades: local.stockTrades,
+      subscriptions: local.subscriptions,
       settings: local.settings,
     }
   }
@@ -420,6 +431,21 @@ export async function saveStockTrades(trades: StockTrade[]): Promise<void> {
     return
   }
   await saveRemotePatch(getStorageUid(), { stockTrades: trades })
+}
+
+export async function loadSubscriptions(): Promise<Subscription[]> {
+  if (storageMode === 'local') return loadLocalSubscriptions()
+  try {
+    return (await loadRemoteState(getStorageUid())).subscriptions
+  } catch {
+    return loadLocalSubscriptions()
+  }
+}
+
+export async function saveSubscriptions(subs: Subscription[]): Promise<void> {
+  safeSave(SUBSCRIPTIONS_KEY, subs)
+  if (storageMode === 'local') return
+  await saveRemotePatch(getStorageUid(), { subscriptions: subs })
 }
 
 export async function loadSettings(): Promise<AppSettings> {

@@ -68,6 +68,17 @@ export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
   기타지출:    { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
 }
 
+export interface Subscription {
+  id: string
+  name: string          // 서비스명 (예: 넷플릭스)
+  amount: number
+  currency: 'KRW' | 'USD'
+  billingDay: number    // 매월 결제일 (1-31)
+  category: string      // EXPENSE_CATEGORIES 중 하나
+  memo: string          // 선택 메모
+  createdAt: number
+}
+
 export type StockTradeType = 'buy' | 'sell'
 
 export interface StockTrade {

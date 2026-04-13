@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade } from './types'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard } from 'lucide-react'
+import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
-import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveTransactions } from './lib/storage'
+import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveTransactions } from './lib/storage'
 import { generateId } from './lib/format'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
@@ -32,6 +32,7 @@ const LEDGER_TABS = [
     { id: 'home' as Tab, label: '홈', Icon: LayoutDashboard },
     { id: 'transactions' as Tab, label: '내역', Icon: List },
     { id: 'analytics' as Tab, label: '분석', Icon: BarChart2 },
+    { id: 'subscriptions' as Tab, label: '구독', Icon: CreditCard },
     { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
 ]
 
@@ -79,6 +80,8 @@ export default function App() {
     const [editingTrade, setEditingTrade] = useState<StockTrade | null>(null)
     const [stockSubTab, setStockSubTab] = useState<StockSubTab>('portfolio')
     const [memoAddTrigger, setMemoAddTrigger] = useState(0)
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
+    const [subscriptionAddTrigger, setSubscriptionAddTrigger] = useState(0)
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -103,6 +106,7 @@ export default function App() {
         setBudgets(snapshot.budgets)
         setRecurring(snapshot.recurring)
         setStockTrades(snapshot.stockTrades)
+        setSubscriptions(snapshot.subscriptions ?? [])
         setStockWatchlist(snapshot.settings.stockWatchlist ?? [])
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
@@ -210,6 +214,11 @@ export default function App() {
     const handleRecurringSave = useCallback((items: RecurringTransaction[]) => {
         setRecurring(items)
         persist(saveRecurring(items), '정기내역 저장에 실패했습니다.')
+    }, [persist])
+
+    const handleSubscriptionsChange = useCallback((items: Subscription[]) => {
+        setSubscriptions(items)
+        persist(saveSubscriptions(items), '구독 저장에 실패했습니다.')
     }, [persist])
 
     const handleApplyRecurring = useCallback((pending: RecurringTransaction[]) => {
@@ -477,14 +486,17 @@ export default function App() {
                         transactions={transactions}
                         budgets={budgets}
                         recurring={recurring}
+                        subscriptions={subscriptions}
                         settingsVersion={settingsVersion}
                         yearMonth={yearMonth}
                         customExpenseCategories={customExpenseCategories}
                         memos={memos}
                         memoAddTrigger={memoAddTrigger}
+                        subscriptionAddTrigger={subscriptionAddTrigger}
                         onBudgetsChange={handleBudgetsChange}
                         onRecurringSave={handleRecurringSave}
                         onApplyRecurring={handleApplyRecurring}
+                        onSubscriptionsChange={handleSubscriptionsChange}
                         onOpenCategoryModal={() => setShowCategoryModal(true)}
                         onTransactionEdit={(t) => { setEditingTransaction(t); setShowModal(true) }}
                         onTransactionDelete={handleDeleteTransaction}
@@ -518,6 +530,8 @@ export default function App() {
                                     setShowStockModal(true)
                                 } else if (activeTab === 'memos') {
                                     setMemoAddTrigger((prev) => prev + 1)
+                                } else if (activeTab === 'subscriptions') {
+                                    setSubscriptionAddTrigger((prev) => prev + 1)
                                 } else {
                                     setEditingTransaction(null)
                                     setShowModal(true)
