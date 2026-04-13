@@ -234,6 +234,25 @@ export function setStorageContext(mode: StorageMode, uid: string | null = null):
   storageUid = uid
 }
 
+export interface LocalDataCounts {
+  transactions: number
+  memos: number
+  budgets: number
+  recurring: number
+  stockTrades: number
+}
+
+export function getLocalDataCounts(): LocalDataCounts {
+  const snapshot = localSnapshot()
+  return {
+    transactions: snapshot.transactions.length,
+    memos: snapshot.memos.length,
+    budgets: snapshot.budgets.length,
+    recurring: snapshot.recurring.length,
+    stockTrades: snapshot.stockTrades.length,
+  }
+}
+
 export function hasLocalMigratableData(): boolean {
   const snapshot = localSnapshot()
   return (
@@ -247,6 +266,10 @@ export function hasLocalMigratableData(): boolean {
     || snapshot.settings.customIncomeCategories.length > 0
     || snapshot.settings.stockWatchlist.length > 0
   )
+}
+
+export function clearLocalData(): void {
+  backupAndClearLocalData()
 }
 
 export async function mergeLocalIntoFirebase(): Promise<MergeResult> {

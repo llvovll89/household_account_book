@@ -114,6 +114,7 @@ export default function App() {
         isSyncing,
         settingsVersion,
         showMergeModal,
+        localDataCounts,
         showAuthModal,
         authMode,
         email,
@@ -601,7 +602,7 @@ export default function App() {
             )}
 
             {showMergeModal && (
-                <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} />
+                <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} counts={localDataCounts} />
             )}
 
             {showAuthModal && (

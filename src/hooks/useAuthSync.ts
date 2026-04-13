@@ -9,7 +9,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase/firebase'
-import { hasLocalMigratableData, mergeLocalIntoFirebase, setStorageContext } from '../lib/storage'
+import { type LocalDataCounts, clearLocalData, getLocalDataCounts, hasLocalMigratableData, mergeLocalIntoFirebase, setStorageContext } from '../lib/storage'
 import { showToast } from '../lib/toast'
 
 interface UseAuthSyncParams {
@@ -22,6 +22,7 @@ interface UseAuthSyncResult {
   isSyncing: boolean
   settingsVersion: number
   showMergeModal: boolean
+  localDataCounts: LocalDataCounts
   showAuthModal: boolean
   authMode: 'login' | 'signup'
   email: string
@@ -96,6 +97,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
   const [isSyncing, setIsSyncing] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [showMergeModal, setShowMergeModal] = useState(false)
+  const [localDataCounts, setLocalDataCounts] = useState<LocalDataCounts>({ transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 })
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
@@ -110,6 +112,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       if (shouldMerge) {
         const result = await mergeLocalIntoFirebase()
         showToast(result.message)
+      } else {
+        clearLocalData()
       }
     } catch {
       showToast('데이터 병합 중 오류가 발생했습니다.')
@@ -160,6 +164,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       setSettingsVersion((prev) => prev + 1)
 
       if (hasLocalMigratableData()) {
+        setLocalDataCounts(getLocalDataCounts())
         setShowMergeModal(true)
         setAuthReady(true)
         return
@@ -234,6 +239,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     isSyncing,
     settingsVersion,
     showMergeModal,
+    localDataCounts,
     showAuthModal,
     authMode,
     email,

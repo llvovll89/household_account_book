@@ -12,8 +12,17 @@ interface Props {
   onRemove: (ticker: string) => void
 }
 
+const TICKER_RE = /^(\d{6}(\.[A-Z]{2})?|[A-Z0-9]{1,7}(\.[A-Z]{1,2})?)$/
+
+function validateTicker(raw: string): string | null {
+  if (/[^\x00-\x7F]/.test(raw)) return '한글/특수문자는 입력할 수 없어요. 종목코드를 입력하세요 (예: 005930, AAPL)'
+  if (!TICKER_RE.test(raw)) return '올바른 종목코드 형식이 아니에요 (예: 005930, 035420.KQ, AAPL)'
+  return null
+}
+
 export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, onRemove }: Props) {
   const [inputTicker, setInputTicker] = useState('')
+  const [inputError, setInputError] = useState<string | null>(null)
   const holdings = useMemo(() => calcHoldings(trades), [trades])
 
   const watchItems = useMemo(() => {
@@ -28,6 +37,9 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
   function handleAdd() {
     const ticker = inputTicker.trim().toUpperCase()
     if (!ticker) return
+    const err = validateTicker(ticker)
+    if (err) { setInputError(err); return }
+    setInputError(null)
     onAdd(ticker)
     setInputTicker('')
   }
@@ -40,7 +52,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
           <input
             type="text"
             value={inputTicker}
-            onChange={(e) => setInputTicker(e.target.value)}
+            onChange={(e) => { setInputTicker(e.target.value); setInputError(null) }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
@@ -58,9 +70,13 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
             <Plus size={16} />
           </button>
         </div>
-        <p className="text-[10px] text-[#4E5968] mt-2">
-          한국 주식: 종목코드 입력 (예: 005930 → KOSPI 자동변환, 035420.KQ → KOSDAQ)
-        </p>
+        {inputError ? (
+          <p className="text-[10px] text-[#F25260] mt-2">{inputError}</p>
+        ) : (
+          <p className="text-[10px] text-[#4E5968] mt-2">
+            한국 주식: 종목코드 입력 (예: 005930 → KOSPI 자동변환, 035420.KQ → KOSDAQ)
+          </p>
+        )}
       </div>
 
       {watchItems.length === 0 ? (

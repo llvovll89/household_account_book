@@ -35,12 +35,39 @@ export function toYahooSymbol(ticker: string): string {
   return t.toUpperCase()
 }
 
-function buildUrl(yahoPath: string): string {
+const PROXY_LIST = [
+  (import.meta.env.VITE_CORS_PROXY as string | undefined) ?? 'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+]
+
+function buildUrl(yahoPath: string, proxy: string): string {
   if (import.meta.env.DEV) {
     return `/yf-api${yahoPath}`
   }
-  const proxy = (import.meta.env.VITE_CORS_PROXY as string | undefined) ?? 'https://corsproxy.io/?'
   return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${yahoPath}`)}`
+}
+
+async function fetchWithProxyFallback(path: string): Promise<Response> {
+  if (import.meta.env.DEV) {
+    return fetch(buildUrl(path, ''), { headers: { Accept: 'application/json' } })
+  }
+  for (const proxy of PROXY_LIST) {
+    const url = buildUrl(path, proxy)
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (res.ok) return res
+      if (res.status !== 403 && res.status !== 429) throw new Error(`HTTP ${res.status}`)
+      // 403/429이면 다음 프록시로
+    } catch (e) {
+      if (proxy === PROXY_LIST[PROXY_LIST.length - 1]) throw e
+    }
+  }
+  throw new Error('모든 프록시 실패')
+}
+
+/** ASCII 범위를 벗어난 문자(한글 등)가 포함된 심볼 제외 */
+function isValidYahooSymbol(sym: string): boolean {
+  return /^[\x00-\x7F]+$/.test(sym)
 }
 
 // ─── 차트 데이터 ────────────────────────────────────────────────
@@ -88,10 +115,7 @@ export async function fetchChart(ticker: string, range: ChartRange): Promise<Sto
     `/v8/finance/chart/${encodeURIComponent(symbol)}` +
     `?interval=${interval}&range=${range}&includePrePost=false`
 
-  const res = await fetch(buildUrl(path), {
-    headers: { Accept: 'application/json' },
-  })
-
+  const res = await fetchWithProxyFallback(path)
   if (!res.ok) throw new Error(`차트 데이터 오류: HTTP ${res.status}`)
 
   const data: any = await res.json()
@@ -127,11 +151,16 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
 
   // 원본 티커 → Yahoo 심볼 매핑 (역방향도 보관)
   const symbolToTicker: Record<string, string> = {}
-  const ySymbols = tickers.map(t => {
-    const sym = toYahooSymbol(t)
-    symbolToTicker[sym] = t
-    return sym
-  })
+  const ySymbols = tickers
+    .map(t => {
+      const sym = toYahooSymbol(t)
+      symbolToTicker[sym] = t
+      return sym
+    })
+    .filter(isValidYahooSymbol)
+
+  if (ySymbols.length === 0) return {}
+
   const symbolsParam = ySymbols.join(',')
 
   const fields = [
@@ -151,10 +180,7 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
     `&lang=ko-KR` +
     `&corsDomain=finance.yahoo.com`
 
-  const res = await fetch(buildUrl(path), {
-    headers: { Accept: 'application/json' },
-  })
-
+  const res = await fetchWithProxyFallback(path)
   if (!res.ok) {
     throw new Error(`Yahoo Finance API 오류: HTTP ${res.status}`)
   }

@@ -58,22 +58,6 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10)
 }
 
-// 두 날짜 사이의 모든 YYYY-MM-DD 생성 (최대 366일)
-function dateRange(start: string, end: string): string[] {
-  const result: string[] = []
-  const s = new Date(start)
-  const e = new Date(end)
-  if (e < s) return [start]
-  const limit = 366
-  let count = 0
-  const cur = new Date(s)
-  while (cur <= e && count < limit) {
-    result.push(cur.toISOString().slice(0, 10))
-    cur.setDate(cur.getDate() + 1)
-    count++
-  }
-  return result
-}
 
 export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onTogglePin, externalAddTrigger = 0 }: Props) {
   const [showForm, setShowForm] = useState(false)
@@ -103,11 +87,11 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     const map = new Map<string, Memo[]>()
     for (const memo of memos) {
       const startKey = memo.date ?? new Date(memo.updatedAt).toISOString().slice(0, 10)
-      const keys = memo.dateEnd ? dateRange(startKey, memo.dateEnd) : [startKey]
+      // 기간 메모는 시작일·종료일에만 표시 (중간 날짜 제외)
+      const keys = memo.dateEnd ? [startKey, memo.dateEnd] : [startKey]
       for (const key of keys) {
         const prev = map.get(key)
         if (prev) {
-          // 중복 방지 (range로 인해 같은 메모가 여러 날짜에 등록)
           if (!prev.find((m) => m.id === memo.id)) prev.push(memo)
         } else {
           map.set(key, [memo])

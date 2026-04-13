@@ -32,7 +32,8 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
     // 날짜 셀
     for (let d = 1; d <= daysInMonth; d++) {
       const date = `${yearMonth}-${String(d).padStart(2, '0')}`
-      const dayTx = transactions.filter((t) => t.date === date)
+      // 시작일이 오늘이거나, dateEnd(종료일)가 오늘인 내역 모두 포함
+      const dayTx = transactions.filter((t) => t.date === date || t.dateEnd === date)
       const income = dayTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
       const expense = dayTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
       result.push({ date, income, expense, isToday: date === today })
@@ -40,11 +41,11 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
     return result
   }, [transactions, yearMonth])
 
-  // 선택된 날짜의 거래 내역
+  // 선택된 날짜의 거래 내역 (시작일 또는 종료일이 해당 날짜인 내역 포함)
   const selectedTx = useMemo(() => {
     if (!selectedDate) return []
     return transactions
-      .filter((t) => t.date === selectedDate)
+      .filter((t) => t.date === selectedDate || t.dateEnd === selectedDate)
       .sort((a, b) => b.createdAt - a.createdAt)
   }, [transactions, selectedDate])
 
