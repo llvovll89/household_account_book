@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { Pencil, Trash2, X, Check } from 'lucide-react'
 import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
 import { fmt } from '../lib/format'
@@ -10,8 +10,6 @@ interface Props {
   addTrigger?: number
   onChange: (items: Subscription[]) => void
 }
-
-const PRESET_CATEGORIES = ['통신비', '문화/여가', '교육', '쇼핑', '기타지출']
 
 const SERVICE_COLORS = [
   '#3D8EF8', '#F25260', '#2ACF6A', '#F5BE3A',

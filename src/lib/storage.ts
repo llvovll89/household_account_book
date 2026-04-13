@@ -139,6 +139,8 @@ function normalizeRemoteState(raw: unknown): RemoteState {
       budgets: [],
       recurring: [],
       stockTrades: [],
+      subscriptions: [],
+      goals: [],
       settings: { ...DEFAULT_SETTINGS },
     }
   }
@@ -316,6 +318,8 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     budgets: mergeBudgets(remote.budgets, local.budgets),
     recurring: mergeRecurring(remote.recurring, local.recurring),
     stockTrades: mergeUniqueByKey(remote.stockTrades, local.stockTrades, stockKey),
+    subscriptions: local.subscriptions.length > 0 ? local.subscriptions : remote.subscriptions,
+    goals: local.goals.length > 0 ? local.goals : remote.goals,
     settings: mergeSettings(remote.settings, local.settings),
   }
 
