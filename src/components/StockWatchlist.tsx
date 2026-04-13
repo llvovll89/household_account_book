@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { Plus, Star, Trash2 } from 'lucide-react'
 import type { StockTrade, StockQuote } from '../types'
 import { calcHoldings } from '../lib/stockCalc'
 import { fmt, fmtQty, fmtPrice } from '../lib/format'
+import { searchStocks, type StockSearchResult } from '../lib/stockPriceApi'
 
 interface Props {
   trades: StockTrade[]
@@ -23,6 +24,9 @@ function validateTicker(raw: string): string | null {
 export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, onRemove }: Props) {
   const [inputTicker, setInputTicker] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<StockSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const holdings = useMemo(() => calcHoldings(trades), [trades])
 
   const watchItems = useMemo(() => {
@@ -42,39 +46,100 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
     setInputError(null)
     onAdd(ticker)
     setInputTicker('')
+    setSuggestions([])
+  }
+
+  function handleSelectSuggestion(s: StockSearchResult) {
+    onAdd(s.symbol)
+    setInputTicker('')
+    setSuggestions([])
+    setInputError(null)
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value
+    setInputTicker(val)
+    setInputError(null)
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    const trimmed = val.trim()
+
+    if (trimmed.length < 2) { setSuggestions([]); return }
+
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const results = await searchStocks(trimmed)
+        setSuggestions(results)
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSearching(false)
+      }
+    }, 350)
   }
 
   return (
     <div className="space-y-3 tab-content">
       <div className="bg-[#1E2236] rounded-2xl p-3">
         <p className="text-sm font-bold text-white mb-2">관심종목 추가</p>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={inputTicker}
-            onChange={(e) => { setInputTicker(e.target.value); setInputError(null) }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                handleAdd()
-              }
-            }}
-            placeholder="예: AAPL, 005930, 005930.KQ"
-            className="flex-1 bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
-          />
-          <button
-            onClick={handleAdd}
-            className="w-10 h-10 rounded-xl bg-[#F5BE3A] text-[#0D0F14] flex items-center justify-center font-bold"
-            aria-label="관심종목 추가"
-          >
-            <Plus size={16} />
-          </button>
+        <div className="relative">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={inputTicker}
+              onChange={handleInputChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleAdd()
+                }
+                if (e.key === 'Escape') {
+                  setSuggestions([])
+                }
+              }}
+              placeholder="종목명 또는 코드 (예: SK하이닉스, AAPL)"
+              className="flex-1 bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+            />
+            <button
+              onClick={handleAdd}
+              className="w-10 h-10 rounded-xl bg-[#F5BE3A] text-[#0D0F14] flex items-center justify-center font-bold shrink-0"
+              aria-label="관심종목 추가"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* 자동완성 드롭다운 */}
+          {suggestions.length > 0 && (
+            <ul className="absolute top-full left-0 right-10 mt-1 bg-[#252A3F] rounded-xl overflow-hidden z-10 shadow-lg border border-white/[0.06]">
+              {suggestions.map((s) => (
+                <li
+                  key={s.symbol}
+                  onMouseDown={(e) => e.preventDefault()} // input blur 방지
+                  onClick={() => handleSelectSuggestion(s)}
+                  className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-[#1E2236] transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">{s.shortName}</p>
+                    <p className="text-[10px] text-[#8B95A1]">{s.symbol}</p>
+                  </div>
+                  <span className="text-[10px] text-[#4E5968] shrink-0 ml-2">{s.quoteType}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {searching && suggestions.length === 0 && (
+            <p className="absolute top-full left-0 mt-1 text-[11px] text-[#8B95A1] px-1">검색 중...</p>
+          )}
         </div>
+
         {inputError ? (
           <p className="text-[10px] text-[#F25260] mt-2">{inputError}</p>
         ) : (
           <p className="text-[10px] text-[#4E5968] mt-2">
-            한국 주식: 종목코드 입력 (예: 005930 → KOSPI 자동변환, 035420.KQ → KOSDAQ)
+            종목명으로 검색하거나 코드를 직접 입력하세요 (예: 005930 → KOSPI, 035420.KQ → KOSDAQ)
           </p>
         )}
       </div>

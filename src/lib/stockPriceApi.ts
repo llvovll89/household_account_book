@@ -75,6 +75,36 @@ function isValidYahooSymbol(sym: string): boolean {
   return /^[\x00-\x7F]+$/.test(sym)
 }
 
+// ─── 종목 검색 ────────────────────────────────────────────────
+
+export interface StockSearchResult {
+  symbol: string    // 예: 000660.KS
+  shortName: string // 예: SK hynix
+  quoteType: string // 'EQUITY' | 'ETF' | ...
+}
+
+/**
+ * Yahoo Finance 검색 API로 키워드(종목명/코드)에 맞는 종목 목록을 반환
+ */
+export async function searchStocks(keyword: string): Promise<StockSearchResult[]> {
+  const path =
+    `/v1/finance/search` +
+    `?q=${encodeURIComponent(keyword)}` +
+    `&lang=ko-KR&region=KR&quotesCount=6&newsCount=0&enableFuzzyQuery=true`
+
+  const res = await fetchWithProxyFallback(path)
+  const data: any = await res.json()
+
+  return (data?.quotes ?? [])
+    .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+    .map((q: any) => ({
+      symbol: q.symbol ?? '',
+      shortName: q.shortName ?? q.longname ?? q.symbol,
+      quoteType: q.quoteType,
+    }))
+    .filter((q: StockSearchResult) => isValidYahooSymbol(q.symbol))
+}
+
 // ─── 차트 데이터 ────────────────────────────────────────────────
 
 export type ChartRange = '1d' | '5d' | '1mo' | '3mo' | '1y'
