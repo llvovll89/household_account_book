@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Minus } from 'lucide-react'
 import type { SavingsGoal } from '../types'
 import { fmt } from '../lib/format'
@@ -45,9 +45,12 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
   const [depositGoal, setDepositGoal] = useState<SavingsGoal | null>(null)
   const [depositMode, setDepositMode] = useState<'add' | 'sub'>('add')
   const [depositStr, setDepositStr] = useState('')
+  const mountedTriggerRef = useRef(addTrigger)
 
+  // FAB 트리거 — 마운트 시점 이후 변경됐을 때만 열기
   useEffect(() => {
-    if (addTrigger && addTrigger > 0) openAdd()
+    if (addTrigger && addTrigger > 0 && addTrigger !== mountedTriggerRef.current) openAdd()
+    mountedTriggerRef.current = addTrigger
   }, [addTrigger])
 
   function openAdd() {

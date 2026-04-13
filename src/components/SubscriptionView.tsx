@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
@@ -45,10 +45,12 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   const [amountStr, setAmountStr] = useState('')
   const [colorIdx, setColorIdx] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const mountedTriggerRef = useRef(addTrigger)
 
-  // FAB 트리거
+  // FAB 트리거 — 마운트 시점 이후 변경됐을 때만 열기
   useEffect(() => {
-    if (addTrigger && addTrigger > 0) openAdd()
+    if (addTrigger && addTrigger > 0 && addTrigger !== mountedTriggerRef.current) openAdd()
+    mountedTriggerRef.current = addTrigger
   }, [addTrigger])
 
   function openAdd() {
