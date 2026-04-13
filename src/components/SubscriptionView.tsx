@@ -225,7 +225,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowSheet(false)} />
           <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto">
             {/* 헤더 */}

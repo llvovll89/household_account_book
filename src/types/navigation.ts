@@ -1,4 +1,4 @@
-export type Tab = 'home' | 'transactions' | 'analytics' | 'memos' | 'subscriptions' | 'stocks'
+export type Tab = 'home' | 'transactions' | 'analytics' | 'memos' | 'subscriptions' | 'goals' | 'stocks'
 
 export type AppMode = 'ledger' | 'stocks'
 

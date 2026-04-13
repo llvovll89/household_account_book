@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { Budget, Memo, RecurringTransaction, StockTrade, Subscription, Transaction } from '../types'
+import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction } from '../types'
 
 function safeSave(key: string, value: unknown): void {
   try {
@@ -20,6 +20,7 @@ const BUDGETS_KEY = 'hb_budgets'
 const RECURRING_KEY = 'hb_recurring'
 const STOCK_TRADES_KEY = 'hb_stock_trades'
 const SUBSCRIPTIONS_KEY = 'hb_subscriptions'
+const GOALS_KEY = 'hb_goals'
 const SETTINGS_KEY = 'hb_settings'
 
 type StorageMode = 'local' | 'firebase'
@@ -38,6 +39,7 @@ interface RemoteState {
   recurring: RecurringTransaction[]
   stockTrades: StockTrade[]
   subscriptions: Subscription[]
+  goals: SavingsGoal[]
   settings: AppSettings
 }
 
@@ -48,6 +50,7 @@ export interface AppDataSnapshot {
   recurring: RecurringTransaction[]
   stockTrades: StockTrade[]
   subscriptions: Subscription[]
+  goals: SavingsGoal[]
   settings: AppSettings
 }
 
@@ -105,6 +108,10 @@ function loadLocalSubscriptions(): Subscription[] {
   return parseJSON(localStorage.getItem(SUBSCRIPTIONS_KEY), [])
 }
 
+function loadLocalGoals(): SavingsGoal[] {
+  return parseJSON(localStorage.getItem(GOALS_KEY), [])
+}
+
 function loadLocalSettings(): AppSettings {
   return { ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) }
 }
@@ -148,6 +155,7 @@ function normalizeRemoteState(raw: unknown): RemoteState {
     recurring: Array.isArray(data.recurring) ? data.recurring : [],
     stockTrades: Array.isArray(data.stockTrades) ? data.stockTrades : [],
     subscriptions: Array.isArray(data.subscriptions) ? data.subscriptions : [],
+    goals: Array.isArray(data.goals) ? data.goals : [],
     settings,
   }
 }
@@ -176,6 +184,7 @@ function localSnapshot(): RemoteState {
     recurring: loadLocalRecurring(),
     stockTrades: loadLocalStockTrades(),
     subscriptions: loadLocalSubscriptions(),
+    goals: loadLocalGoals(),
     settings: loadLocalSettings(),
   }
 }
@@ -336,6 +345,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       recurring: local.recurring,
       stockTrades: local.stockTrades,
       subscriptions: local.subscriptions,
+      goals: local.goals,
       settings: local.settings,
     }
   }
@@ -349,6 +359,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       recurring: remote.recurring,
       stockTrades: remote.stockTrades,
       subscriptions: remote.subscriptions,
+      goals: remote.goals,
       settings: remote.settings,
     }
   } catch {
@@ -360,6 +371,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
       recurring: local.recurring,
       stockTrades: local.stockTrades,
       subscriptions: local.subscriptions,
+      goals: local.goals,
       settings: local.settings,
     }
   }
@@ -446,6 +458,21 @@ export async function saveSubscriptions(subs: Subscription[]): Promise<void> {
   safeSave(SUBSCRIPTIONS_KEY, subs)
   if (storageMode === 'local') return
   await saveRemotePatch(getStorageUid(), { subscriptions: subs })
+}
+
+export async function loadGoals(): Promise<SavingsGoal[]> {
+  if (storageMode === 'local') return loadLocalGoals()
+  try {
+    return (await loadRemoteState(getStorageUid())).goals
+  } catch {
+    return loadLocalGoals()
+  }
+}
+
+export async function saveGoals(goals: SavingsGoal[]): Promise<void> {
+  safeSave(GOALS_KEY, goals)
+  if (storageMode === 'local') return
+  await saveRemotePatch(getStorageUid(), { goals })
 }
 
 export async function loadSettings(): Promise<AppSettings> {

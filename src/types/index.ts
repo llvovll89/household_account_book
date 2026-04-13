@@ -68,6 +68,18 @@ export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
   기타지출:    { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
 }
 
+export interface SavingsGoal {
+  id: string
+  name: string          // 목표명 (예: 제주도 여행)
+  targetAmount: number  // 목표 금액
+  currentAmount: number // 현재 저축된 금액
+  emoji: string         // 이모지 아이콘
+  color: string         // 카드 강조색 (hex)
+  deadline?: string     // 목표 기한 YYYY-MM-DD (선택)
+  memo: string
+  createdAt: number
+}
+
 export interface Subscription {
   id: string
   name: string          // 서비스명 (예: 넷플릭스)
