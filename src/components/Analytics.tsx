@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { Transaction } from '../types'
+import type { Budget, Transaction } from '../types'
 import { CATEGORY_EMOJI } from '../types'
+import SpendingAnalysisView from './SpendingAnalysisView'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import { fmtShort as fmt } from '../lib/format'
 import TrendAreaChart from './charts/TrendAreaChart'
@@ -14,6 +15,7 @@ import CashflowChart from './charts/CashflowChart'
 interface Props {
   transactions: Transaction[]
   yearMonth: string
+  budgets: Budget[]
 }
 
 function getYM(year: number, month: number) {
@@ -22,9 +24,9 @@ function getYM(year: number, month: number) {
 
 const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
-type ViewMode = 'monthly' | 'yearly' | 'cashflow'
+type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'reduce'
 
-export default function Analytics({ transactions, yearMonth }: Props) {
+export default function Analytics({ transactions, yearMonth, budgets }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
@@ -136,13 +138,14 @@ export default function Analytics({ transactions, yearMonth }: Props) {
     monthly: '월간 분석',
     yearly: '연간 요약',
     cashflow: '캐시플로',
+    reduce: '절감 제안',
   }
 
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
       <div className="bg-[#1E2236] rounded-2xl p-1 flex">
-        {(['monthly', 'yearly', 'cashflow'] as ViewMode[]).map((m) => (
+        {(['monthly', 'yearly', 'cashflow', 'reduce'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
@@ -367,6 +370,11 @@ export default function Analytics({ transactions, yearMonth }: Props) {
             </div>
           </div>
         </>
+      )}
+
+      {/* ──── 절감 제안 뷰 ──── */}
+      {viewMode === 'reduce' && (
+        <SpendingAnalysisView transactions={transactions} budgets={budgets} />
       )}
 
       {/* ──── 캐시플로 뷰 ──── */}

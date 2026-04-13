@@ -64,7 +64,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return null
-    return { type, amount: parsed, category, description, tags, date, dateEnd: (showDateEnd && dateEnd) ? dateEnd : undefined }
+    const item: QueueItem = { type, amount: parsed, category, description, tags, date }
+    if (showDateEnd && dateEnd) item.dateEnd = dateEnd
+    return item
   }
 
   function handleAddToQueue() {

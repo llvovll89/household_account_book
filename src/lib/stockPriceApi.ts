@@ -3,7 +3,7 @@
  *
  * CORS 처리:
  *  - 개발(DEV): Vite 프록시 /yf-api → query1.finance.yahoo.com
- *  - 프로덕션:  VITE_CORS_PROXY 환경변수 (기본값: https://corsproxy.io/?)
+ *  - 프로덕션:  VITE_CORS_PROXY 환경변수 (기본값: https://api.allorigins.win/raw?url=)
  *
  * 한국 종목코드 자동 변환:
  *  - 6자리 숫자 → {code}.KS (KOSPI 기본)
@@ -44,6 +44,7 @@ function buildUrl(yahoPath: string, proxy: string): string {
   if (import.meta.env.DEV) {
     return `/yf-api${yahoPath}`
   }
+  const proxy = (import.meta.env.VITE_CORS_PROXY as string | undefined) ?? 'https://api.allorigins.win/raw?url='
   return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${yahoPath}`)}`
 }
 

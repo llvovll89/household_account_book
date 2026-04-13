@@ -72,7 +72,7 @@ export default function LedgerWorkspace({
           onDelete={onTransactionDelete}
         />
       )}
-      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} />}
+      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} />}
       {activeTab === 'memos' && (
         <MemoSection
           memos={memos}
