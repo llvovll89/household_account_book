@@ -35,17 +35,21 @@ export function toYahooSymbol(ticker: string): string {
   return t.toUpperCase()
 }
 
-const PROXY_LIST = [
-  (import.meta.env.VITE_CORS_PROXY as string | undefined) ?? 'https://corsproxy.io/?',
+const DEFAULT_PROXIES = [
+  'https://corsproxy.io/?',
   'https://api.allorigins.win/raw?url=',
 ]
 
-function buildUrl(yahoPath: string, proxy: string): string {
+const envProxy = (import.meta.env.VITE_CORS_PROXY as string | undefined) || ''
+const PROXY_LIST: string[] = envProxy
+  ? [envProxy, ...DEFAULT_PROXIES.filter(p => p !== envProxy)]
+  : DEFAULT_PROXIES
+
+function buildUrl(path: string, proxy: string): string {
   if (import.meta.env.DEV) {
-    return `/yf-api${yahoPath}`
+    return `/yf-api${path}`
   }
-  const proxy = (import.meta.env.VITE_CORS_PROXY as string | undefined) ?? 'https://api.allorigins.win/raw?url='
-  return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${yahoPath}`)}`
+  return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${path}`)}`
 }
 
 async function fetchWithProxyFallback(path: string): Promise<Response> {
@@ -117,8 +121,6 @@ export async function fetchChart(ticker: string, range: ChartRange): Promise<Sto
     `?interval=${interval}&range=${range}&includePrePost=false`
 
   const res = await fetchWithProxyFallback(path)
-  if (!res.ok) throw new Error(`차트 데이터 오류: HTTP ${res.status}`)
-
   const data: any = await res.json()
   const result = data?.chart?.result?.[0]
   if (!result) throw new Error('차트 데이터 없음')
