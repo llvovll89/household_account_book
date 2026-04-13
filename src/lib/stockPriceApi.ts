@@ -45,19 +45,19 @@ const PROXY_LIST: string[] = envProxy
   ? [envProxy, ...DEFAULT_PROXIES.filter(p => p !== envProxy)]
   : DEFAULT_PROXIES
 
-function buildUrl(path: string, proxy: string): string {
+function buildUrl(path: string, proxy: string, host = 'query1'): string {
   if (import.meta.env.DEV) {
-    return `/yf-api${path}`
+    return host === 'query2' ? `/yf-api2${path}` : `/yf-api${path}`
   }
-  return `${proxy}${encodeURIComponent(`https://query1.finance.yahoo.com${path}`)}`
+  return `${proxy}${encodeURIComponent(`https://${host}.finance.yahoo.com${path}`)}`
 }
 
-async function fetchWithProxyFallback(path: string): Promise<Response> {
+async function fetchWithProxyFallback(path: string, host: 'query1' | 'query2' = 'query1'): Promise<Response> {
   if (import.meta.env.DEV) {
-    return fetch(buildUrl(path, ''), { headers: { Accept: 'application/json' } })
+    return fetch(buildUrl(path, '', host), { headers: { Accept: 'application/json' } })
   }
   for (const proxy of PROXY_LIST) {
-    const url = buildUrl(path, proxy)
+    const url = buildUrl(path, proxy, host)
     try {
       const res = await fetch(url, { headers: { Accept: 'application/json' } })
       if (res.ok) return res
@@ -79,22 +79,25 @@ function isValidYahooSymbol(sym: string): boolean {
 
 export interface StockSearchResult {
   symbol: string    // 예: 000660.KS
-  shortName: string // 예: SK hynix
+  shortName: string // 예: SK하이닉스
   quoteType: string // 'EQUITY' | 'ETF' | ...
 }
 
-/**
- * Yahoo Finance 검색 API로 키워드(종목명/코드)에 맞는 종목 목록을 반환
- */
-export async function searchStocks(keyword: string): Promise<StockSearchResult[]> {
-  const path =
-    `/v1/finance/search` +
-    `?q=${encodeURIComponent(keyword)}` +
-    `&lang=ko-KR&region=KR&quotesCount=6&newsCount=0&enableFuzzyQuery=true`
+/** Yahoo Finance 검색 (영문명/코드/해외 종목) */
+async function searchByYahoo(keyword: string): Promise<StockSearchResult[]> {
+  const qs = `?q=${encodeURIComponent(keyword)}&quotesCount=6&newsCount=0&enableFuzzyQuery=true`
+  const path = `/v1/finance/search${qs}`
 
-  const res = await fetchWithProxyFallback(path)
+  let res: Response
+  try {
+    res = await fetchWithProxyFallback(path, 'query2')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  } catch {
+    res = await fetchWithProxyFallback(path, 'query1')
+    if (!res.ok) throw new Error(`Yahoo 검색 오류: HTTP ${res.status}`)
+  }
+
   const data: any = await res.json()
-
   return (data?.quotes ?? [])
     .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
     .map((q: any) => ({
@@ -103,6 +106,20 @@ export async function searchStocks(keyword: string): Promise<StockSearchResult[]
       quoteType: q.quoteType,
     }))
     .filter((q: StockSearchResult) => isValidYahooSymbol(q.symbol))
+}
+
+/**
+ * 종목 검색:
+ *  - 한글 포함 → 번들된 한국 종목 리스트에서 즉시 검색 (오프라인 동작)
+ *  - 영문/코드  → Yahoo Finance API 검색
+ */
+export async function searchStocks(keyword: string): Promise<StockSearchResult[]> {
+  const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(keyword)
+  if (hasKorean) {
+    const { searchKrStocks } = await import('./krStocks')
+    return searchKrStocks(keyword)
+  }
+  return searchByYahoo(keyword)
 }
 
 // ─── 차트 데이터 ────────────────────────────────────────────────

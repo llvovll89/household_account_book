@@ -13,6 +13,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/yf-api/, ''),
       },
+      '/yf-api2': {
+        target: 'https://query2.finance.yahoo.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/yf-api2/, ''),
+      },
     },
   },
   plugins: [

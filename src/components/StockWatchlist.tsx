@@ -4,6 +4,7 @@ import type { StockTrade, StockQuote } from '../types'
 import { calcHoldings } from '../lib/stockCalc'
 import { fmt, fmtQty, fmtPrice } from '../lib/format'
 import { searchStocks, type StockSearchResult } from '../lib/stockPriceApi'
+import { getKrStockName } from '../lib/krStocks'
 
 interface Props {
   trades: StockTrade[]
@@ -66,17 +67,22 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
     if (trimmed.length < 2) { setSuggestions([]); return }
 
+    const hasKorean = /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(trimmed)
+    const delay = hasKorean ? 0 : 350  // 한글은 정적 검색이므로 즉시
+
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
         const results = await searchStocks(trimmed)
         setSuggestions(results)
-      } catch {
+        if (results.length === 0) setInputError('검색 결과가 없어요. 종목코드를 직접 입력해보세요.')
+      } catch (e) {
         setSuggestions([])
+        setInputError(e instanceof Error ? e.message : '검색에 실패했어요.')
       } finally {
         setSearching(false)
       }
-    }, 350)
+    }, delay)
   }
 
   return (
@@ -98,7 +104,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
                   setSuggestions([])
                 }
               }}
-              placeholder="종목명 또는 코드 (예: SK하이닉스, AAPL)"
+              placeholder="종목명 또는 코드 (예: SK하이닉스, AAPL, 005930)"
               className="flex-1 bg-[#252A3F] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
             />
             <button
@@ -139,7 +145,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
           <p className="text-[10px] text-[#F25260] mt-2">{inputError}</p>
         ) : (
           <p className="text-[10px] text-[#4E5968] mt-2">
-            종목명으로 검색하거나 코드를 직접 입력하세요 (예: 005930 → KOSPI, 035420.KQ → KOSDAQ)
+            한글·영문 종목명 또는 코드로 검색 (예: SK하이닉스, AAPL, 005930)
           </p>
         )}
       </div>
@@ -165,16 +171,14 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-bold text-white truncate">{item.ticker}</p>
-                      {quote?.shortName && item.ticker !== quote.shortName && (
-                        <p className="text-[10px] text-[#4E5968] truncate hidden sm:block">{quote.shortName}</p>
-                      )}
-                    </div>
+                    <p className="text-sm font-bold text-white truncate">
+                      {getKrStockName(item.ticker) || quote?.shortName || item.ticker}
+                    </p>
+                    <p className="text-[10px] text-[#4E5968] truncate">{item.ticker}</p>
                     {item.holding ? (
-                      <p className="text-[11px] text-[#8B95A1]">보유 {fmtQty(item.holding.quantity)}주 · 원가 {fmt(item.holding.totalCost)}원</p>
+                      <p className="text-[11px] text-[#8B95A1] mt-0.5">보유 {fmtQty(item.holding.quantity)}주 · 원가 {fmt(item.holding.totalCost)}원</p>
                     ) : (
-                      <p className="text-[11px] text-[#4E5968]">보유 없음{item.tradeCount > 0 ? ` · 거래 ${item.tradeCount}건` : ''}</p>
+                      <p className="text-[11px] text-[#4E5968] mt-0.5">보유 없음{item.tradeCount > 0 ? ` · 거래 ${item.tradeCount}건` : ''}</p>
                     )}
                   </div>
 
