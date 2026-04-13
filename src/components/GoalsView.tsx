@@ -258,9 +258,11 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
 
       {/* 저금/인출 시트 */}
       {depositGoal && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setDepositGoal(null)} />
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          onClick={(e) => e.target === e.currentTarget && setDepositGoal(null)}
+        >
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{depositGoal.emoji} {depositGoal.name}</p>
               <button onClick={() => setDepositGoal(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252A3F] text-[#8B95A1]">
@@ -305,9 +307,11 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
 
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowSheet(false)} />
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          onClick={(e) => e.target === e.currentTarget && setShowSheet(false)}
+        >
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{editing ? '목표 수정' : '목표 추가'}</p>
               <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#252A3F] text-[#8B95A1]">

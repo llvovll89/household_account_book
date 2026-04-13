@@ -225,9 +225,11 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end max-w-lg mx-auto">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setShowSheet(false)} />
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          onClick={(e) => e.target === e.currentTarget && setShowSheet(false)}
+        >
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto w-full max-w-lg">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-1">
               <p className="text-base font-bold text-white">{editing ? '구독 수정' : '구독 추가'}</p>
