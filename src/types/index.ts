@@ -10,6 +10,7 @@ export interface Transaction {
   date: string    // YYYY-MM-DD (시작일)
   dateEnd?: string // YYYY-MM-DD (종료일, 선택)
   createdAt: number
+  receiptImageUrl?: string  // 영수증 이미지 URL
 }
 
 export interface Memo {
@@ -51,21 +52,21 @@ export const EXPENSE_CATEGORIES = [
 
 // 다크 테마 카테고리 색상
 export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
-  급여:        { bg: 'rgba(61,142,248,0.15)',  text: '#4D9EFF' },
-  부업:        { bg: 'rgba(155,126,255,0.15)', text: '#9B7EFF' },
-  용돈:        { bg: 'rgba(240,110,196,0.15)', text: '#F06EC4' },
-  투자수익:    { bg: 'rgba(42,207,106,0.15)',  text: '#2ACF6A' },
-  기타수입:    { bg: 'rgba(31,217,180,0.15)',  text: '#1FD9B4' },
-  식비:        { bg: 'rgba(255,160,46,0.15)',  text: '#FFA02E' },
-  교통비:      { bg: 'rgba(61,142,248,0.15)',  text: '#4D9EFF' },
-  주거비:      { bg: 'rgba(245,190,58,0.15)',  text: '#F5BE3A' },
-  통신비:      { bg: 'rgba(155,126,255,0.15)', text: '#9B7EFF' },
-  의료비:      { bg: 'rgba(242,82,96,0.15)',   text: '#F25260' },
-  쇼핑:        { bg: 'rgba(240,110,196,0.15)', text: '#F06EC4' },
-  '문화/여가': { bg: 'rgba(61,154,255,0.15)',  text: '#3D9AFF' },
-  교육:        { bg: 'rgba(0,212,255,0.15)',   text: '#00D4FF' },
-  저축:        { bg: 'rgba(42,207,106,0.15)',  text: '#2ACF6A' },
-  기타지출:    { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
+  급여: { bg: 'rgba(61,142,248,0.15)', text: '#4D9EFF' },
+  부업: { bg: 'rgba(155,126,255,0.15)', text: '#9B7EFF' },
+  용돈: { bg: 'rgba(240,110,196,0.15)', text: '#F06EC4' },
+  투자수익: { bg: 'rgba(42,207,106,0.15)', text: '#2ACF6A' },
+  기타수입: { bg: 'rgba(31,217,180,0.15)', text: '#1FD9B4' },
+  식비: { bg: 'rgba(255,160,46,0.15)', text: '#FFA02E' },
+  교통비: { bg: 'rgba(61,142,248,0.15)', text: '#4D9EFF' },
+  주거비: { bg: 'rgba(245,190,58,0.15)', text: '#F5BE3A' },
+  통신비: { bg: 'rgba(155,126,255,0.15)', text: '#9B7EFF' },
+  의료비: { bg: 'rgba(242,82,96,0.15)', text: '#F25260' },
+  쇼핑: { bg: 'rgba(240,110,196,0.15)', text: '#F06EC4' },
+  '문화/여가': { bg: 'rgba(61,154,255,0.15)', text: '#3D9AFF' },
+  교육: { bg: 'rgba(0,212,255,0.15)', text: '#00D4FF' },
+  저축: { bg: 'rgba(42,207,106,0.15)', text: '#2ACF6A' },
+  기타지출: { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
 }
 
 export interface SavingsGoal {

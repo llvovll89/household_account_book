@@ -8,6 +8,8 @@ import { generateId } from './lib/format'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
 import { registerToastHandler, showToast } from './lib/toast'
+import { auth } from './firebase/firebase'
+import { deleteReceiptImage } from './lib/receiptStorage'
 import TransactionModal from './components/TransactionModal'
 import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
@@ -175,6 +177,15 @@ export default function App() {
     const handleDeleteTransaction = useCallback((id: string) => {
         if (!confirm('이 내역을 삭제할까요?')) return
         setTransactions((prev) => {
+            const transaction = prev.find((t) => t.id === id)
+
+            // 영수증 이미지 삭제
+            if (transaction?.receiptImageUrl && auth.currentUser) {
+                void deleteReceiptImage(auth.currentUser.uid, id).catch((e) => {
+                    console.error('Failed to delete receipt image:', e)
+                })
+            }
+
             const next = prev.filter((t) => t.id !== id)
             persist(saveTransactions(next), '거래 삭제 저장에 실패했습니다.')
             return next

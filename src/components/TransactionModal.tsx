@@ -3,6 +3,9 @@ import { X, ChevronDown, Plus, CalendarRange } from 'lucide-react'
 import type { Transaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
+import { uploadReceiptImage } from '../lib/receiptStorage'
+import { showToast } from '../lib/toast'
+import { auth } from '../firebase/firebase'
 
 interface Props {
   transaction?: Transaction | null
@@ -27,6 +30,7 @@ function fmtShortDate(date: string) {
 
 export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [] }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -35,6 +39,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [dateEnd, setDateEnd] = useState('')
   const [showDateEnd, setShowDateEnd] = useState(false)
   const [queue, setQueue] = useState<QueueItem[]>([])
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string>('')
 
   const isEditMode = !!transaction
   const tags = parseHashtags(description)
@@ -64,7 +72,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return null
-    const item: QueueItem = { type, amount: parsed, category, description, tags, date }
+    const item: QueueItem = { type, amount: parsed, category, description, tags, date, receiptImageUrl }
     if (showDateEnd && dateEnd) item.dateEnd = dateEnd
     return item
   }
@@ -81,12 +89,46 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     amountInputRef.current?.focus()
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const current = buildItem()
-    const all = current ? [...queue, current] : queue
-    if (all.length === 0) return
-    onSave(all)
+
+    try {
+      setUploading(true)
+      let finalReceiptUrl = receiptImageUrl
+
+      // 파일이 선택됨 → 업로드
+      if (receiptFile && auth.currentUser) {
+        finalReceiptUrl = await uploadReceiptImage(
+          auth.currentUser.uid,
+          transaction?.id || `receipt-${Date.now()}`,
+          receiptFile
+        )
+        showToast('영수증이 업로드되었습니다')
+      }
+
+      const current = buildItem()
+      let all = current ? [...queue, current] : queue
+
+      // receiptImageUrl 설정
+      if (finalReceiptUrl) {
+        all = all.map((item) => ({
+          ...item,
+          receiptImageUrl: finalReceiptUrl
+        }))
+      }
+
+      if (all.length === 0) return
+      onSave(all)
+
+      // 모달 닫기
+      setReceiptPreview(null)
+      setReceiptFile(null)
+      setReceiptImageUrl('')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '저장 실패')
+    } finally {
+      setUploading(false)
+    }
   }
 
   function handleRemoveFromQueue(idx: number) {
@@ -114,6 +156,18 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       setShowDateEnd(true)
       setDateEnd(date)
     }
+  }
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setReceiptPreview(event.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+    setReceiptFile(file)
   }
 
   const color = CATEGORY_COLOR[category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
@@ -187,16 +241,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
               <button type="button" onClick={() => setType('income')}
                 aria-pressed={type === 'income'}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  type === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
-                }`}>
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${type === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
+                  }`}>
                 수입
               </button>
               <button type="button" onClick={() => setType('expense')}
                 aria-pressed={type === 'expense'}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  type === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
-                }`}>
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${type === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
+                  }`}>
                 지출
               </button>
             </div>
@@ -225,9 +277,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <button
                   type="button"
                   onClick={toggleDateEnd}
-                  className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${
-                    showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
-                  }`}
+                  className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
+                    }`}
                 >
                   <CalendarRange size={11} />
                   기간 설정
@@ -328,6 +379,51 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
+            {/* 영수증 첨부 */}
+            <div className="bg-[#2C2C2E] rounded-2xl p-4 space-y-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${uploading
+                    ? 'bg-[#4E5968] text-[#8B95A1] cursor-not-allowed'
+                    : 'bg-[#3D8EF8]/20 hover:bg-[#3D8EF8]/30 text-[#3D8EF8]'
+                  }`}
+              >
+                {uploading ? (
+                  <>⏳ 업로드 중...</>
+                ) : receiptPreview ? (
+                  <>✓ 영수증 선택됨</>
+                ) : (
+                  <>📷 영수증 첨부</>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+
+              {receiptPreview && (
+                <div className="relative rounded-xl overflow-hidden border border-[#3D8EF8]/30">
+                  <img src={receiptPreview} alt="영수증 미리보기" className="w-full" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReceiptPreview(null)
+                      setReceiptFile(null)
+                    }}
+                    className="absolute top-2 right-2 bg-[#F25260]/80 hover:bg-[#F25260] rounded-full p-2 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* 버튼 영역 */}
             {isEditMode ? (
               <button type="submit"
@@ -345,9 +441,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   항목 추가
                 </button>
                 <button type="submit"
-                  className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] transition-all ${
-                    queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'
-                  }`}>
+                  className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] transition-all ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'
+                    }`}>
                   {queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
                 </button>
               </div>

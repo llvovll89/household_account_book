@@ -28,6 +28,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   const [baseDate, setBaseDate] = useState(`${yearMonth}-01`)
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [showTagSummary, setShowTagSummary] = useState(false)
+  const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
 
   const monthTx = useMemo(
     () => transactions.filter((t) => t.date.startsWith(yearMonth)),
@@ -396,6 +397,18 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           >
                             {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
                           </span>
+
+                          {/* 영수증 아이콘 */}
+                          {t.receiptImageUrl && (
+                            <button
+                              onClick={() => setReceiptModal({ open: true, url: t.receiptImageUrl! })}
+                              className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#3D8EF8] transition-colors"
+                              title="영수증 보기"
+                            >
+                              📷
+                            </button>
+                          )}
+
                           <div className="flex gap-0.5 ml-1">
                             <button
                               onClick={() => onEdit(t)}
@@ -423,6 +436,21 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         )}
 
       </> /* end list view */}
+
+      {/* 영수증 모달 */}
+      {receiptModal.open && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setReceiptModal({ open: false, url: '' })}
+        >
+          <img
+            src={receiptModal.url}
+            alt="영수증"
+            className="max-w-full max-h-[90vh] rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {showExport && (
         <ExportModal

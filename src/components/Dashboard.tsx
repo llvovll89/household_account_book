@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag } from 'lucide-react'
 import type { Transaction, Budget, RecurringTransaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
@@ -9,6 +9,7 @@ import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
 import { fmt, fmtShort } from '../lib/format'
+import { showToast } from '../lib/toast'
 
 interface Props {
   transactions: Transaction[]
@@ -35,6 +36,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
   const [paydayInput, setPaydayInput] = useState('')
   const [paydayError, setPaydayError] = useState('')
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
+  const lastNotifiedMonthRef = useRef<string>('')
 
   useEffect(() => {
     let cancelled = false
@@ -154,6 +156,27 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
     })
     return budgets.filter((b) => (map[b.category] || 0) > b.limit)
   }, [monthly, budgets])
+
+  // 예산 초과 감지 및 알림
+  useEffect(() => {
+    const currentMonth = yearMonth
+
+    // 월이 바뀌었으면 알림 표시
+    if (currentMonth !== lastNotifiedMonthRef.current && overBudget.length > 0) {
+      lastNotifiedMonthRef.current = currentMonth
+
+      overBudget.forEach((budget) => {
+        const spent = monthly
+          .filter((t) => t.type === 'expense' && t.category === budget.category)
+          .reduce((sum, t) => sum + t.amount, 0)
+
+        showToast(
+          `⚠️ ${budget.category} 예산을 초과했습니다\n지출: ${fmt(spent)} / 예산: ${fmt(budget.limit)}`,
+          3000
+        )
+      })
+    }
+  }, [yearMonth, overBudget, monthly])
 
   // 6개월 스파크라인 데이터
   const monthlyData = useMonthlyData(transactions)
