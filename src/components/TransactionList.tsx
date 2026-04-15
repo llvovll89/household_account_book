@@ -66,8 +66,9 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   }, [yearMonth])
 
   const monthly = useMemo(
-    () =>
-      monthTx
+    () => {
+      const normalizedSearch = search.replace(/^#/, '').toLowerCase()
+      return monthTx
         .filter((t) => {
           if (periodMode === 'day') return t.date === normalizedBaseDate
           if (periodMode === 'week') return t.date >= weekRange.start && t.date <= weekRange.end
@@ -76,12 +77,13 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         .filter((t) => filter === 'all' || t.type === filter)
         .filter((t) =>
           !search ||
-          t.category.includes(search) ||
-          t.description.toLowerCase().includes(search.toLowerCase()) ||
-          (t.tags ?? []).some((tag) => tag.toLowerCase().includes(search.toLowerCase()))
+          t.category.toLowerCase().includes(normalizedSearch) ||
+          t.description.toLowerCase().includes(normalizedSearch) ||
+          (t.tags ?? []).some((tag) => tag.toLowerCase().includes(normalizedSearch))
         )
         .filter((t) => !activeTag || (t.tags ?? []).includes(activeTag))
-        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+    },
     [monthTx, periodMode, normalizedBaseDate, weekRange, filter, search, activeTag]
   )
 
@@ -192,8 +194,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                   setBaseDate(latestMonthDate)
                 }}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${periodMode === mode.key
-                    ? 'bg-[#3D8EF8] text-white'
-                    : 'text-[#4E5968] hover:text-[#8B95A1]'
+                  ? 'bg-[#3D8EF8] text-white'
+                  : 'text-[#4E5968] hover:text-[#8B95A1]'
                   }`}
               >
                 {mode.label} 단위
@@ -245,8 +247,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
               key={f}
               onClick={() => setFilter(f)}
               className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${filter === f
-                  ? 'bg-[#3D8EF8] text-white'
-                  : 'text-[#4E5968] hover:text-[#8B95A1]'
+                ? 'bg-[#3D8EF8] text-white'
+                : 'text-[#4E5968] hover:text-[#8B95A1]'
                 }`}
             >
               {f === 'all' ? '전체' : f === 'income' ? '수입' : '지출'}
@@ -283,8 +285,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                       key={tag}
                       onClick={() => handleTagClick(tag)}
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${isActive
-                          ? 'bg-[#3D8EF8]/20 ring-1 ring-[#3D8EF8]/40'
-                          : 'bg-[#2C2C2E] hover:bg-[#3A3A3C]'
+                        ? 'bg-[#3D8EF8]/20 ring-1 ring-[#3D8EF8]/40'
+                        : 'bg-[#2C2C2E] hover:bg-[#3A3A3C]'
                         }`}
                     >
                       <div className="flex items-center gap-2">
@@ -366,7 +368,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           )}
                           {t.dateEnd && (
                             <p className="text-[10px] text-[#3D8EF8] font-semibold mt-0.5">
-                              ~ {(() => { const [,m,d] = t.dateEnd.split('-'); return `${parseInt(m)}.${d}` })()}까지
+                              ~ {(() => { const [, m, d] = t.dateEnd.split('-'); return `${parseInt(m)}.${d}` })()}까지
                             </p>
                           )}
                           {tags.length > 0 && (
@@ -376,8 +378,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                                   key={tag}
                                   onClick={() => handleTagClick(tag)}
                                   className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all ${activeTag === tag
-                                      ? 'bg-[#3D8EF8]/30 text-[#3D8EF8]'
-                                      : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
+                                    ? 'bg-[#3D8EF8]/30 text-[#3D8EF8]'
+                                    : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
                                     }`}
                                 >
                                   #{tag}
