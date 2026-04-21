@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, CalendarRange, Plus } from 'lucide-react'
 import type { Memo, TransactionType } from '../types'
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, MEMO_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
@@ -69,14 +69,16 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const [content, setContent] = useState('')
   const [amountStr, setAmountStr] = useState('')
   const [txType, setTxType] = useState<TransactionType>('expense')
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0])
+  const [category, setCategory] = useState(MEMO_CATEGORIES[0])
   const [date, setDate] = useState(todayStr())
   const [dateEnd, setDateEnd] = useState('')
   const [showDateEnd, setShowDateEnd] = useState(false)
   const [queue, setQueue] = useState<MemoQueueItem[]>([])
   const prevExternalAddTriggerRef = useRef(externalAddTrigger)
 
-  const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const categories = amountStr
+    ? (txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)
+    : MEMO_CATEGORIES
 
   const sorted = [...memos].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
@@ -135,7 +137,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
   function openNew() {
     setEditingId(null); setTitle(''); setContent('')
-    setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
+    setAmountStr(''); setTxType('expense'); setCategory(MEMO_CATEGORIES[0])
     setDate(todayStr()); setDateEnd(''); setShowDateEnd(false)
     setQueue([])
     setShowForm(true)
@@ -153,7 +155,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     setEditingId(m.id); setTitle(m.title); setContent(m.content)
     setAmountStr(m.amount ? m.amount.toLocaleString() : '')
     setTxType(m.transactionType ?? 'expense')
-    setCategory(m.category ?? (m.transactionType === 'income' ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]))
+    setCategory(m.category ?? (m.transactionType === 'income' ? INCOME_CATEGORIES[0] : m.transactionType === 'expense' ? EXPENSE_CATEGORIES[0] : MEMO_CATEGORIES[0]))
     setDate(m.date ?? todayStr())
     if (m.dateEnd) { setDateEnd(m.dateEnd); setShowDateEnd(true) } else { setDateEnd(''); setShowDateEnd(false) }
     setQueue([])
@@ -162,7 +164,10 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
-    setAmountStr(digits ? Number(digits).toLocaleString() : '')
+    const newAmountStr = digits ? Number(digits).toLocaleString() : ''
+    if (!newAmountStr && amountStr) setCategory(MEMO_CATEGORIES[0])
+    if (newAmountStr && !amountStr) setCategory(EXPENSE_CATEGORIES[0])
+    setAmountStr(newAmountStr)
   }
 
   function handleTypeChange(t: TransactionType) {
@@ -198,7 +203,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     if (!item) return
     setQueue((prev) => [...prev, item])
     setTitle(''); setContent('')
-    setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
+    setAmountStr(''); setTxType('expense'); setCategory(MEMO_CATEGORIES[0])
     setDateEnd(''); setShowDateEnd(false)
     // 날짜 유지
   }
@@ -223,7 +228,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
   function resetForm() {
     setTitle(''); setContent('')
-    setAmountStr(''); setTxType('expense'); setCategory(EXPENSE_CATEGORIES[0])
+    setAmountStr(''); setTxType('expense'); setCategory(MEMO_CATEGORIES[0])
     setDate(todayStr()); setDateEnd(''); setShowDateEnd(false)
     setEditingId(null); setQueue([])
   }

@@ -148,14 +148,35 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
     [recurring, yearMonth]
   )
 
-  // 예산 초과 카테고리
+  // 이월 금액 계산 (전월 미사용 예산)
+  const carryoverAmounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    const [y, m] = yearMonth.split('-').map(Number)
+    const prevYM = m === 1
+      ? `${y - 1}-12`
+      : `${y}-${String(m - 1).padStart(2, '0')}`
+    for (const b of budgets) {
+      if (!b.carryover) continue
+      const prevSpent = transactions
+        .filter((t) => t.type === 'expense' && t.category === b.category && t.date.startsWith(prevYM))
+        .reduce((s, t) => s + t.amount, 0)
+      const unused = Math.max(0, b.limit - prevSpent)
+      if (unused > 0) map[b.category] = unused
+    }
+    return map
+  }, [budgets, transactions, yearMonth])
+
+  // 예산 초과 카테고리 (이월 포함 유효 한도 기준)
   const overBudget = useMemo(() => {
     const map: Record<string, number> = {}
     monthly.filter((t) => t.type === 'expense').forEach((t) => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
-    return budgets.filter((b) => (map[b.category] || 0) > b.limit)
-  }, [monthly, budgets])
+    return budgets.filter((b) => {
+      const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
+      return (map[b.category] || 0) > effectiveLimit
+    })
+  }, [monthly, budgets, carryoverAmounts])
 
   // 예산 초과 감지 및 알림
   useEffect(() => {
@@ -506,6 +527,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
             {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
               const budget = budgets.find((b) => b.category === cat)!
               const spent = spentByCategory[cat] ?? 0
+              const effectiveLimit = budget.limit + (carryoverAmounts[cat] ?? 0)
               const color = CATEGORY_COLOR[cat]?.text ?? '#8B95A1'
               return (
                 <BudgetGauge
@@ -513,7 +535,7 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                   category={cat}
                   emoji={CATEGORY_EMOJI[cat] ?? '📦'}
                   spent={spent}
-                  limit={budget.limit}
+                  limit={effectiveLimit}
                   color={color}
                 />
               )
@@ -527,8 +549,10 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
               const spent = monthly
                 .filter((t) => t.type === 'expense' && t.category === cat)
                 .reduce((s, t) => s + t.amount, 0)
-              const pct = Math.min((spent / budget.limit) * 100, 100)
-              const isOver = spent > budget.limit
+              const carryover = carryoverAmounts[cat] ?? 0
+              const effectiveLimit = budget.limit + carryover
+              const pct = Math.min((spent / effectiveLimit) * 100, 100)
+              const isOver = spent > effectiveLimit
               const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
               return (
                 <div key={cat}>
@@ -536,12 +560,17 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
                     <div className="flex items-center gap-2">
                       <span className="text-base">{CATEGORY_EMOJI[cat]}</span>
                       <span className="text-sm font-semibold text-white">{cat}</span>
+                      {carryover > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">
+                          +이월 {fmtShort(carryover)}
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className={`text-sm font-bold num ${isOver ? 'text-[#F25260]' : 'text-white'}`}>
                         {fmt(spent)}
                       </span>
-                      <span className="text-xs text-[#4E5968] num"> / {fmt(budget.limit)}원</span>
+                      <span className="text-xs text-[#4E5968] num"> / {fmt(effectiveLimit)}원</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">

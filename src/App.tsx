@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions } from './lib/storage'
@@ -39,6 +39,58 @@ const LEDGER_TABS = [
     { id: 'memos' as Tab, label: '메모', Icon: StickyNote },
 ]
 
+// ── UI 전용 상태 (모달 열림/닫힘, 트리거 카운터) ──────────────────────────────
+interface UIState {
+    showModal: boolean
+    editingTransaction: Transaction | null
+    showImport: boolean
+    showHelp: boolean
+    showStockModal: boolean
+    editingTrade: StockTrade | null
+    stockSubTab: StockSubTab
+    showCategoryModal: boolean
+    memoAddTrigger: number
+    subscriptionAddTrigger: number
+    goalAddTrigger: number
+}
+
+type UIAction =
+    | { type: 'OPEN_TX_MODAL'; editing?: Transaction }
+    | { type: 'CLOSE_TX_MODAL' }
+    | { type: 'OPEN_STOCK_MODAL'; editing?: StockTrade }
+    | { type: 'CLOSE_STOCK_MODAL' }
+    | { type: 'SET_IMPORT'; value: boolean }
+    | { type: 'SET_HELP'; value: boolean }
+    | { type: 'SET_CATEGORY'; value: boolean }
+    | { type: 'SET_STOCK_SUBTAB'; value: StockSubTab }
+    | { type: 'TRIGGER_MEMO' }
+    | { type: 'TRIGGER_SUB' }
+    | { type: 'TRIGGER_GOAL' }
+
+const UI_INIT: UIState = {
+    showModal: false, editingTransaction: null,
+    showImport: false, showHelp: false,
+    showStockModal: false, editingTrade: null,
+    stockSubTab: 'portfolio', showCategoryModal: false,
+    memoAddTrigger: 0, subscriptionAddTrigger: 0, goalAddTrigger: 0,
+}
+
+function uiReducer(state: UIState, action: UIAction): UIState {
+    switch (action.type) {
+        case 'OPEN_TX_MODAL': return { ...state, showModal: true, editingTransaction: action.editing ?? null }
+        case 'CLOSE_TX_MODAL': return { ...state, showModal: false, editingTransaction: null }
+        case 'OPEN_STOCK_MODAL': return { ...state, showStockModal: true, editingTrade: action.editing ?? null }
+        case 'CLOSE_STOCK_MODAL': return { ...state, showStockModal: false, editingTrade: null }
+        case 'SET_IMPORT': return { ...state, showImport: action.value }
+        case 'SET_HELP': return { ...state, showHelp: action.value }
+        case 'SET_CATEGORY': return { ...state, showCategoryModal: action.value }
+        case 'SET_STOCK_SUBTAB': return { ...state, stockSubTab: action.value }
+        case 'TRIGGER_MEMO': return { ...state, memoAddTrigger: state.memoAddTrigger + 1 }
+        case 'TRIGGER_SUB': return { ...state, subscriptionAddTrigger: state.subscriptionAddTrigger + 1 }
+        case 'TRIGGER_GOAL': return { ...state, goalAddTrigger: state.goalAddTrigger + 1 }
+    }
+}
+
 function GoogleIcon() {
     return (
         <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
@@ -73,20 +125,22 @@ export default function App() {
 
     const [customExpenseCategories, setCustomExpenseCategories] = useState<string[]>([])
     const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([])
-    const [showCategoryModal, setShowCategoryModal] = useState(false)
-
-    const [showModal, setShowModal] = useState(false)
-    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
-    const [showImport, setShowImport] = useState(false)
-    const [showHelp, setShowHelp] = useState(false)
-    const [showStockModal, setShowStockModal] = useState(false)
-    const [editingTrade, setEditingTrade] = useState<StockTrade | null>(null)
-    const [stockSubTab, setStockSubTab] = useState<StockSubTab>('portfolio')
-    const [memoAddTrigger, setMemoAddTrigger] = useState(0)
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
-    const [subscriptionAddTrigger, setSubscriptionAddTrigger] = useState(0)
     const [goals, setGoals] = useState<SavingsGoal[]>([])
-    const [goalAddTrigger, setGoalAddTrigger] = useState(0)
+
+    // UI 전용 상태: 11개 useState → useReducer 1개로 통합
+    const [ui, dispatchUI] = useReducer(uiReducer, UI_INIT)
+    const {
+        showModal, editingTransaction, showImport, showHelp,
+        showStockModal, editingTrade, stockSubTab, showCategoryModal,
+        memoAddTrigger, subscriptionAddTrigger, goalAddTrigger,
+    } = ui
+
+    // 오프라인 / 미동기화 상태
+    const [isOnline, setIsOnline] = useState(navigator.onLine)
+    const [hasPendingSync, setHasPendingSync] = useState(
+        () => localStorage.getItem('hb_pending_sync') === 'true'
+    )
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -97,6 +151,20 @@ export default function App() {
             if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
             toastTimerRef.current = setTimeout(() => setToastMsg(null), duration)
         })
+    }, [])
+
+    useEffect(() => {
+        const onOnline = () => {
+            setIsOnline(true)
+            setHasPendingSync(localStorage.getItem('hb_pending_sync') === 'true')
+        }
+        const onOffline = () => setIsOnline(false)
+        window.addEventListener('online', onOnline)
+        window.addEventListener('offline', onOffline)
+        return () => {
+            window.removeEventListener('online', onOnline)
+            window.removeEventListener('offline', onOffline)
+        }
     }, [])
 
     const yearMonth = getYearMonth(currentDate)
@@ -146,10 +214,13 @@ export default function App() {
     const activeTab: Tab = activeMode === 'stocks' ? 'stocks' : (tab === 'stocks' ? 'home' : tab)
 
     const persist = useCallback((task: Promise<void>, failMsg: string) => {
-        void task.catch((e) => {
-            console.error('[persist]', failMsg, e)
-            showToast(failMsg)
-        })
+        void task
+            .then(() => setHasPendingSync(false))
+            .catch((e) => {
+                console.error('[persist]', failMsg, e)
+                showToast(failMsg)
+                setHasPendingSync(true)
+            })
     }, [])
 
     const handleSaveTransaction = useCallback(
@@ -168,8 +239,7 @@ export default function App() {
                 persist(saveTransactions(next), '거래 저장에 실패했습니다.')
                 return next
             })
-            setShowModal(false)
-            setEditingTransaction(null)
+            dispatchUI({ type: 'CLOSE_TX_MODAL' })
         },
         [editingTransaction, persist]
     )
@@ -208,8 +278,7 @@ export default function App() {
             persist(saveStockTrades(next), '주식 거래 저장에 실패했습니다.')
             return next
         })
-        setShowStockModal(false)
-        setEditingTrade(null)
+        dispatchUI({ type: 'CLOSE_STOCK_MODAL' })
     }, [editingTrade, persist])
 
     const handleDeleteStockTrade = useCallback((id: string) => {
@@ -241,8 +310,8 @@ export default function App() {
         persist(saveGoals(items), '목표 저장에 실패했습니다.')
     }, [persist])
 
-    const handleApplyRecurring = useCallback((pending: RecurringTransaction[]) => {
-        const newTx = pending.map((r) => ({
+    const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[]) => {
+        const newTx: Transaction[] = pending.map((r) => ({
             id: generateId(),
             type: r.type,
             amount: r.amount,
@@ -251,18 +320,29 @@ export default function App() {
             date: `${yearMonth}-${String(r.dayOfMonth).padStart(2, '0')}`,
             createdAt: Date.now(),
         }))
-        setTransactions((prev) => {
-            const next = [...prev, ...newTx]
-            persist(saveTransactions(next), '정기내역 적용 저장에 실패했습니다.')
-            return next
-        })
+        const newTxIds = new Set(newTx.map((t) => t.id))
+        const nextTxs = [...transactions, ...newTx]
+
+        setTransactions(nextTxs)
+
+        try {
+            await saveTransactions(nextTxs)
+        } catch (e) {
+            console.error('[handleApplyRecurring] 거래 저장 실패', e)
+            showToast('정기내역 적용 저장에 실패했습니다.')
+            // 저장 실패 시 추가했던 거래를 롤백
+            setTransactions((prev) => prev.filter((t) => !newTxIds.has(t.id)))
+            return
+        }
+
+        // 거래 저장 성공 확인 후에만 lastAppliedMonth 업데이트
         setRecurring((prev) => {
             const ids = new Set(pending.map((r) => r.id))
             const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: yearMonth } : r)
             persist(saveRecurring(next), '정기내역 상태 저장에 실패했습니다.')
             return next
         })
-    }, [persist, yearMonth])
+    }, [transactions, persist, yearMonth])
 
     const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
         setCustomExpenseCategories(expense)
@@ -342,18 +422,34 @@ export default function App() {
         })
     }, [persist])
 
-    const prevMonth = () => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
-    const nextMonth = () => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+    const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
+    const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
     const isCurrentMonth = () => {
         const now = new Date()
         return currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth()
     }
 
-    const monthlyTx = transactions.filter((t) => t.date.startsWith(yearMonth))
-    const openingBalance = calcNet(transactions.filter((t) => t.date < `${yearMonth}-01`))
-    const monthIncome = monthlyTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-    const monthExpense = monthlyTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    const monthBalance = openingBalance + (monthIncome - monthExpense)
+    const { monthlyTx, openingBalance, monthIncome, monthExpense, monthBalance } = useMemo(() => {
+        const cutoff = `${yearMonth}-01`
+        let income = 0, expense = 0, opening = 0
+        const monthly: Transaction[] = []
+        for (const t of transactions) {
+            if (t.date < cutoff) {
+                opening += t.type === 'income' ? t.amount : -t.amount
+            } else if (t.date.startsWith(yearMonth)) {
+                monthly.push(t)
+                if (t.type === 'income') income += t.amount
+                else expense += t.amount
+            }
+        }
+        return {
+            monthlyTx: monthly,
+            openingBalance: opening,
+            monthIncome: income,
+            monthExpense: expense,
+            monthBalance: opening + income - expense,
+        }
+    }, [transactions, yearMonth])
     const stockTickerCount = useMemo(() => new Set(stockTrades.map((t) => t.ticker)).size, [stockTrades])
 
     const showFAB = activeMode === 'stocks'
@@ -404,10 +500,25 @@ export default function App() {
                         </div>
                         <div className="flex items-center gap-2">
                             {activeMode === 'ledger' && (
-                                <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
+                                <button onClick={() => dispatchUI({ type: 'SET_IMPORT', value: true })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
                                     <FileDown size={13} />
                                     가져오기
                                 </button>
+                            )}
+                            {/* 오프라인 / 미동기화 상태 배지 */}
+                            {(!isOnline || hasPendingSync) && (
+                                <div
+                                    title={!isOnline ? '오프라인 상태입니다' : '저장되지 않은 변경사항이 있어요'}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#2C2C2E] border border-white/6"
+                                >
+                                    {!isOnline
+                                        ? <WifiOff size={11} className="text-[#F25260]" />
+                                        : <CloudOff size={11} className="text-[#F5BE3A]" />
+                                    }
+                                    <span className="text-[10px] font-bold text-[#8B95A1]">
+                                        {!isOnline ? '오프라인' : '미동기화'}
+                                    </span>
+                                </div>
                             )}
                             {user ? (
                                 <div className="flex items-center gap-2">
@@ -452,7 +563,7 @@ export default function App() {
                                 }
                                 setMode('stocks')
                                 setTab('stocks')
-                                setStockSubTab('portfolio')
+                                dispatchUI({ type: 'SET_STOCK_SUBTAB', value: 'portfolio' })
                             }}
                             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'stocks' ? 'bg-[#F5BE3A] text-[#111111]' : 'text-[#8B95A1] hover:bg-white/5'}`}
                         >
@@ -520,8 +631,8 @@ export default function App() {
                         onApplyRecurring={handleApplyRecurring}
                         onSubscriptionsChange={handleSubscriptionsChange}
                         onGoalsChange={handleGoalsChange}
-                        onOpenCategoryModal={() => setShowCategoryModal(true)}
-                        onTransactionEdit={(t) => { setEditingTransaction(t); setShowModal(true) }}
+                        onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
+                        onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                         onTransactionDelete={handleDeleteTransaction}
                         onMemoAdd={handleAddMemo}
                         onMemoUpdate={handleUpdateMemo}
@@ -534,8 +645,8 @@ export default function App() {
                         stockSubTab={stockSubTab}
                         stockTrades={stockTrades}
                         stockWatchlist={stockWatchlist}
-                        onStockSubTabChange={setStockSubTab}
-                        onTradeEdit={(t) => { setEditingTrade(t); setShowStockModal(true) }}
+                        onStockSubTabChange={(v) => dispatchUI({ type: 'SET_STOCK_SUBTAB', value: v })}
+                        onTradeEdit={(t) => dispatchUI({ type: 'OPEN_STOCK_MODAL', editing: t })}
                         onTradeDelete={handleDeleteStockTrade}
                         onWatchAdd={handleAddWatchTicker}
                         onWatchRemove={handleRemoveWatchTicker}
@@ -549,17 +660,15 @@ export default function App() {
                         <button
                             onClick={() => {
                                 if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
-                                    setEditingTrade(null)
-                                    setShowStockModal(true)
+                                    dispatchUI({ type: 'OPEN_STOCK_MODAL' })
                                 } else if (activeTab === 'memos') {
-                                    setMemoAddTrigger((prev) => prev + 1)
+                                    dispatchUI({ type: 'TRIGGER_MEMO' })
                                 } else if (activeTab === 'subscriptions') {
-                                    setSubscriptionAddTrigger((prev) => prev + 1)
+                                    dispatchUI({ type: 'TRIGGER_SUB' })
                                 } else if (activeTab === 'goals') {
-                                    setGoalAddTrigger((prev) => prev + 1)
+                                    dispatchUI({ type: 'TRIGGER_GOAL' })
                                 } else {
-                                    setEditingTransaction(null)
-                                    setShowModal(true)
+                                    dispatchUI({ type: 'OPEN_TX_MODAL' })
                                 }
                             }}
                             aria-label="내역 추가"
@@ -569,7 +678,7 @@ export default function App() {
                         </button>
                     )}
 
-                    <button onClick={() => setShowHelp(true)} aria-label="사용 가이드" className="pointer-events-auto absolute left-5 bottom-fab-safe w-8 h-8 bg-[#F5F7F8] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all text-sm font-bold">
+                    <button onClick={() => dispatchUI({ type: 'SET_HELP', value: true })} aria-label="사용 가이드" className="pointer-events-auto absolute left-5 bottom-fab-safe w-8 h-8 bg-[#F5F7F8] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all text-sm font-bold">
                         ?
                     </button>
                 </div>
@@ -598,7 +707,7 @@ export default function App() {
                 activeTab={activeTab}
                 stockSubTab={stockSubTab}
                 onLedgerTabChange={setTab}
-                onStockSubTabChange={setStockSubTab}
+                onStockSubTabChange={(v) => dispatchUI({ type: 'SET_STOCK_SUBTAB', value: v })}
             />
 
             {toastMsg && (
@@ -614,22 +723,22 @@ export default function App() {
                 <StockTradeModal
                     trade={editingTrade}
                     onSave={handleSaveStockTrade}
-                    onClose={() => { setShowStockModal(false); setEditingTrade(null) }}
+                    onClose={() => dispatchUI({ type: 'CLOSE_STOCK_MODAL' })}
                 />
             )}
-            {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+            {showHelp && <HelpModal onClose={() => dispatchUI({ type: 'SET_HELP', value: false })} />}
             {showImport && (
                 <ImportModal
                     existingTransactions={transactions}
                     onImport={handleBulkImport}
-                    onClose={() => setShowImport(false)}
+                    onClose={() => dispatchUI({ type: 'SET_IMPORT', value: false })}
                 />
             )}
             {showModal && (
                 <TransactionModal
                     transaction={editingTransaction}
                     onSave={handleSaveTransaction}
-                    onClose={() => { setShowModal(false); setEditingTransaction(null) }}
+                    onClose={() => dispatchUI({ type: 'CLOSE_TX_MODAL' })}
                     customExpenseCategories={customExpenseCategories}
                     customIncomeCategories={customIncomeCategories}
                 />
@@ -639,7 +748,7 @@ export default function App() {
                     customExpenseCategories={customExpenseCategories}
                     customIncomeCategories={customIncomeCategories}
                     onSave={handleSaveCategories}
-                    onClose={() => setShowCategoryModal(false)}
+                    onClose={() => dispatchUI({ type: 'SET_CATEGORY', value: false })}
                 />
             )}
 

@@ -30,6 +30,7 @@ export interface Memo {
 export interface Budget {
   category: string
   limit: number // 월 예산 (원)
+  carryover?: boolean // 미사용 예산을 다음 달로 이월
 }
 
 export interface RecurringTransaction {
@@ -50,6 +51,8 @@ export const EXPENSE_CATEGORIES = [
   '쇼핑', '문화/여가', '교육', '저축', '기타지출',
 ]
 
+export const MEMO_CATEGORIES = ['아이디어', '할일', '일정', '개인', '업무', '중요', '기타']
+
 // 다크 테마 카테고리 색상
 export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
   급여: { bg: 'rgba(61,142,248,0.15)', text: '#4D9EFF' },
@@ -67,6 +70,13 @@ export const CATEGORY_COLOR: Record<string, { bg: string; text: string }> = {
   교육: { bg: 'rgba(0,212,255,0.15)', text: '#00D4FF' },
   저축: { bg: 'rgba(42,207,106,0.15)', text: '#2ACF6A' },
   기타지출: { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
+  아이디어: { bg: 'rgba(245,190,58,0.15)', text: '#F5BE3A' },
+  할일: { bg: 'rgba(42,207,106,0.15)', text: '#2ACF6A' },
+  일정: { bg: 'rgba(61,142,248,0.15)', text: '#4D9EFF' },
+  개인: { bg: 'rgba(240,110,196,0.15)', text: '#F06EC4' },
+  업무: { bg: 'rgba(155,126,255,0.15)', text: '#9B7EFF' },
+  중요: { bg: 'rgba(255,160,46,0.15)', text: '#FFA02E' },
+  기타: { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' },
 }
 
 export interface SavingsGoal {
@@ -141,4 +151,5 @@ export const CATEGORY_EMOJI: Record<string, string> = {
   급여: '💼', 부업: '💻', 용돈: '🎁', 투자수익: '📈', 기타수입: '💰',
   식비: '🍽️', 교통비: '🚌', 주거비: '🏠', 통신비: '📱', 의료비: '🏥',
   쇼핑: '🛍️', '문화/여가': '🎮', 교육: '📚', 저축: '🏦', 기타지출: '📦',
+  아이디어: '💡', 할일: '✅', 일정: '📅', 개인: '🙋', 업무: '💼', 중요: '⭐', 기타: '📝',
 }

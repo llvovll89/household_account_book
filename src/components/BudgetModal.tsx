@@ -16,6 +16,11 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
     budgets.forEach((b) => { m[b.category] = b.limit.toLocaleString() })
     return m
   })
+  const [carryoverMap, setCarryoverMap] = useState<Record<string, boolean>>(() => {
+    const m: Record<string, boolean> = {}
+    budgets.forEach((b) => { m[b.category] = b.carryover ?? false })
+    return m
+  })
 
   function handleChange(cat: string, val: string) {
     const digits = val.replace(/[^0-9]/g, '')
@@ -26,7 +31,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
     const result: Budget[] = []
     for (const [category, raw] of Object.entries(values)) {
       const limit = parseInt(raw.replace(/,/g, ''), 10)
-      if (limit > 0) result.push({ category, limit })
+      if (limit > 0) result.push({ category, limit, carryover: carryoverMap[category] ?? false })
     }
     onSave(result)
     onClose()
@@ -55,25 +60,42 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
           {[...EXPENSE_CATEGORIES, ...customExpenseCategories].map((cat) => {
             const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
             return (
-              <div key={cat} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                <div
-                  className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
-                  style={{ backgroundColor: color.bg }}
-                >
-                  {CATEGORY_EMOJI[cat] ?? '📦'}
+              <div key={cat} className="bg-[#2C2C2E] rounded-2xl px-4 py-3 space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
+                    style={{ backgroundColor: color.bg }}
+                  >
+                    {CATEGORY_EMOJI[cat] ?? '📦'}
+                  </div>
+                  <span className="text-sm font-semibold text-white flex-1">{cat}</span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={values[cat] ?? ''}
+                      onChange={(e) => handleChange(cat, e.target.value)}
+                      placeholder="제한 없음"
+                      className="w-28 bg-[#3A3A3C] text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/50 placeholder-[#4E5968] num"
+                    />
+                    <span className="text-xs text-[#4E5968]">원</span>
+                  </div>
                 </div>
-                <span className="text-sm font-semibold text-white flex-1">{cat}</span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={values[cat] ?? ''}
-                    onChange={(e) => handleChange(cat, e.target.value)}
-                    placeholder="제한 없음"
-                    className="w-28 bg-[#3A3A3C] text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/50 placeholder-[#4E5968] num"
-                  />
-                  <span className="text-xs text-[#4E5968]">원</span>
-                </div>
+                {(values[cat] ?? '') !== '' && (
+                  <div className="flex items-center justify-between pl-13">
+                    <span className="text-xs text-[#4E5968]">미사용 예산 다음 달로 이월</span>
+                    <button
+                      type="button"
+                      onClick={() => setCarryoverMap((prev) => ({ ...prev, [cat]: !prev[cat] }))}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${carryoverMap[cat] ? 'bg-[#3D8EF8]' : 'bg-[#3A3A3C]'}`}
+                      aria-pressed={carryoverMap[cat]}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${carryoverMap[cat] ? 'translate-x-5' : 'translate-x-0.5'}`}
+                      />
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}

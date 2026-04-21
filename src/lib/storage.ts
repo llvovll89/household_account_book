@@ -22,6 +22,8 @@ const STOCK_TRADES_KEY = 'hb_stock_trades'
 const SUBSCRIPTIONS_KEY = 'hb_subscriptions'
 const GOALS_KEY = 'hb_goals'
 const SETTINGS_KEY = 'hb_settings'
+// Firebase 저장 실패 시 로컬에 미동기화 변경사항이 있음을 표시
+const PENDING_SYNC_KEY = 'hb_pending_sync'
 
 type StorageMode = 'local' | 'firebase'
 
@@ -84,24 +86,83 @@ function parseJSON<T>(value: string | null, fallback: T): T {
   }
 }
 
+// 배열 파싱 + 아이템 단위 검증: 손상된 항목만 버리고 나머지는 살린다
+function parseValidArray<T>(key: string, guard: (item: unknown) => item is T): T[] {
+  const raw = localStorage.getItem(key)
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(guard)
+  } catch {
+    return []
+  }
+}
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === 'object' && !Array.isArray(v)
+}
+
+function isTransaction(v: unknown): v is Transaction {
+  if (!isObj(v)) return false
+  return (
+    typeof v.id === 'string' &&
+    (v.type === 'income' || v.type === 'expense') &&
+    typeof v.amount === 'number' && v.amount >= 0 &&
+    typeof v.category === 'string' &&
+    typeof v.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v.date as string)
+  )
+}
+
+function isMemo(v: unknown): v is Memo {
+  if (!isObj(v)) return false
+  return typeof v.id === 'string' && typeof v.title === 'string' && typeof v.content === 'string'
+}
+
+function isBudget(v: unknown): v is Budget {
+  if (!isObj(v)) return false
+  return typeof v.category === 'string' && typeof v.limit === 'number'
+}
+
+function isRecurring(v: unknown): v is RecurringTransaction {
+  if (!isObj(v)) return false
+  return (
+    typeof v.id === 'string' &&
+    (v.type === 'income' || v.type === 'expense') &&
+    typeof v.amount === 'number' &&
+    typeof v.dayOfMonth === 'number'
+  )
+}
+
+function isStockTrade(v: unknown): v is StockTrade {
+  if (!isObj(v)) return false
+  return (
+    typeof v.id === 'string' &&
+    typeof v.ticker === 'string' &&
+    (v.tradeType === 'buy' || v.tradeType === 'sell') &&
+    typeof v.quantity === 'number' &&
+    typeof v.price === 'number'
+  )
+}
+
 function loadLocalTransactions(): Transaction[] {
-  return parseJSON(localStorage.getItem(TRANSACTIONS_KEY), [])
+  return parseValidArray(TRANSACTIONS_KEY, isTransaction)
 }
 
 function loadLocalMemos(): Memo[] {
-  return parseJSON(localStorage.getItem(MEMOS_KEY), [])
+  return parseValidArray(MEMOS_KEY, isMemo)
 }
 
 function loadLocalBudgets(): Budget[] {
-  return parseJSON(localStorage.getItem(BUDGETS_KEY), [])
+  return parseValidArray(BUDGETS_KEY, isBudget)
 }
 
 function loadLocalRecurring(): RecurringTransaction[] {
-  return parseJSON(localStorage.getItem(RECURRING_KEY), [])
+  return parseValidArray(RECURRING_KEY, isRecurring)
 }
 
 function loadLocalStockTrades(): StockTrade[] {
-  return parseJSON(localStorage.getItem(STOCK_TRADES_KEY), [])
+  return parseValidArray(STOCK_TRADES_KEY, isStockTrade)
 }
 
 function loadLocalSubscriptions(): Subscription[] {
@@ -168,14 +229,17 @@ async function loadRemoteState(uid: string): Promise<RemoteState> {
 }
 
 async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promise<void> {
-  await setDoc(
-    getUserDocRef(uid),
-    {
-      ...patch,
-      updatedAt: Date.now(),
-    },
-    { merge: true }
-  )
+  try {
+    await setDoc(
+      getUserDocRef(uid),
+      { ...patch, updatedAt: Date.now() },
+      { merge: true }
+    )
+    localStorage.removeItem(PENDING_SYNC_KEY)
+  } catch (e) {
+    localStorage.setItem(PENDING_SYNC_KEY, 'true')
+    throw e
+  }
 }
 
 function localSnapshot(): RemoteState {
@@ -311,7 +375,15 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     }
   }
 
-  const remote = await loadRemoteState(uid)
+  let remote: RemoteState
+  try {
+    remote = await loadRemoteState(uid)
+  } catch (e) {
+    // Firebase 조회 실패 — 로컬 데이터는 보존되며 다음 로드 시 재시도한다
+    localStorage.setItem(PENDING_SYNC_KEY, 'true')
+    throw e
+  }
+
   const merged: RemoteState = {
     transactions: mergeUniqueByKey(remote.transactions, local.transactions, txKey),
     memos: mergeUniqueByKey(remote.memos, local.memos, memoKey),
@@ -323,6 +395,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     settings: mergeSettings(remote.settings, local.settings),
   }
 
+  // saveRemotePatch 실패 시 PENDING_SYNC_KEY를 자동으로 설정하고 예외를 던진다
   await saveRemotePatch(uid, merged)
   backupAndClearLocalData()
 
@@ -341,43 +414,27 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
 
 export async function loadAllData(): Promise<AppDataSnapshot> {
   if (storageMode === 'local') {
-    const local = localSnapshot()
-    return {
-      transactions: local.transactions,
-      memos: local.memos,
-      budgets: local.budgets,
-      recurring: local.recurring,
-      stockTrades: local.stockTrades,
-      subscriptions: local.subscriptions,
-      goals: local.goals,
-      settings: local.settings,
+    return localSnapshot()
+  }
+
+  const uid = getStorageUid()
+
+  // 이전 Firebase 저장 실패로 로컬에 미동기화 변경사항이 있으면,
+  // 로컬 데이터를 Firebase에 먼저 밀어넣은 뒤 로드한다.
+  if (localStorage.getItem(PENDING_SYNC_KEY) === 'true') {
+    try {
+      const local = localSnapshot()
+      await saveRemotePatch(uid, local) // 성공 시 PENDING_SYNC_KEY 자동 삭제
+      return local
+    } catch {
+      return localSnapshot()
     }
   }
 
   try {
-    const remote = await loadRemoteState(getStorageUid())
-    return {
-      transactions: remote.transactions,
-      memos: remote.memos,
-      budgets: remote.budgets,
-      recurring: remote.recurring,
-      stockTrades: remote.stockTrades,
-      subscriptions: remote.subscriptions,
-      goals: remote.goals,
-      settings: remote.settings,
-    }
+    return await loadRemoteState(uid)
   } catch {
-    const local = localSnapshot()
-    return {
-      transactions: local.transactions,
-      memos: local.memos,
-      budgets: local.budgets,
-      recurring: local.recurring,
-      stockTrades: local.stockTrades,
-      subscriptions: local.subscriptions,
-      goals: local.goals,
-      settings: local.settings,
-    }
+    return localSnapshot()
   }
 }
 

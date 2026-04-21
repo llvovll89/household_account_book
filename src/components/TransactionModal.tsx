@@ -62,6 +62,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         setDateEnd(transaction.dateEnd)
         setShowDateEnd(true)
       }
+      if (transaction.receiptImageUrl) {
+        setReceiptImageUrl(transaction.receiptImageUrl)
+        setReceiptPreview(transaction.receiptImageUrl)
+      }
     }
   }, [transaction])
 
@@ -415,6 +419,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     onClick={() => {
                       setReceiptPreview(null)
                       setReceiptFile(null)
+                      setReceiptImageUrl('')
                     }}
                     className="absolute top-2 right-2 bg-[#F25260]/80 hover:bg-[#F25260] rounded-full p-2 transition-colors"
                   >
