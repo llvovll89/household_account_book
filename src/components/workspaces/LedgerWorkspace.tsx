@@ -1,4 +1,4 @@
-import type { Budget, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, TransactionType } from '../../types'
+import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType } from '../../types'
 import type { Tab } from '../../types/navigation'
 import Dashboard from '../Dashboard'
 import TransactionList from '../TransactionList'
@@ -12,6 +12,7 @@ interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
+  stockTrades: StockTrade[]
   subscriptions: Subscription[]
   goals: SavingsGoal[]
   settingsVersion: number
@@ -29,6 +30,7 @@ interface Props {
   onOpenCategoryModal: () => void
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
+  onTransactionArchive: (cutoff: string) => void
   onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoDelete: (id: string) => void
@@ -40,6 +42,7 @@ export default function LedgerWorkspace({
   transactions,
   budgets,
   recurring,
+  stockTrades,
   subscriptions,
   goals,
   settingsVersion,
@@ -57,6 +60,7 @@ export default function LedgerWorkspace({
   onOpenCategoryModal,
   onTransactionEdit,
   onTransactionDelete,
+  onTransactionArchive,
   onMemoAdd,
   onMemoUpdate,
   onMemoDelete,
@@ -69,6 +73,8 @@ export default function LedgerWorkspace({
           transactions={transactions}
           budgets={budgets}
           recurring={recurring}
+          stockTrades={stockTrades}
+          goals={goals}
           settingsVersion={settingsVersion}
           yearMonth={yearMonth}
           customExpenseCategories={customExpenseCategories}
@@ -84,6 +90,7 @@ export default function LedgerWorkspace({
           yearMonth={yearMonth}
           onEdit={onTransactionEdit}
           onDelete={onTransactionDelete}
+          onArchiveDone={onTransactionArchive}
         />
       )}
       {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} />}

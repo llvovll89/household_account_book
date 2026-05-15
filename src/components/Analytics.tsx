@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight, Hash } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
 import type { Budget, Transaction } from '../types'
 import { CATEGORY_EMOJI } from '../types'
 import SpendingAnalysisView from './SpendingAnalysisView'
 import { useMonthlyData } from '../lib/useMonthlyData'
-import { fmtShort as fmt } from '../lib/format'
+import { fmt as fmtFull, fmtShort as fmt } from '../lib/format'
 import TrendAreaChart from './charts/TrendAreaChart'
 import WeekdayBarChart from './charts/WeekdayBarChart'
 import DonutChart from './charts/DonutChart'
@@ -24,7 +25,7 @@ function getYM(year: number, month: number) {
 
 const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
-type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'reduce'
+type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce'
 
 export default function Analytics({ transactions, yearMonth, budgets }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
@@ -125,6 +126,42 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
     return list.slice(0, 4)
   }, [expenseDiff, incomeDiff, expenseByCategory, current, topWeekday])
 
+  // ── 태그 탭 데이터 ────────────────────────────────────────────
+  const tagData = useMemo(() => {
+    const map = new Map<string, { expense: number; income: number; count: number }>()
+    currentMonthly.forEach((t) => {
+      const tags = t.tags ?? []
+      tags.forEach((tag) => {
+        const cur = map.get(tag) ?? { expense: 0, income: 0, count: 0 }
+        if (t.type === 'expense') cur.expense += t.amount
+        else cur.income += t.amount
+        cur.count += 1
+        map.set(tag, cur)
+      })
+    })
+    return Array.from(map.entries())
+      .map(([tag, stat]) => ({ tag, ...stat, net: stat.income - stat.expense }))
+      .sort((a, b) => b.expense - a.expense)
+  }, [currentMonthly])
+
+  // 태그별 월간 트렌드 (최근 6개월, 상위 3 태그)
+  const tagTrend = useMemo(() => {
+    const topTags = tagData.slice(0, 3).map((t) => t.tag)
+    if (topTags.length === 0) return []
+    return monthlyData.map((m) => {
+      const monthTxs = transactions.filter((t) => t.date.startsWith(m.ym))
+      const entry: Record<string, number> & { label: string } = { label: m.label }
+      topTags.forEach((tag) => {
+        entry[tag] = monthTxs
+          .filter((t) => t.type === 'expense' && (t.tags ?? []).includes(tag))
+          .reduce((s, t) => s + t.amount, 0)
+      })
+      return entry
+    })
+  }, [tagData, monthlyData, transactions])
+
+  const topTagColors = ['#3D8EF8', '#F5BE3A', '#2ACF6A']
+
   // ── 캐시플로 탭 best/worst 월 ────────────────────────
   const cashflowStats = useMemo(() => {
     const withData = monthlyData.filter(m => m.income > 0 || m.expense > 0)
@@ -135,21 +172,22 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
   }, [monthlyData])
 
   const TAB_LABELS: Record<ViewMode, string> = {
-    monthly: '월간 분석',
-    yearly: '연간 요약',
-    cashflow: '캐시플로',
-    reduce: '절감 제안',
+    monthly: '월간',
+    yearly: '연간',
+    cashflow: '플로우',
+    tags: '태그',
+    reduce: '절감',
   }
 
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
       <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
-        {(['monthly', 'yearly', 'cashflow', 'reduce'] as ViewMode[]).map((m) => (
+        {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
           >
@@ -369,6 +407,171 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
               )}
             </div>
           </div>
+        </>
+      )}
+
+      {/* ──── 태그 뷰 ──── */}
+      {viewMode === 'tags' && (
+        <>
+          {tagData.length === 0 ? (
+            <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
+              <Hash size={32} className="text-[#2C2C2E] mx-auto mb-3" />
+              <p className="text-sm font-semibold text-[#4E5968]">이번 달 태그 내역이 없어요</p>
+              <p className="text-xs text-[#2C2C2E] mt-1">거래 내역에 태그를 추가하면 분석을 보여드려요</p>
+            </div>
+          ) : (
+            <>
+              {/* 태그별 지출 순위 */}
+              <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <Hash size={15} className="text-[#3D8EF8]" />
+                  <p className="text-[15px] font-bold text-white">태그별 지출 순위</p>
+                  <span className="text-xs text-[#4E5968] ml-auto">{yearMonth.replace('-', '년 ')}월</span>
+                </div>
+                <div className="space-y-3">
+                  {tagData.slice(0, 8).map((item, idx) => {
+                    const maxExpense = tagData[0].expense || 1
+                    const barPct = Math.round((item.expense / maxExpense) * 100)
+                    return (
+                      <div key={item.tag}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-[#4E5968] w-4 num">{idx + 1}</span>
+                            <span className="text-[13px] font-semibold text-[#F1F3F6]">#{item.tag}</span>
+                            <span className="text-[10px] text-[#4E5968]">{item.count}건</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[13px] font-bold text-[#F25260] num">
+                              -{fmtFull(item.expense)}원
+                            </span>
+                            {item.income > 0 && (
+                              <span className="text-[11px] text-[#2ACF6A] num ml-1.5">
+                                +{fmtFull(item.income)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${barPct}%`,
+                              backgroundColor: topTagColors[idx] ?? '#4E5968',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 태그 지출 막대 차트 (상위 6) */}
+              {tagData.length > 0 && (
+                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                  <p className="text-[15px] font-bold text-white mb-4">태그 지출 비교</p>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={tagData.slice(0, 6).map(d => ({ name: `#${d.tag}`, 지출: d.expense }))}
+                      margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: '#8B95A1', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: '#4E5968', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => fmt(v)}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 12 }}
+                        labelStyle={{ color: '#F1F3F6', fontSize: 12, fontWeight: 700 }}
+                        itemStyle={{ color: '#F25260', fontSize: 12 }}
+                        formatter={(v: number) => [`${fmtFull(v)}원`, '지출']}
+                      />
+                      <Bar dataKey="지출" fill="#F25260" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* 상위 3 태그 월별 트렌드 */}
+              {tagData.length > 0 && tagTrend.length > 0 && (
+                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                  <p className="text-[15px] font-bold text-white mb-1">상위 태그 6개월 트렌드</p>
+                  <p className="text-xs text-[#4E5968] mb-4">태그별 월간 지출 변화</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
+                    {tagData.slice(0, 3).map((t, i) => (
+                      <div key={t.tag} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: topTagColors[i] }} />
+                        <span className="text-[11px] text-[#8B95A1]">#{t.tag}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={tagTrend} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fill: '#8B95A1', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: '#4E5968', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => fmt(v)}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 12 }}
+                        labelStyle={{ color: '#F1F3F6', fontSize: 12, fontWeight: 700 }}
+                        itemStyle={{ fontSize: 12 }}
+                        formatter={(v: number, name: string) => [`${fmtFull(v)}원`, `#${name}`]}
+                      />
+                      {tagData.slice(0, 3).map((t, i) => (
+                        <Line
+                          key={t.tag}
+                          type="monotone"
+                          dataKey={t.tag}
+                          stroke={topTagColors[i]}
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: topTagColors[i] }}
+                          activeDot={{ r: 5 }}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* 태그 요약 통계 */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
+                  <p className="text-[10px] text-[#4E5968] font-semibold mb-1">태그 수</p>
+                  <p className="text-[17px] font-extrabold text-white num">{tagData.length}</p>
+                  <p className="text-[10px] text-[#4E5968] mt-0.5">개</p>
+                </div>
+                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
+                  <p className="text-[10px] text-[#4E5968] font-semibold mb-1">태그 지출</p>
+                  <p className="text-[13px] font-extrabold text-[#F25260] num">
+                    {fmt(tagData.reduce((s, t) => s + t.expense, 0))}
+                  </p>
+                  <p className="text-[10px] text-[#4E5968] mt-0.5">원</p>
+                </div>
+                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
+                  <p className="text-[10px] text-[#4E5968] font-semibold mb-1">총 건수</p>
+                  <p className="text-[17px] font-extrabold text-white num">
+                    {tagData.reduce((s, t) => s + t.count, 0)}
+                  </p>
+                  <p className="text-[10px] text-[#4E5968] mt-0.5">건</p>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 

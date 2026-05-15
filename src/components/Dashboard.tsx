@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag } from 'lucide-react'
-import type { Transaction, Budget, RecurringTransaction } from '../types'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart } from 'lucide-react'
+import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -10,11 +10,14 @@ import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
 import { fmt, fmtShort } from '../lib/format'
 import { showToast } from '../lib/toast'
+import { calcHoldings } from '../lib/stockCalc'
 
 interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
+  stockTrades: StockTrade[]
+  goals: SavingsGoal[]
   settingsVersion: number
   yearMonth: string
   customExpenseCategories: string[]
@@ -28,7 +31,7 @@ function calcNet(items: Transaction[]) {
   return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
 }
 
-export default function Dashboard({ transactions, budgets, recurring, settingsVersion, yearMonth, customExpenseCategories, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
@@ -211,6 +214,32 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
   const expenseTrend = prevMonth.expense > 0
     ? Math.round(((expense - prevMonth.expense) / prevMonth.expense) * 100) : null
 
+  // ── 순자산 계산 ────────────────────────────────────────────
+  const netWorth = useMemo(() => {
+    // 1) 전체 누적 잔액 (수입 - 지출 전체)
+    const totalBalance = transactions.reduce(
+      (s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0
+    )
+
+    // 2) 주식 보유 원가 합계 (실현되지 않은 보유분)
+    const holdings = calcHoldings(stockTrades)
+    const stockBookValue = holdings.reduce((s, h) => s + h.totalCost, 0)
+
+    // 3) 저축 목표 달성 금액 합계
+    const goalsSaved = goals.reduce((s, g) => s + (g.savedAmount ?? 0), 0)
+
+    const total = totalBalance + stockBookValue
+
+    return {
+      totalBalance,
+      stockBookValue,
+      goalsSaved,
+      total,
+      holdingCount: holdings.length,
+      goalCount: goals.length,
+    }
+  }, [transactions, stockTrades, goals])
+
   // 예산 게이지용 카테고리별 지출
   const spentByCategory = useMemo(() => {
     const map: Record<string, number> = {}
@@ -222,6 +251,46 @@ export default function Dashboard({ transactions, budgets, recurring, settingsVe
 
   return (
     <div className="space-y-3 tab-content">
+      {/* 순자산 카드 */}
+      {(transactions.length > 0 || stockTrades.length > 0) && (
+        <div className="bg-[#1C1C1E] rounded-3xl px-5 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <PieChart size={14} className="text-[#3D8EF8]" />
+            <span className="text-[13px] font-bold text-[#8B95A1]">순자산 현황</span>
+          </div>
+          <p className={`text-[26px] font-extrabold num tracking-tight mb-3 ${netWorth.total >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+            {netWorth.total >= 0 ? '' : '-'}{fmt(Math.abs(netWorth.total))}<span className="text-sm font-medium text-[#4E5968] ml-1">원</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 잔액</p>
+              <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
+              </p>
+            </div>
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">주식 원가</p>
+              <p className="text-[13px] font-extrabold text-[#F5BE3A] num">
+                {netWorth.stockBookValue > 0 ? fmtShort(netWorth.stockBookValue) : '-'}
+              </p>
+              {netWorth.holdingCount > 0 && (
+                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.holdingCount}종목</p>
+              )}
+            </div>
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">저축 목표</p>
+              <p className="text-[13px] font-extrabold text-[#3D8EF8] num">
+                {netWorth.goalsSaved > 0 ? fmtShort(netWorth.goalsSaved) : '-'}
+              </p>
+              {netWorth.goalCount > 0 && (
+                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.goalCount}개 목표</p>
+              )}
+            </div>
+          </div>
+          <p className="text-[10px] text-[#2C2C2E] mt-2.5 text-right">주식은 매입 원가 기준 · 시세 반영 안됨</p>
+        </div>
+      )}
+
       {/* 예산 초과 알림 */}
       {overBudget.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F5BE3A]/10 rounded-2xl border border-[#F5BE3A]/20">
