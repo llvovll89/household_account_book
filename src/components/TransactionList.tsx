@@ -12,6 +12,7 @@ interface Props {
   yearMonth: string
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
+  onArchiveDone?: (cutoff: string) => void
 }
 
 type ViewMode = 'list' | 'calendar'
@@ -19,7 +20,7 @@ type ViewMode = 'list' | 'calendar'
 type FilterType = 'all' | 'income' | 'expense'
 type PeriodMode = 'day' | 'week' | 'month'
 
-export default function TransactionList({ transactions, yearMonth, onEdit, onDelete }: Props) {
+export default function TransactionList({ transactions, yearMonth, onEdit, onDelete, onArchiveDone }: Props) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -457,6 +458,10 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           transactions={transactions}
           yearMonth={yearMonth}
           onClose={() => setShowExport(false)}
+          onArchiveDone={(cutoff) => {
+            setShowExport(false)
+            onArchiveDone?.(cutoff)
+          }}
         />
       )}
     </div>

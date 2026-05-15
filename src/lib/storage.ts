@@ -318,6 +318,47 @@ export function setStorageContext(mode: StorageMode, uid: string | null = null):
   storageUid = uid
 }
 
+// ─── 스토리지 사용량 ────────────────────────────────────────────────
+
+/** localStorage 사용량(bytes) 반환. 브라우저 한도는 약 5MB */
+export function getLocalStorageUsageBytes(): number {
+  let total = 0
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i) ?? ''
+    const val = localStorage.getItem(key) ?? ''
+    total += (key.length + val.length) * 2 // UTF-16: 문자당 2바이트
+  }
+  return total
+}
+
+// ─── 내역 아카이브 ────────────────────────────────────────────────
+
+/**
+ * `before` 이전(미포함) 날짜의 거래 내역을 로컬 스토리지에서 삭제한다.
+ * Firebase 모드에서도 로컬 스토리지를 직접 조작하며,
+ * 호출 전에 반드시 CSV 내보내기를 완료해야 한다.
+ *
+ * @returns 삭제된 건수
+ */
+export async function archiveTransactionsBefore(before: string): Promise<number> {
+  const all = loadLocalTransactions()
+  const keep = all.filter(t => t.date >= before)
+  const removed = all.length - keep.length
+  if (removed === 0) return 0
+
+  safeSave(TRANSACTIONS_KEY, keep)
+
+  if (storageMode === 'firebase') {
+    try {
+      await saveRemotePatch(getStorageUid(), { transactions: keep })
+    } catch {
+      localStorage.setItem(PENDING_SYNC_KEY, 'true')
+    }
+  }
+
+  return removed
+}
+
 export interface LocalDataCounts {
   transactions: number
   memos: number
