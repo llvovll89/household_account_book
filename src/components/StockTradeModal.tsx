@@ -52,13 +52,29 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
   const parsedFee = parseInt(fee.replace(/,/g, ''), 10) || 0
   const totalAmount = parsedPrice * parsedQty + parsedFee
 
+  // 유효성 검증
+  const MAX_PRICE_KRW = 100_000_000   // 1억원 (주당 상한)
+  const MAX_PRICE_USD = 100_000       // $100,000
+  const MAX_QTY = 10_000_000          // 1천만 주
+  const maxPrice = currency === 'KRW' ? MAX_PRICE_KRW : MAX_PRICE_USD
+
+  const priceError = parsedPrice > maxPrice
+    ? `주가가 ${maxPrice.toLocaleString()}${currency === 'KRW' ? '원' : ` ${currency}`}을 초과합니다`
+    : null
+  const qtyError = parsedQty > MAX_QTY
+    ? `수량이 ${MAX_QTY.toLocaleString()}주를 초과합니다`
+    : parsedQty > 0 && !/^\d+(\.\d{1,6})?$/.test(quantity)
+    ? '소수점 6자리까지만 입력 가능합니다'
+    : null
+  const hasError = !!(priceError || qtyError)
+
   function fmtQty(q: number) {
     return q % 1 === 0 ? q.toFixed(0) : q.toString()
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!ticker.trim() || parsedPrice <= 0 || parsedQty <= 0) return
+    if (!ticker.trim() || parsedPrice <= 0 || parsedQty <= 0 || hasError) return
     onSave({
       tradeType,
       ticker: ticker.trim(),
@@ -195,8 +211,16 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
             </div>
           </div>
 
+          {/* 입력 오류 */}
+          {(priceError || qtyError) && (
+            <div className="space-y-1">
+              {priceError && <p className="text-[11px] text-[#F25260] px-1">{priceError}</p>}
+              {qtyError  && <p className="text-[11px] text-[#F25260] px-1">{qtyError}</p>}
+            </div>
+          )}
+
           {/* 총 거래금액 */}
-          {totalAmount > 0 && (
+          {totalAmount > 0 && !hasError && (
             <div className="flex items-center justify-between px-1">
               <span className="text-xs text-[#4E5968]">총 거래금액</span>
               <span className={`text-sm font-bold num ${tradeType === 'buy' ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
@@ -222,7 +246,8 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
           </div>
 
           <button type="submit"
-            className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] transition-all active:scale-[0.98] ${
+            disabled={hasError}
+            className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] transition-all active:scale-[0.98] disabled:opacity-40 ${
               tradeType === 'buy' ? 'bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'bg-[#F25260] hover:bg-[#FF6B78]'
             }`}>
             {trade ? '수정 완료' : tradeType === 'buy' ? '매수 추가' : '매도 추가'}
