@@ -3,7 +3,7 @@
  *
  * CORS 처리:
  *  - 개발(DEV): Vite 프록시 /yf-api → query1.finance.yahoo.com
- *  - 프로덕션:  VITE_CORS_PROXY 환경변수 (기본값: https://api.allorigins.win/raw?url=)
+ *  - 프로덕션:  VITE_CORS_PROXY 환경변수 (기본값: corsproxy.io)
  *
  * 한국 종목코드 자동 변환:
  *  - 6자리 숫자 → {code}.KS (KOSPI 기본)
@@ -38,12 +38,98 @@ export function toYahooSymbol(ticker: string): string {
 const DEFAULT_PROXIES = [
   'https://corsproxy.io/?',
   'https://api.allorigins.win/raw?url=',
+  'https://cors.sh/?',
 ]
 
 const envProxy = (import.meta.env.VITE_CORS_PROXY as string | undefined) || ''
 const PROXY_LIST: string[] = envProxy
   ? [envProxy, ...DEFAULT_PROXIES.filter(p => p !== envProxy)]
   : DEFAULT_PROXIES
+
+// ─── 요청 타임아웃 ────────────────────────────────────────────────
+
+const FETCH_TIMEOUT_MS = 8_000
+const MAX_RETRIES = 2
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// ─── 지수 백오프 재시도 ────────────────────────────────────────────────
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url, options, FETCH_TIMEOUT_MS)
+      if (res.ok) return res
+      // 429 Rate Limit: 재시도 대기
+      if (res.status === 429 && attempt < retries) {
+        await sleep(500 * 2 ** attempt + Math.random() * 200)
+        continue
+      }
+      // 다른 오류는 즉시 throw (다음 프록시로 넘김)
+      throw new Error(`HTTP ${res.status}`)
+    } catch (e) {
+      if (attempt === retries) throw e
+      // 네트워크 오류 / 타임아웃: 짧은 대기 후 재시도
+      await sleep(300 * 2 ** attempt)
+    }
+  }
+  throw new Error('재시도 초과')
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+// ─── API 레벨 캐시 ────────────────────────────────────────────────
+// 성공한 응답을 캐싱해 두어 모든 프록시 실패 시 stale 데이터 반환
+
+interface CacheEntry {
+  data: Record<string, StockQuote>
+  expiresAt: number
+}
+
+const quoteCache = new Map<string, CacheEntry>()
+const CACHE_TTL_REGULAR_MS  = 60_000        // 장중: 1분
+const CACHE_TTL_CLOSED_MS   = 10 * 60_000   // 장외: 10분
+const CACHE_TTL_STALE_MS    = 30 * 60_000   // 전체 실패 시 stale 허용: 30분
+
+function getCacheTtl(quotes: Record<string, StockQuote>): number {
+  const states = Object.values(quotes).map(q => q.marketState)
+  const isRegular = states.some(s => s === 'REGULAR' || s === 'PRE' || s === 'POST')
+  return isRegular ? CACHE_TTL_REGULAR_MS : CACHE_TTL_CLOSED_MS
+}
+
+function getCached(key: string): Record<string, StockQuote> | null {
+  const entry = quoteCache.get(key)
+  if (!entry) return null
+  if (Date.now() < entry.expiresAt) return entry.data
+  return null
+}
+
+function getStaleCache(key: string): Record<string, StockQuote> | null {
+  const entry = quoteCache.get(key)
+  if (!entry) return null
+  if (Date.now() < entry.expiresAt + CACHE_TTL_STALE_MS) return entry.data
+  return null
+}
+
+function setCache(key: string, data: Record<string, StockQuote>): void {
+  quoteCache.set(key, { data, expiresAt: Date.now() + getCacheTtl(data) })
+}
+
+// ─── 프록시 폴백 fetch ────────────────────────────────────────────────
 
 function buildUrl(path: string, proxy: string, host = 'query1'): string {
   if (import.meta.env.DEV) {
@@ -54,20 +140,19 @@ function buildUrl(path: string, proxy: string, host = 'query1'): string {
 
 async function fetchWithProxyFallback(path: string, host: 'query1' | 'query2' = 'query1'): Promise<Response> {
   if (import.meta.env.DEV) {
-    return fetch(buildUrl(path, '', host), { headers: { Accept: 'application/json' } })
+    return fetchWithRetry(buildUrl(path, '', host), { headers: { Accept: 'application/json' } })
   }
+
+  let lastError: unknown
   for (const proxy of PROXY_LIST) {
     const url = buildUrl(path, proxy, host)
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } })
-      if (res.ok) return res
-      if (res.status !== 403 && res.status !== 429) throw new Error(`HTTP ${res.status}`)
-      // 403/429이면 다음 프록시로
+      return await fetchWithRetry(url, { headers: { Accept: 'application/json' } })
     } catch (e) {
-      if (proxy === PROXY_LIST[PROXY_LIST.length - 1]) throw e
+      lastError = e
     }
   }
-  throw new Error('모든 프록시 실패')
+  throw lastError ?? new Error('모든 프록시 실패')
 }
 
 /** ASCII 범위를 벗어난 문자(한글 등)가 포함된 심볼 제외 */
@@ -193,11 +278,17 @@ export async function fetchChart(ticker: string, range: ChartRange): Promise<Sto
 // ─── Quote 데이터 ────────────────────────────────────────────────
 
 /**
- * Yahoo Finance에서 주어진 티커 목록의 시세를 가져옴
+ * Yahoo Finance에서 주어진 티커 목록의 시세를 가져옴.
+ * 캐시 유효 → 캐시 반환 / 실패 → stale 캐시 반환 (최대 30분)
+ *
  * @returns ticker → StockQuote 맵 (조회 실패 티커는 포함되지 않음)
  */
 export async function fetchQuotes(tickers: string[]): Promise<Record<string, StockQuote>> {
   if (tickers.length === 0) return {}
+
+  const cacheKey = [...tickers].sort().join(',')
+  const cached = getCached(cacheKey)
+  if (cached) return cached
 
   // 원본 티커 → Yahoo 심볼 매핑 (역방향도 보관)
   const symbolToTicker: Record<string, string> = {}
@@ -230,13 +321,18 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
     `&lang=ko-KR` +
     `&corsDomain=finance.yahoo.com`
 
-  const res = await fetchWithProxyFallback(path)
-  if (!res.ok) {
-    throw new Error(`Yahoo Finance API 오류: HTTP ${res.status}`)
+  let results: any[]
+  try {
+    const res = await fetchWithProxyFallback(path)
+    if (!res.ok) throw new Error(`Yahoo Finance API 오류: HTTP ${res.status}`)
+    const data: unknown = await res.json()
+    results = (data as any)?.quoteResponse?.result ?? []
+  } catch (e) {
+    // 모든 프록시 실패 → stale 캐시 반환
+    const stale = getStaleCache(cacheKey)
+    if (stale) return stale
+    throw e
   }
-
-  const data: unknown = await res.json()
-  const results: any[] = (data as any)?.quoteResponse?.result ?? []
 
   const quotes: Record<string, StockQuote> = {}
   for (const r of results) {
@@ -253,6 +349,10 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
       shortName: r.shortName ?? originalTicker,
       lastUpdated: Date.now(),
     }
+  }
+
+  if (Object.keys(quotes).length > 0) {
+    setCache(cacheKey, quotes)
   }
 
   return quotes

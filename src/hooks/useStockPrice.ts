@@ -2,34 +2,46 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchQuotes } from '../lib/stockPriceApi'
 import type { StockQuote } from '../lib/stockPriceApi'
 
-/** 폴링 간격: 30초 */
-const POLL_INTERVAL_MS = 30_000
+/** 장중 폴링 간격: 30초 */
+const POLL_INTERVAL_REGULAR_MS = 30_000
+/** 장외(CLOSED/PRE/POST) 폴링 간격: 5분 */
+const POLL_INTERVAL_CLOSED_MS  = 5 * 60_000
+
+function getMarketState(prices: Record<string, StockQuote>): string {
+  const states = Object.values(prices).map(q => q.marketState)
+  if (states.includes('REGULAR')) return 'REGULAR'
+  if (states.includes('PRE') || states.includes('POST')) return 'PRE'
+  return 'CLOSED'
+}
 
 export interface UseStockPriceResult {
   prices: Record<string, StockQuote>
   loading: boolean
   error: string | null
+  isStale: boolean         // true면 캐시 만료 후 재요청 실패한 stale 데이터
   lastUpdated: number | null
   refresh: () => void
 }
 
 /**
- * 주어진 티커 목록의 실시간 시세를 30초 간격으로 폴링하는 훅
+ * 주어진 티커 목록의 실시간 시세를 폴링하는 훅.
+ * - 장중(REGULAR): 30초 간격
+ * - 장외(CLOSED): 5분 간격
+ * - 모든 프록시 실패 시 stale 캐시 데이터 유지 (최대 30분)
  *
  * @param tickers - 시세를 조회할 티커 배열 (예: ['005930', 'AAPL', '035420.KQ'])
- * @returns prices, loading, error, lastUpdated, refresh
  */
 export default function useStockPrice(tickers: string[]): UseStockPriceResult {
   const [prices, setPrices] = useState<Record<string, StockQuote>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isStale, setIsStale] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
 
-  // tickers 변경 시 ref에 최신값 유지 (interval 콜백에서 사용)
   const tickersRef = useRef<string[]>(tickers)
-  useEffect(() => {
-    tickersRef.current = tickers
-  }, [tickers])
+  const pricesRef  = useRef<Record<string, StockQuote>>(prices)
+  useEffect(() => { tickersRef.current = tickers }, [tickers])
+  useEffect(() => { pricesRef.current  = prices  }, [prices])
 
   const refresh = useCallback(async () => {
     const ts = tickersRef.current
@@ -39,10 +51,15 @@ export default function useStockPrice(tickers: string[]): UseStockPriceResult {
     setError(null)
     try {
       const quotes = await fetchQuotes(ts)
+      const isFromStale = Object.values(quotes).some(
+        q => Date.now() - q.lastUpdated > 60_000,
+      )
       setPrices(prev => ({ ...prev, ...quotes }))
+      setIsStale(isFromStale)
       setLastUpdated(Date.now())
     } catch (e) {
       setError(e instanceof Error ? e.message : '시세 조회 실패')
+      // 이전 prices 유지 (실패해도 화면 클리어하지 않음)
     } finally {
       setLoading(false)
     }
@@ -54,14 +71,26 @@ export default function useStockPrice(tickers: string[]): UseStockPriceResult {
     if (tickers.length === 0) {
       setPrices({})
       setError(null)
+      setIsStale(false)
       return
     }
 
-    refresh()
-    const id = setInterval(refresh, POLL_INTERVAL_MS)
-    return () => clearInterval(id)
+    let timerId: ReturnType<typeof setTimeout>
+
+    const schedule = () => {
+      const state = getMarketState(pricesRef.current)
+      const interval = state === 'REGULAR' ? POLL_INTERVAL_REGULAR_MS : POLL_INTERVAL_CLOSED_MS
+      timerId = setTimeout(async () => {
+        await refresh()
+        schedule()
+      }, interval)
+    }
+
+    refresh().then(schedule)
+
+    return () => clearTimeout(timerId)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey, refresh])
 
-  return { prices, loading, error, lastUpdated, refresh }
+  return { prices, loading, error, isStale, lastUpdated, refresh }
 }

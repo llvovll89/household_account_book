@@ -36,7 +36,7 @@ export default function StocksWorkspace({
     return [...new Set([...holdingTickers, ...stockWatchlist])]
   }, [stockTrades, stockWatchlist])
 
-  const { prices, loading, error, lastUpdated, refresh } = useStockPrice(allTickers)
+  const { prices, loading, error, isStale, lastUpdated, refresh } = useStockPrice(allTickers)
 
   // 마지막 업데이트 시각 포맷 (HH:MM:SS)
   const lastUpdatedStr = lastUpdated
@@ -86,11 +86,13 @@ export default function StocksWorkspace({
             )}
             <span className="text-[10px] text-[#4E5968]">
               {error
-                ? '시세 오류'
+                ? isStale
+                  ? `이전 시세 (연결 실패)`
+                  : '시세 오류'
                 : loading
                 ? '시세 불러오는 중...'
                 : lastUpdatedStr
-                ? `${lastUpdatedStr} 업데이트`
+                ? `${lastUpdatedStr} 업데이트${isStale ? ' (이전 데이터)' : ''}`
                 : '시세 대기 중'}
             </span>
           </div>
