@@ -198,14 +198,15 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                 </div>
               </div>
 
-              {/* 설명 */}
+              {/* 메모 */}
               <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <p className="text-[10px] text-[#4E5968] font-semibold mb-1">설명 (선택)</p>
-                <input
-                  type="text" value={newDesc}
+                <p className="text-[10px] text-[#4E5968] font-semibold mb-1">메모 (선택)</p>
+                <textarea
+                  value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="예: 넷플릭스, 월세"
-                  className="w-full bg-transparent text-sm font-medium text-white placeholder-[#2D3352] focus:outline-none"
+                  rows={2}
+                  className="w-full bg-transparent text-sm font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
                 />
               </div>
 

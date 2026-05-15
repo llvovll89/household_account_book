@@ -5,6 +5,7 @@ import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
+import TransactionDetailModal from './TransactionDetailModal'
 import { fmt } from '../lib/format'
 
 interface Props {
@@ -30,6 +31,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [showTagSummary, setShowTagSummary] = useState(false)
   const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null)
 
   const monthTx = useMemo(
     () => transactions.filter((t) => t.date.startsWith(yearMonth)),
@@ -353,7 +355,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                     return (
                       <div
                         key={t.id}
-                        className={`flex items-center gap-3 px-5 py-3.5 group ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
+                        onClick={() => setDetailTransaction(t)}
+                        className={`flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/[0.02] transition-colors ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
                           }`}
                       >
                         <div
@@ -378,7 +381,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                               {tags.map((tag) => (
                                 <button
                                   key={tag}
-                                  onClick={() => handleTagClick(tag)}
+                                  onClick={(e) => { e.stopPropagation(); handleTagClick(tag) }}
                                   className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all ${activeTag === tag
                                     ? 'bg-[#3D8EF8]/30 text-[#3D8EF8]'
                                     : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
@@ -402,7 +405,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           {/* 영수증 아이콘 */}
                           {t.receiptImageUrl && (
                             <button
-                              onClick={() => setReceiptModal({ open: true, url: t.receiptImageUrl! })}
+                              onClick={(e) => { e.stopPropagation(); setReceiptModal({ open: true, url: t.receiptImageUrl! }) }}
                               className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#3D8EF8] transition-colors"
                               title="영수증 보기"
                             >
@@ -412,14 +415,14 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
 
                           <div className="flex gap-0.5 ml-1">
                             <button
-                              onClick={() => onEdit(t)}
+                              onClick={(e) => { e.stopPropagation(); onEdit(t) }}
                               aria-label={`${t.category} 내역 수정`}
                               className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
                             >
                               <Pencil size={12} />
                             </button>
                             <button
-                              onClick={() => onDelete(t.id)}
+                              onClick={(e) => { e.stopPropagation(); onDelete(t.id) }}
                               aria-label={`${t.category} 내역 삭제`}
                               className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
                             >
@@ -437,6 +440,16 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         )}
 
       </> /* end list view */}
+
+      {/* 내역 상세 모달 */}
+      {detailTransaction && (
+        <TransactionDetailModal
+          transaction={detailTransaction}
+          onEdit={(t) => { setDetailTransaction(null); onEdit(t) }}
+          onDelete={(id) => { setDetailTransaction(null); onDelete(id) }}
+          onClose={() => setDetailTransaction(null)}
+        />
+      )}
 
       {/* 영수증 모달 */}
       {receiptModal.open && (

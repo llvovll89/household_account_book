@@ -350,16 +350,17 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
-            {/* 설명 + 해시태그 */}
+            {/* 메모 + 해시태그 */}
             <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
               <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
-                설명 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
+                메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
               </p>
-              <input
-                type="text" value={description}
+              <textarea
+                value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="어디서 사용했나요? (예: 점심 #식비 #카페)"
-                className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none"
+                placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
+                rows={3}
+                className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
               />
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
