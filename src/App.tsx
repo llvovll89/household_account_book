@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal } from './types'
+import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
-import { loadAllData, loadSettings, saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions } from './lib/storage'
-import { generateId } from './lib/format'
+import { loadAllData } from './lib/storage'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
+import { useAppHandlers } from './hooks/useAppHandlers'
+import type { UIAction } from './hooks/useAppHandlers.types'
 import { registerToastHandler, showToast } from './lib/toast'
-import { auth } from './firebase/firebase'
-import { deleteReceiptImage } from './lib/receiptStorage'
 import TransactionModal from './components/TransactionModal'
 import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
@@ -53,19 +52,6 @@ interface UIState {
     subscriptionAddTrigger: number
     goalAddTrigger: number
 }
-
-type UIAction =
-    | { type: 'OPEN_TX_MODAL'; editing?: Transaction }
-    | { type: 'CLOSE_TX_MODAL' }
-    | { type: 'OPEN_STOCK_MODAL'; editing?: StockTrade }
-    | { type: 'CLOSE_STOCK_MODAL' }
-    | { type: 'SET_IMPORT'; value: boolean }
-    | { type: 'SET_HELP'; value: boolean }
-    | { type: 'SET_CATEGORY'; value: boolean }
-    | { type: 'SET_STOCK_SUBTAB'; value: StockSubTab }
-    | { type: 'TRIGGER_MEMO' }
-    | { type: 'TRIGGER_SUB' }
-    | { type: 'TRIGGER_GOAL' }
 
 const UI_INIT: UIState = {
     showModal: false, editingTransaction: null,
@@ -223,204 +209,43 @@ export default function App() {
             })
     }, [])
 
-    const handleSaveTransaction = useCallback(
-        (items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
-            setTransactions((prev) => {
-                let next = prev
-                if (editingTransaction && items.length > 0) {
-                    // 수정 모드: 첫 번째 항목으로 수정
-                    next = prev.map((t) => t.id === editingTransaction.id ? { ...t, ...items[0] } : t)
-                    // 나머지는 신규 추가
-                    const extra = items.slice(1).map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))
-                    next = [...next, ...extra]
-                } else {
-                    next = [...prev, ...items.map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))]
-                }
-                persist(saveTransactions(next), '거래 저장에 실패했습니다.')
-                return next
-            })
-            dispatchUI({ type: 'CLOSE_TX_MODAL' })
-        },
-        [editingTransaction, persist]
-    )
-
-    const handleDeleteTransaction = useCallback((id: string) => {
-        if (!confirm('이 내역을 삭제할까요?')) return
-        setTransactions((prev) => {
-            const transaction = prev.find((t) => t.id === id)
-
-            // 영수증 이미지 삭제
-            if (transaction?.receiptImageUrl && auth.currentUser) {
-                void deleteReceiptImage(auth.currentUser.uid, id).catch((e) => {
-                    console.error('Failed to delete receipt image:', e)
-                })
-            }
-
-            const next = prev.filter((t) => t.id !== id)
-            persist(saveTransactions(next), '거래 삭제 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
-        setTransactions((prev) => {
-            const next = [...prev, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
-            persist(saveTransactions(next), '가져오기 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleSaveStockTrade = useCallback((data: Omit<StockTrade, 'id' | 'createdAt'>) => {
-        setStockTrades((prev) => {
-            const next = editingTrade
-                ? prev.map((t) => t.id === editingTrade.id ? { ...t, ...data } : t)
-                : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
-            persist(saveStockTrades(next), '주식 거래 저장에 실패했습니다.')
-            return next
-        })
-        dispatchUI({ type: 'CLOSE_STOCK_MODAL' })
-    }, [editingTrade, persist])
-
-    const handleDeleteStockTrade = useCallback((id: string) => {
-        if (!confirm('이 거래를 삭제할까요?')) return
-        setStockTrades((prev) => {
-            const next = prev.filter((t) => t.id !== id)
-            persist(saveStockTrades(next), '주식 거래 삭제에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleBudgetsChange = useCallback((b: Budget[]) => {
-        setBudgets(b)
-        persist(saveBudgets(b), '예산 저장에 실패했습니다.')
-    }, [persist])
-
-    const handleRecurringSave = useCallback((items: RecurringTransaction[]) => {
-        setRecurring(items)
-        persist(saveRecurring(items), '정기내역 저장에 실패했습니다.')
-    }, [persist])
-
-    const handleSubscriptionsChange = useCallback((items: Subscription[]) => {
-        setSubscriptions(items)
-        persist(saveSubscriptions(items), '구독 저장에 실패했습니다.')
-    }, [persist])
-
-    const handleGoalsChange = useCallback((items: SavingsGoal[]) => {
-        setGoals(items)
-        persist(saveGoals(items), '목표 저장에 실패했습니다.')
-    }, [persist])
-
-    const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[]) => {
-        const newTx: Transaction[] = pending.map((r) => ({
-            id: generateId(),
-            type: r.type,
-            amount: r.amount,
-            category: r.category,
-            description: r.description,
-            date: `${yearMonth}-${String(r.dayOfMonth).padStart(2, '0')}`,
-            createdAt: Date.now(),
-        }))
-        const newTxIds = new Set(newTx.map((t) => t.id))
-        const nextTxs = [...transactions, ...newTx]
-
-        setTransactions(nextTxs)
-
-        try {
-            await saveTransactions(nextTxs)
-        } catch (e) {
-            console.error('[handleApplyRecurring] 거래 저장 실패', e)
-            showToast('정기내역 적용 저장에 실패했습니다.')
-            // 저장 실패 시 추가했던 거래를 롤백
-            setTransactions((prev) => prev.filter((t) => !newTxIds.has(t.id)))
-            return
-        }
-
-        // 거래 저장 성공 확인 후에만 lastAppliedMonth 업데이트
-        setRecurring((prev) => {
-            const ids = new Set(pending.map((r) => r.id))
-            const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: yearMonth } : r)
-            persist(saveRecurring(next), '정기내역 상태 저장에 실패했습니다.')
-            return next
-        })
-    }, [transactions, persist, yearMonth])
-
-    const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
-        setCustomExpenseCategories(expense)
-        setCustomIncomeCategories(income)
-        persist(
-            (async () => {
-                const current = await loadSettings()
-                await saveSettings({ ...current, customExpenseCategories: expense, customIncomeCategories: income })
-            })(),
-            '카테고리 저장에 실패했습니다.'
-        )
-    }, [persist])
-
-    const handleAddWatchTicker = useCallback((ticker: string) => {
-        const normalized = ticker.trim().toUpperCase()
-        if (!normalized) return
-
-        setStockWatchlist((prev) => {
-            if (prev.includes(normalized)) return prev
-            const next = [...prev, normalized]
-            persist(
-                (async () => {
-                    const current = await loadSettings()
-                    await saveSettings({ ...current, stockWatchlist: next })
-                })(),
-                '관심종목 저장에 실패했습니다.'
-            )
-            return next
-        })
-    }, [persist])
-
-    const handleRemoveWatchTicker = useCallback((ticker: string) => {
-        setStockWatchlist((prev) => {
-            const next = prev.filter((item) => item !== ticker)
-            persist(
-                (async () => {
-                    const current = await loadSettings()
-                    await saveSettings({ ...current, stockWatchlist: next })
-                })(),
-                '관심종목 저장에 실패했습니다.'
-            )
-            return next
-        })
-    }, [persist])
-
-    const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
-        setMemos((prev) => {
-            const now = Date.now()
-            const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, dateEnd, amount, transactionType, category }]
-            persist(saveMemos(next), '메모 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
-        setMemos((prev) => {
-            const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, dateEnd, amount, transactionType, category } : m)
-            persist(saveMemos(next), '메모 수정 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleDeleteMemo = useCallback((id: string) => {
-        if (!confirm('이 메모를 삭제할까요?')) return
-        setMemos((prev) => {
-            const next = prev.filter((m) => m.id !== id)
-            persist(saveMemos(next), '메모 삭제 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
-
-    const handleTogglePin = useCallback((id: string) => {
-        setMemos((prev) => {
-            const next = prev.map((m) => m.id === id ? { ...m, pinned: !m.pinned } : m)
-            persist(saveMemos(next), '메모 고정 상태 저장에 실패했습니다.')
-            return next
-        })
-    }, [persist])
+    const {
+        handleSaveTransaction,
+        handleDeleteTransaction,
+        handleTransactionArchive,
+        handleBulkImport,
+        handleSaveStockTrade,
+        handleDeleteStockTrade,
+        handleBudgetsChange,
+        handleRecurringSave,
+        handleSubscriptionsChange,
+        handleGoalsChange,
+        handleApplyRecurring,
+        handleSaveCategories,
+        handleAddWatchTicker,
+        handleRemoveWatchTicker,
+        handleAddMemo,
+        handleUpdateMemo,
+        handleDeleteMemo,
+        handleTogglePin,
+    } = useAppHandlers({
+        transactions,
+        editingTransaction,
+        editingTrade,
+        yearMonth,
+        persist,
+        setTransactions,
+        setStockTrades,
+        setBudgets,
+        setRecurring,
+        setSubscriptions,
+        setGoals,
+        setMemos,
+        setStockWatchlist,
+        setCustomExpenseCategories,
+        setCustomIncomeCategories,
+        dispatchUI,
+    })
 
     const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
     const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
@@ -617,6 +442,7 @@ export default function App() {
                         transactions={transactions}
                         budgets={budgets}
                         recurring={recurring}
+                        stockTrades={stockTrades}
                         subscriptions={subscriptions}
                         goals={goals}
                         settingsVersion={settingsVersion}
@@ -634,6 +460,7 @@ export default function App() {
                         onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
                         onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                         onTransactionDelete={handleDeleteTransaction}
+                        onTransactionArchive={handleTransactionArchive}
                         onMemoAdd={handleAddMemo}
                         onMemoUpdate={handleUpdateMemo}
                         onMemoDelete={handleDeleteMemo}
