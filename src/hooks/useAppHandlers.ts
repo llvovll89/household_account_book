@@ -1,4 +1,5 @@
-import { useCallback, Dispatch } from 'react'
+import { useCallback } from 'react'
+import type { Dispatch } from 'react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal } from '../types'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'

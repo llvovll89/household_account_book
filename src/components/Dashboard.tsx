@@ -226,7 +226,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const stockBookValue = holdings.reduce((s, h) => s + h.totalCost, 0)
 
     // 3) 저축 목표 달성 금액 합계
-    const goalsSaved = goals.reduce((s, g) => s + (g.savedAmount ?? 0), 0)
+    const goalsSaved = goals.reduce((s, g) => s + (g.currentAmount ?? 0), 0)
 
     const total = totalBalance + stockBookValue
 

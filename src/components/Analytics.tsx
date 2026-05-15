@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight, Hash } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import type { Budget, Transaction } from '../types'
 import { CATEGORY_EMOJI } from '../types'
 import SpendingAnalysisView from './SpendingAnalysisView'
@@ -150,7 +150,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
     if (topTags.length === 0) return []
     return monthlyData.map((m) => {
       const monthTxs = transactions.filter((t) => t.date.startsWith(m.ym))
-      const entry: Record<string, number> & { label: string } = { label: m.label }
+      const entry: Record<string, number | string> = { label: m.label }
       topTags.forEach((tag) => {
         entry[tag] = monthTxs
           .filter((t) => t.type === 'expense' && (t.tags ?? []).includes(tag))
@@ -491,7 +491,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
                         contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 12 }}
                         labelStyle={{ color: '#F1F3F6', fontSize: 12, fontWeight: 700 }}
                         itemStyle={{ color: '#F25260', fontSize: 12 }}
-                        formatter={(v: number) => [`${fmtFull(v)}원`, '지출']}
+                        formatter={(v) => [`${fmtFull(Number(v))}원`, '지출']}
                       />
                       <Bar dataKey="지출" fill="#F25260" radius={[6, 6, 0, 0]} />
                     </BarChart>
@@ -530,7 +530,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
                         contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 12 }}
                         labelStyle={{ color: '#F1F3F6', fontSize: 12, fontWeight: 700 }}
                         itemStyle={{ fontSize: 12 }}
-                        formatter={(v: number, name: string) => [`${fmtFull(v)}원`, `#${name}`]}
+                        formatter={(v, name) => [`${fmtFull(Number(v))}원`, `#${name}`]}
                       />
                       {tagData.slice(0, 3).map((t, i) => (
                         <Line

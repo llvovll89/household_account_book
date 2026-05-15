@@ -25,9 +25,6 @@ function getYearMonth(date: Date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-function calcNet(items: Transaction[]) {
-    return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
-}
 
 const LEDGER_TABS = [
     { id: 'home' as Tab, label: '홈', Icon: LayoutDashboard },
@@ -254,7 +251,7 @@ export default function App() {
         return currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth()
     }
 
-    const { monthlyTx, openingBalance, monthIncome, monthExpense, monthBalance } = useMemo(() => {
+    const { monthIncome, monthExpense, monthBalance } = useMemo(() => {
         const cutoff = `${yearMonth}-01`
         let income = 0, expense = 0, opening = 0
         const monthly: Transaction[] = []
@@ -268,8 +265,6 @@ export default function App() {
             }
         }
         return {
-            monthlyTx: monthly,
-            openingBalance: opening,
             monthIncome: income,
             monthExpense: expense,
             monthBalance: opening + income - expense,
