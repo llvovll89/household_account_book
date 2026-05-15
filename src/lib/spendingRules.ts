@@ -63,6 +63,33 @@ export function filterByRange(txs: Transaction[], start: string, end: string): T
   return txs.filter((t) => t.date >= start && t.date <= end)
 }
 
+// ── 일회성 대형 지출 감지 ────────────────────────────────────────────────
+// 카테고리 내에서 단일 거래가 금액의 대부분을 차지할 때 "일회성 지출" 플래그
+
+function isOneTimeSpike(txs: Transaction[], category: string): boolean {
+  const catTxs = txs.filter((t) => t.category === category)
+  if (catTxs.length === 0) return false
+  const total = catTxs.reduce((s, t) => s + t.amount, 0)
+  const max = Math.max(...catTxs.map((t) => t.amount))
+  return catTxs.length <= 2 && max / total > 0.8
+}
+
+// 일평균 계산에서 극단적 일회성 지출을 제외한 "조정 일평균" 계산
+// 단일 거래가 전체 합의 40% 초과하고 3배 이상 큰 경우 제외
+function calcAdjustedDailyAvg(expenses: Transaction[], days: number): { avg: number; excluded: number } {
+  if (expenses.length === 0) return { avg: 0, excluded: 0 }
+  const sorted = [...expenses].sort((a, b) => b.amount - a.amount)
+  const total = expenses.reduce((s, t) => s + t.amount, 0)
+  const top = sorted[0]
+  const rest = total - top.amount
+  const restAvg = rest / Math.max(1, expenses.length - 1)
+
+  if (expenses.length >= 3 && top.amount > total * 0.4 && top.amount > restAvg * 3) {
+    return { avg: Math.round(rest / days), excluded: top.amount }
+  }
+  return { avg: Math.round(total / days), excluded: 0 }
+}
+
 // ── Rule engine ─────────────────────────────────────────────────
 
 export function generateSuggestions(
@@ -89,11 +116,12 @@ export function generateSuggestions(
   const prevCatMap: Record<string, number> = {}
   prevExpenses.forEach((t) => { prevCatMap[t.category] = (prevCatMap[t.category] || 0) + t.amount })
 
-  // Rule 1: 카테고리 급등
+  // Rule 1: 카테고리 급등 (일회성 대형 지출 제외)
   const spikes = Object.entries(catMap)
     .filter(([cat, amt]) => {
       const prev = prevCatMap[cat] || 0
       if (prev === 0) return false
+      if (isOneTimeSpike(periodExpenses, cat)) return false  // 일회성 단건 제외
       return ((amt - prev) / prev) * 100 > 30 && (amt - prev) > 20_000
     })
     .sort((a, b) => b[1] - a[1])
@@ -155,9 +183,13 @@ export function generateSuggestions(
     })
   }
 
-  // Rule 2: 단일 항목 쏠림
+  // Rule 2: 단일 항목 쏠림 (일회성 주거비 등은 제외)
   if (totalExpense > 0) {
-    const dominant = Object.entries(catMap).find(([, amt]) => amt / totalExpense > 0.4)
+    const dominant = Object.entries(catMap).find(([cat, amt]) => {
+      if (amt / totalExpense <= 0.4) return false
+      // 일회성 단건(월세 등)은 dominant 경고에서 제외
+      return !isOneTimeSpike(periodExpenses, cat)
+    })
     if (dominant) {
       const [cat, amt] = dominant
       const pct = Math.round((amt / totalExpense) * 100)
@@ -206,17 +238,22 @@ export function generateSuggestions(
     }
   }
 
-  // Rule 7: 일평균 지출 과다
-  if (totalExpense > 0 && totalExpense / days > 100_000) {
-    const dailyAvg = Math.round(totalExpense / days)
-    suggestions.push({
-      id: 'daily_avg',
-      priority: 'medium',
-      icon: '💸',
-      title: `하루 평균 지출이 ${dailyAvg.toLocaleString('ko-KR')}원이에요`,
-      body: `${days}일 동안 총 ${totalExpense.toLocaleString('ko-KR')}원을 지출했어요. 하루 10만원 이하를 목표로 삼아보세요.`,
-      savingHint: `목표 달성 시 ${Math.round((dailyAvg - 100_000) * days).toLocaleString('ko-KR')}원 절약 가능`,
-    })
+  // Rule 7: 일평균 지출 과다 (일회성 대형 지출 보정 후 계산)
+  if (totalExpense > 0) {
+    const { avg: adjustedAvg, excluded } = calcAdjustedDailyAvg(periodExpenses, days)
+    if (adjustedAvg > 100_000) {
+      const excludedNote = excluded > 0
+        ? ` (${excluded.toLocaleString('ko-KR')}원 일회성 지출 제외)`
+        : ''
+      suggestions.push({
+        id: 'daily_avg',
+        priority: 'medium',
+        icon: '💸',
+        title: `하루 평균 지출이 ${adjustedAvg.toLocaleString('ko-KR')}원이에요`,
+        body: `${days}일 동안 총 ${totalExpense.toLocaleString('ko-KR')}원을 지출했어요${excludedNote}. 하루 10만원 이하를 목표로 삼아보세요.`,
+        savingHint: `목표 달성 시 ${Math.round((adjustedAvg - 100_000) * days).toLocaleString('ko-KR')}원 절약 가능`,
+      })
+    }
   }
 
   // Rule 10: 수입 미기록
