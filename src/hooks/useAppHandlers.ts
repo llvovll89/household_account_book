@@ -133,14 +133,15 @@ export function useAppHandlers({
     persist(saveGoals(items), '목표 저장에 실패했습니다.')
   }, [persist, setGoals])
 
-  const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[]) => {
+  const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
+    const ym = targetYM ?? yearMonth
     const newTx: Transaction[] = pending.map((r) => ({
       id: generateId(),
       type: r.type,
       amount: r.amount,
       category: r.category,
       description: r.description,
-      date: `${yearMonth}-${String(r.dayOfMonth).padStart(2, '0')}`,
+      date: `${ym}-${String(r.dayOfMonth).padStart(2, '0')}`,
       createdAt: Date.now(),
     }))
     const newTxIds = new Set(newTx.map((t) => t.id))
@@ -156,7 +157,7 @@ export function useAppHandlers({
     }
     setRecurring((prev) => {
       const ids = new Set(pending.map((r) => r.id))
-      const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: yearMonth } : r)
+      const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: ym } : r)
       persist(saveRecurring(next), '정기내역 상태 저장에 실패했습니다.')
       return next
     })

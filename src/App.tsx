@@ -18,6 +18,7 @@ import LedgerWorkspace from './components/workspaces/LedgerWorkspace'
 import StocksWorkspace from './components/workspaces/StocksWorkspace'
 import BottomNavigation from './components/layout/BottomNavigation'
 import MergeLocalDataModal from './components/MergeLocalDataModal'
+import AutoApplyRecurringModal from './components/AutoApplyRecurringModal'
 
 const DATA_LOAD_TIMEOUT_MS = 9000
 
@@ -128,6 +129,10 @@ export default function App() {
     const [toastMsg, setToastMsg] = useState<string | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+    const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
+    const [showAutoApplyModal, setShowAutoApplyModal] = useState(false)
+    const autoApplyCheckedRef = useRef(false)
+
     useEffect(() => {
         return registerToastHandler((msg, duration = 2500) => {
             setToastMsg(msg)
@@ -149,6 +154,25 @@ export default function App() {
             window.removeEventListener('offline', onOffline)
         }
     }, [])
+
+    // 앱 로드 시 오늘 날짜 기준 정기 항목 자동 감지
+    useEffect(() => {
+        if (!authReady || isSyncing || autoApplyCheckedRef.current) return
+        if (recurring.length === 0) return
+        autoApplyCheckedRef.current = true
+
+        const today = new Date()
+        const todayDay = today.getDate()
+        const todayYM = getYearMonth(today)
+
+        const pending = recurring.filter(
+            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay
+        )
+        if (pending.length > 0) {
+            setAutoApplyPending(pending)
+            setShowAutoApplyModal(true)
+        }
+    }, [authReady, isSyncing, recurring])
 
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
@@ -576,6 +600,19 @@ export default function App() {
 
             {showMergeModal && (
                 <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} counts={localDataCounts} />
+            )}
+
+            {showAutoApplyModal && autoApplyPending.length > 0 && (
+                <AutoApplyRecurringModal
+                    pending={autoApplyPending}
+                    onConfirm={async () => {
+                        const todayYM = getYearMonth(new Date())
+                        setShowAutoApplyModal(false)
+                        await handleApplyRecurring(autoApplyPending, todayYM)
+                        showToast(`정기 항목 ${autoApplyPending.length}건이 등록되었습니다.`)
+                    }}
+                    onDismiss={() => setShowAutoApplyModal(false)}
+                />
             )}
 
             {showAuthModal && (
