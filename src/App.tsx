@@ -155,25 +155,6 @@ export default function App() {
         }
     }, [])
 
-    // 앱 로드 시 오늘 날짜 기준 정기 항목 자동 감지
-    useEffect(() => {
-        if (!authReady || isSyncing || autoApplyCheckedRef.current) return
-        if (recurring.length === 0) return
-        autoApplyCheckedRef.current = true
-
-        const today = new Date()
-        const todayDay = today.getDate()
-        const todayYM = getYearMonth(today)
-
-        const pending = recurring.filter(
-            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay
-        )
-        if (pending.length > 0) {
-            setAutoApplyPending(pending)
-            setShowAutoApplyModal(true)
-        }
-    }, [authReady, isSyncing, recurring])
-
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
         const timeout = new Promise<never>((_, reject) => {
@@ -215,6 +196,25 @@ export default function App() {
         handleEmailAuth,
         handleLogout,
     } = useAuthSync({ hydrateData })
+
+    // 앱 로드 시 오늘 날짜 기준 정기 항목 자동 감지
+    useEffect(() => {
+        if (!authReady || isSyncing || autoApplyCheckedRef.current) return
+        if (recurring.length === 0) return
+        autoApplyCheckedRef.current = true
+
+        const today = new Date()
+        const todayDay = today.getDate()
+        const todayYM = getYearMonth(today)
+
+        const pending = recurring.filter(
+            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay
+        )
+        if (pending.length > 0) {
+            setAutoApplyPending(pending)
+            setShowAutoApplyModal(true)
+        }
+    }, [authReady, isSyncing, recurring])
 
     const activeMode: AppMode = user ? mode : 'ledger'
     const visibleTabs = LEDGER_TABS
