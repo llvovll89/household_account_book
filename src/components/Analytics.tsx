@@ -37,19 +37,20 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
   const [cardBillingDay, setCardBillingDay] = useState<number>(25)
 
   useEffect(() => {
-    let cancelled = false
-
-    void loadSettings().then((settings) => {
-      if (!cancelled) {
-        const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
-        setCardBillingDay(firstCredit?.billingDay ?? settings.cardBillingDay ?? 25)
+    if (userPaymentMethods.length > 0) {
+      const firstCredit = userPaymentMethods.find((m) => m.type === 'credit')
+      if (firstCredit?.billingDay) {
+        setCardBillingDay(firstCredit.billingDay)
+        return
       }
-    })
-
-    return () => {
-      cancelled = true
     }
-  }, [settingsVersion])
+
+    let cancelled = false
+    void loadSettings().then((settings) => {
+      if (!cancelled) setCardBillingDay(settings.cardBillingDay ?? 25)
+    })
+    return () => { cancelled = true }
+  }, [settingsVersion, userPaymentMethods])
 
   // ── 월간 데이터 (공유 훅) ────────────────────────────────
   const monthlyData = useMonthlyData(transactions)
