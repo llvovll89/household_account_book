@@ -8,7 +8,7 @@ import FancyDatePicker from './FancyDatePicker'
 import TransactionDetailModal from './TransactionDetailModal'
 import { fmt } from '../lib/format'
 import { loadSettings, saveSettings } from '../lib/storage'
-import { getBillingStage, getStatementYMForCardExpense } from '../lib/cardBilling'
+import { getBillingStage, getStatementYMForCardExpense, getTransactionBillingDay, isCreditPaymentMethod } from '../lib/cardBilling'
 import { showToast } from '../lib/toast'
 
 interface Props {
@@ -22,7 +22,7 @@ interface Props {
 type ViewMode = 'list' | 'calendar'
 
 type FilterType = 'all' | 'income' | 'expense'
-type MethodFilterType = 'all' | 'cash' | 'card'
+type MethodFilterType = 'all' | 'cash' | 'check' | 'credit'
 type BillingFilterType = 'all' | 'current' | 'next' | 'later'
 type PeriodMode = 'day' | 'week' | 'month'
 
@@ -34,7 +34,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   const [filter, setFilter] = useState<FilterType>('all')
   const [methodFilter, setMethodFilter] = useState<MethodFilterType>(() => {
     const saved = localStorage.getItem(METHOD_FILTER_KEY)
-    if (saved === 'cash' || saved === 'card' || saved === 'all') return saved
+    if (saved === 'card') return 'credit'
+    if (saved === 'cash' || saved === 'check' || saved === 'credit' || saved === 'all') return saved
     return 'all'
   })
   const [billingFilter, setBillingFilter] = useState<BillingFilterType>(() => {
@@ -153,17 +154,22 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           return true
         })
         .filter((t) => filter === 'all' || t.type === filter)
-        .filter((t) => methodFilter === 'all' || (t.paymentMethod ?? 'cash') === methodFilter)
+        .filter((t) => {
+          if (methodFilter === 'all') return true
+          const method = t.paymentMethod ?? 'cash'
+          if (methodFilter === 'credit') return isCreditPaymentMethod(method)
+          return method === methodFilter
+        })
         .filter((t) => {
           if (statementMonthFilter) {
-            if (t.type !== 'expense' || (t.paymentMethod ?? 'cash') !== 'card') return false
-            const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+            if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return false
+            const statementYM = getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, cardBillingDay))
             if (statementYM !== statementMonthFilter) return false
           }
 
           if (billingFilter === 'all') return true
-          if (t.type !== 'expense' || (t.paymentMethod ?? 'cash') !== 'card') return false
-          const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+          if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return false
+          const statementYM = getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, cardBillingDay))
           const stage = getBillingStage(yearMonth, statementYM)
           return stage === billingFilter
         })
@@ -206,16 +212,22 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   }, [monthly])
 
   const methodSummary = useMemo(() => {
-    const map: Record<'cash' | 'card', { income: number; expense: number }> = {
+    const map: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
       cash: { income: 0, expense: 0 },
-      card: { income: 0, expense: 0 },
+      check: { income: 0, expense: 0 },
+      credit: { income: 0, expense: 0 },
     }
 
     monthly.forEach((t) => {
-      const method = t.paymentMethod ?? 'cash'
+      const rawMethod = t.paymentMethod ?? 'cash'
+      const method: 'cash' | 'check' | 'credit' = isCreditPaymentMethod(rawMethod)
+        ? 'credit'
+        : rawMethod === 'check'
+          ? 'check'
+          : 'cash'
       if (!(method in map)) return
-      if (t.type === 'income') map[method as 'cash' | 'card'].income += t.amount
-      else map[method as 'cash' | 'card'].expense += t.amount
+      if (t.type === 'income') map[method].income += t.amount
+      else map[method].expense += t.amount
     })
 
     return map
@@ -411,7 +423,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           {([
             { key: 'all', label: '결제수단 전체' },
             { key: 'cash', label: '현금' },
-            { key: 'card', label: '카드' },
+            { key: 'check', label: '체크카드' },
+            { key: 'credit', label: '신용카드' },
           ] as { key: MethodFilterType; label: string }[]).map((f) => (
             <button
               key={f.key}
@@ -419,7 +432,9 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
               className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${methodFilter === f.key
                 ? f.key === 'cash'
                   ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
-                  : f.key === 'card'
+                  : f.key === 'check'
+                    ? 'bg-[#6AD3C0]/22 text-[#6AD3C0]'
+                    : f.key === 'credit'
                     ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
                     : 'bg-[#3D8EF8] text-white'
                 : 'text-[#4E5968] hover:text-[#8B95A1]'
@@ -460,8 +475,8 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         </div>
 
         {/* 태그별 합계 */}
-        <div className="grid grid-cols-2 gap-2">
-          {(['cash', 'card'] as const).map((method) => {
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {(['cash', 'check', 'credit'] as const).map((method) => {
             const income = methodSummary[method].income
             const expense = methodSummary[method].expense
             const net = income - expense
@@ -604,14 +619,17 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           {t.description && (
                             <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
                           )}
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${t.paymentMethod === 'card'
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${isCreditPaymentMethod(t.paymentMethod)
                             ? 'bg-[#3D8EF8]/18 text-[#79B2FF]'
-                            : 'bg-[#2ACF6A]/18 text-[#2ACF6A]'
+                            : t.paymentMethod === 'check'
+                              ? 'bg-[#6AD3C0]/20 text-[#6AD3C0]'
+                              : 'bg-[#2ACF6A]/18 text-[#2ACF6A]'
                             }`}>
-                            {t.paymentMethod === 'card' ? '💳 카드' : '💵 현금'}
+                            {t.paymentMethod === 'check' ? '💳 체크카드' : isCreditPaymentMethod(t.paymentMethod) ? '💎 신용카드' : '💵 현금'}
                           </span>
-                          {t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card' && (() => {
-                            const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+                          {t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod) && (() => {
+                            const txBillingDay = getTransactionBillingDay(t, cardBillingDay)
+                            const statementYM = getStatementYMForCardExpense(t.date, txBillingDay)
                             const stage = getBillingStage(yearMonth, statementYM)
                             return (
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 ml-1 font-bold ${stage === 'current'
@@ -620,11 +638,11 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                                   ? 'bg-[#3D8EF8]/20 text-[#79B2FF]'
                                   : 'bg-[#8B95A1]/20 text-[#B9C0C8]'
                                 }`}
-                                title={`결제일 ${cardBillingDay}일 기준 · ${statementYM} 청구`}
+                                title={`결제일 ${txBillingDay}일 기준 · ${statementYM} 청구`}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   setStatementMonthFilter(statementYM)
-                                  setMethodFilter('card')
+                                  setMethodFilter('credit')
                                 }}
                               >
                                 {stage === 'current' ? '이번 청구' : stage === 'next' ? '다음 청구' : `${statementYM.slice(5)}월 청구`}

@@ -1,14 +1,17 @@
 export type TransactionType = 'income' | 'expense'
-export type PaymentMethod = 'cash' | 'card'
+export type PaymentMethod = 'cash' | 'check' | 'credit' | 'card'
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
   { value: 'cash', label: '현금', emoji: '💵' },
-  { value: 'card', label: '카드', emoji: '💳' },
+  { value: 'check', label: '체크카드', emoji: '💳' },
+  { value: 'credit', label: '신용카드', emoji: '💎' },
 ]
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: '현금',
-  card: '카드',
+  check: '체크카드',
+  credit: '신용카드',
+  card: '신용카드',
 }
 
 export interface Transaction {
@@ -16,6 +19,7 @@ export interface Transaction {
   type: TransactionType
   amount: number
   paymentMethod?: PaymentMethod
+  creditBillingDay?: number
   category: string
   description: string
   tags?: string[]

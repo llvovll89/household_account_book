@@ -4,7 +4,7 @@ import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
 import { fmt } from '../lib/format'
 import { loadSettings } from '../lib/storage'
-import { getStatementYMForCardExpense } from '../lib/cardBilling'
+import { getStatementYMForCardExpense, getTransactionBillingDay, isCreditPaymentMethod } from '../lib/cardBilling'
 
 interface Props {
   transaction: Transaction
@@ -45,8 +45,8 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
     }
   }, [])
 
-  const statementYM = t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card'
-    ? getStatementYMForCardExpense(t.date, cardBillingDay)
+  const statementYM = t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod)
+    ? getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, cardBillingDay))
     : null
 
   function handleEdit() {
@@ -89,7 +89,7 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-[#8B95A1]">{t.category}</p>
-              <p className="text-[12px] text-[#4E5968] font-bold mt-1">{t.paymentMethod === 'card' ? '💳' : '💵'} {PAYMENT_METHOD_LABEL[t.paymentMethod ?? 'cash']}</p>
+              <p className="text-[12px] text-[#4E5968] font-bold mt-1">{t.paymentMethod === 'cash' ? '💵' : t.paymentMethod === 'check' ? '💳' : '💎'} {PAYMENT_METHOD_LABEL[t.paymentMethod ?? 'cash']}</p>
               {statementYM && (
                 <p className="text-[11px] text-[#9CC7FF] font-bold mt-1">{statementYM.replace('-', '년 ')}월 청구 기준</p>
               )}

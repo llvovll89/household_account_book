@@ -12,7 +12,7 @@ import DonutChart from './charts/DonutChart'
 import YearlyBarChart from './charts/YearlyBarChart'
 import CumulativeLineChart from './charts/CumulativeLineChart'
 import CashflowChart from './charts/CashflowChart'
-import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, shiftYM } from '../lib/cardBilling'
+import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 
 interface Props {
@@ -111,23 +111,31 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     const cashExpense = currentMonthly
       .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
       .reduce((s, t) => s + t.amount, 0)
-    const cardIncome = currentMonthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'card')
+    const checkIncome = currentMonthly
+      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'check')
       .reduce((s, t) => s + t.amount, 0)
-    const cardExpense = currentMonthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
+    const checkExpense = currentMonthly
+      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'check')
+      .reduce((s, t) => s + t.amount, 0)
+    const creditIncome = currentMonthly
+      .filter((t) => t.type === 'income' && isCreditPaymentMethod(t.paymentMethod))
+      .reduce((s, t) => s + t.amount, 0)
+    const creditExpense = currentMonthly
+      .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
       .reduce((s, t) => s + t.amount, 0)
 
     const methodCompareData = [
       { label: '현금', income: cashIncome, expense: cashExpense },
-      { label: '카드', income: cardIncome, expense: cardExpense },
+      { label: '체크', income: checkIncome, expense: checkExpense },
+      { label: '신용', income: creditIncome, expense: creditExpense },
     ]
 
     const nextStatementYM = shiftYM(yearMonth, 1)
 
     return {
       cash: { income: cashIncome, expense: cashExpense, net: cashIncome - cashExpense },
-      card: { income: cardIncome, expense: cardExpense, net: cardIncome - cardExpense },
+      check: { income: checkIncome, expense: checkExpense, net: checkIncome - checkExpense },
+      credit: { income: creditIncome, expense: creditExpense, net: creditIncome - creditExpense },
       methodCompareData,
       cardDue: calculateCardDueAmount(transactions, yearMonth, cardBillingDay),
       nextCardDue: calculateCardDueAmount(transactions, nextStatementYM, cardBillingDay),
@@ -142,14 +150,18 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       const cashExpense = monthTx
         .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
         .reduce((s, t) => s + t.amount, 0)
-      const cardExpense = monthTx
-        .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
+      const checkExpense = monthTx
+        .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'check')
+        .reduce((s, t) => s + t.amount, 0)
+      const creditExpense = monthTx
+        .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
         .reduce((s, t) => s + t.amount, 0)
 
       return {
         label: m.label,
         cashExpense,
-        cardExpense,
+        checkExpense,
+        creditExpense,
       }
     }),
     [monthlyData, transactions]
@@ -370,13 +382,15 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           {/* 카테고리 비율 - 도넛 차트 */}
           {(paymentMethodStats.cash.income > 0
             || paymentMethodStats.cash.expense > 0
-            || paymentMethodStats.card.income > 0
-            || paymentMethodStats.card.expense > 0) && (
+            || paymentMethodStats.check.income > 0
+            || paymentMethodStats.check.expense > 0
+            || paymentMethodStats.credit.income > 0
+            || paymentMethodStats.credit.expense > 0) && (
             <div className="bg-[#1C1C1E] rounded-2xl p-5">
               <p className="text-[15px] font-bold text-white mb-1">결제수단 분석</p>
-              <p className="text-xs text-[#4E5968] mb-4">현금/카드 지출 흐름 비교</p>
+              <p className="text-xs text-[#4E5968] mb-4">현금/체크/신용 지출 흐름 비교</p>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
                 <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
                   <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 순잔액</p>
                   <p className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
@@ -386,10 +400,19 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                     지출 -{fmt(paymentMethodStats.cash.expense)}
                   </p>
                 </div>
+                <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/12 to-[#2C2C2E]">
+                  <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 순잔액</p>
+                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.check.net >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
+                    {paymentMethodStats.check.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.check.net)}원
+                  </p>
+                  <p className="text-[10px] text-[#8B95A1] mt-1">
+                    지출 -{fmt(paymentMethodStats.check.expense)}
+                  </p>
+                </div>
                 <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/12 to-[#2C2C2E]">
-                  <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💳 카드 순잔액</p>
-                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.card.net >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
-                    {paymentMethodStats.card.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.card.net)}원
+                  <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 순잔액</p>
+                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.credit.net >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+                    {paymentMethodStats.credit.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.credit.net)}원
                   </p>
                   <p className="text-[10px] text-[#8B95A1] mt-1">
                     결제예정 {fmt(paymentMethodStats.cardDue)}원
@@ -440,11 +463,12 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                         contentStyle={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
                         formatter={(value, name) => [
                           `${fmtFull(Number(value ?? 0))}원`,
-                          name === 'cashExpense' ? '현금 지출' : '카드 지출',
+                          name === 'cashExpense' ? '현금 지출' : name === 'checkExpense' ? '체크 지출' : '신용 지출',
                         ]}
                       />
                       <Line type="monotone" dataKey="cashExpense" stroke="#2ACF6A" strokeWidth={2.2} dot={{ r: 2 }} />
-                      <Line type="monotone" dataKey="cardExpense" stroke="#3D8EF8" strokeWidth={2.2} dot={{ r: 2 }} />
+                      <Line type="monotone" dataKey="checkExpense" stroke="#6AD3C0" strokeWidth={2.2} dot={{ r: 2 }} />
+                      <Line type="monotone" dataKey="creditExpense" stroke="#3D8EF8" strokeWidth={2.2} dot={{ r: 2 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -453,7 +477,10 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                     <span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />현금 지출
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                    <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />카드 지출
+                    <span className="w-2 h-2 rounded-full bg-[#6AD3C0]" />체크 지출
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
+                    <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />신용 지출
                   </span>
                 </div>
               </div>

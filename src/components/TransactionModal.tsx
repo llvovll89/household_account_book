@@ -6,7 +6,7 @@ import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
 import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
-import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense } from '../lib/cardBilling'
+import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 
 interface Props {
@@ -47,6 +47,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [uploading, setUploading] = useState(false)
   const [receiptImageUrl, setReceiptImageUrl] = useState<string>('')
   const [cardBillingDay, setCardBillingDay] = useState(25)
+  const [creditBillingDayInput, setCreditBillingDayInput] = useState('25')
 
   const isEditMode = !!transaction
   const tags = parseHashtags(description)
@@ -59,6 +60,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     if (transaction) {
       setType(transaction.type)
       setPaymentMethod(transaction.paymentMethod ?? 'cash')
+      if (typeof transaction.creditBillingDay === 'number') {
+        setCreditBillingDayInput(String(transaction.creditBillingDay))
+      }
       setAmount(transaction.amount.toLocaleString())
       setCategory(transaction.category)
       setDescription(transaction.description)
@@ -83,7 +87,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
     void loadSettings().then((settings) => {
       if (!cancelled) {
-        setCardBillingDay(settings.cardBillingDay ?? 25)
+        const defaultDay = settings.cardBillingDay ?? 25
+        setCardBillingDay(defaultDay)
+        setCreditBillingDayInput(String(defaultDay))
       }
     })
 
@@ -93,22 +99,30 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }, [])
 
   const billingPreview = useMemo(() => {
-    if (type !== 'expense' || paymentMethod !== 'card') return null
-    const statementYM = getStatementYMForCardExpense(date, cardBillingDay)
+    if (type !== 'expense' || !isCreditPaymentMethod(paymentMethod)) return null
+    const parsedBillingDay = parseInt(creditBillingDayInput, 10)
+    const effectiveBillingDay = Number.isInteger(parsedBillingDay) && parsedBillingDay >= 1 && parsedBillingDay <= 31
+      ? parsedBillingDay
+      : cardBillingDay
+    const statementYM = getStatementYMForCardExpense(date, effectiveBillingDay)
     const stage = getBillingStage(date.slice(0, 7), statementYM)
     const stageLabel = stage === 'current' ? '이번 청구' : stage === 'next' ? '다음 청구' : `${statementYM.slice(5)}월 청구`
     return {
       stage,
       stageLabel,
       statementYM,
-      rangeLabel: formatBillingRange(getCardBillingRange(statementYM, cardBillingDay)),
+      rangeLabel: formatBillingRange(getCardBillingRange(statementYM, effectiveBillingDay)),
+      effectiveBillingDay,
     }
-  }, [type, paymentMethod, date, cardBillingDay])
+  }, [type, paymentMethod, date, cardBillingDay, creditBillingDayInput])
 
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return null
     const item: QueueItem = { type, amount: parsed, paymentMethod, category, description, tags, date, receiptImageUrl }
+    if (type === 'expense' && isCreditPaymentMethod(paymentMethod) && billingPreview) {
+      item.creditBillingDay = billingPreview.effectiveBillingDay
+    }
     if (showDateEnd && dateEnd) item.dateEnd = dateEnd
     return item
   }
@@ -253,7 +267,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
                       </span>
                       <span className="text-[11px] text-[#4E5968] ml-1.5">{item.category}</span>
-                      <span className="text-[11px] text-[#4E5968] ml-1">· {item.paymentMethod === 'cash' ? '현금' : '카드'}</span>
+                      <span className="text-[11px] text-[#4E5968] ml-1">· {item.paymentMethod === 'cash' ? '현금' : item.paymentMethod === 'check' ? '체크카드' : '신용카드'}</span>
                       {item.description && (
                         <span className="text-[11px] text-[#4E5968] ml-1 truncate"> · {item.description}</span>
                       )}
@@ -318,8 +332,20 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <p className={`text-sm font-bold ${billingPreview.stage === 'current' ? 'text-[#F5BE3A]' : 'text-[#79B2FF]'}`}>
                   {billingPreview.stageLabel}
                 </p>
-                <p className="text-[11px] text-[#8B95A1] mt-1">결제일 {cardBillingDay}일 기준 · {billingPreview.statementYM.replace('-', '년 ')}월 청구</p>
+                <p className="text-[11px] text-[#8B95A1] mt-1">결제일 {billingPreview.effectiveBillingDay}일 기준 · {billingPreview.statementYM.replace('-', '년 ')}월 청구</p>
                 <p className="text-[11px] text-[#8B95A1] mt-0.5">집계 기간: {billingPreview.rangeLabel}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[11px] text-[#8B95A1]">결제일</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={creditBillingDayInput}
+                    onChange={(e) => setCreditBillingDayInput(e.target.value)}
+                    className="w-14 bg-[#2C2C2E] text-white text-center rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                  />
+                  <span className="text-[11px] text-[#8B95A1]">일</span>
+                </div>
               </div>
             )}
 

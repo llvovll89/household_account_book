@@ -11,7 +11,7 @@ import BudgetGauge from './charts/BudgetGauge'
 import { fmt, fmtShort } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { calcHoldings } from '../lib/stockCalc'
-import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, shiftYM } from '../lib/cardBilling'
+import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
 
 interface Props {
   transactions: Transaction[]
@@ -169,18 +169,30 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const cashExpense = monthly
       .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
       .reduce((s, t) => s + t.amount, 0)
-    const cardIncome = monthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'card')
+    const checkIncome = monthly
+      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'check')
       .reduce((s, t) => s + t.amount, 0)
-    const cardExpense = monthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
+    const checkExpense = monthly
+      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'check')
+      .reduce((s, t) => s + t.amount, 0)
+    const creditIncome = monthly
+      .filter((t) => t.type === 'income' && isCreditPaymentMethod(t.paymentMethod))
+      .reduce((s, t) => s + t.amount, 0)
+    const creditExpense = monthly
+      .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
       .reduce((s, t) => s + t.amount, 0)
 
     return {
       cash: cashIncome - cashExpense,
-      card: cardIncome - cardExpense,
+      check: checkIncome - checkExpense,
+      credit: creditIncome - creditExpense,
     }
   }, [monthly])
+
+  const hasCreditTransactions = useMemo(
+    () => transactions.some((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod)),
+    [transactions]
+  )
 
   const monthlyCardDue = useMemo(
     () => calculateCardDueAmount(transactions, yearMonth, cardBillingDay ?? 25),
@@ -463,81 +475,95 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
             <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
             <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
               {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
             </p>
           </div>
+          <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/14 to-[#2C2C2E]">
+            <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 잔액</p>
+            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
+              {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
+            </p>
+          </div>
           <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/14 to-[#2C2C2E]">
-            <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💳 카드 잔액</p>
-            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.card >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
-              {monthlyMethodBalance.card >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.card)}
+            <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 잔액</p>
+            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.credit >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+              {monthlyMethodBalance.credit >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.credit)}
             </p>
           </div>
         </div>
 
-        <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <p className="text-[10px] text-[#9CC7FF] font-semibold">카드 결제예정</p>
-            <button
-              onClick={() => {
-                setEditingCardBilling(true)
-                setCardBillingInput(String(cardBillingDay ?? 25))
-                setCardBillingError('')
-              }}
-              className="text-[10px] font-bold text-[#9CC7FF] hover:text-white transition-colors"
-            >
-              결제일 {cardBillingDay ?? 25}일
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-              <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
-              <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
-              <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
+        {hasCreditTransactions ? (
+          <>
+            <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-[10px] text-[#9CC7FF] font-semibold">신용 결제예정</p>
+                <button
+                  onClick={() => {
+                    setEditingCardBilling(true)
+                    setCardBillingInput(String(cardBillingDay ?? 25))
+                    setCardBillingError('')
+                  }}
+                  className="text-[10px] font-bold text-[#9CC7FF] hover:text-white transition-colors"
+                >
+                  결제일 {cardBillingDay ?? 25}일
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                  <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
+                  <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
+                  <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
+                </div>
+                <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                  <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
+                  <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
+                  <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-              <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
-              <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
-              <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
-            </div>
-          </div>
-        </div>
 
-        {editingCardBilling && (
-          <div className="mt-2 rounded-2xl px-3 py-2.5 bg-[#2C2C2E] border border-white/10">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#8B95A1] font-semibold shrink-0">카드 결제일</span>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={cardBillingInput}
-                onChange={(e) => { setCardBillingInput(e.target.value); setCardBillingError('') }}
-                onKeyDown={(e) => e.key === 'Enter' && void handleSaveCardBillingDay()}
-                className={`flex-1 bg-[#1C1C1E] text-white text-center rounded-xl px-3 py-2 text-sm focus:outline-none ${cardBillingError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-1 focus:ring-[#3D8EF8]/40'}`}
-              />
-              <button
-                onClick={() => { void handleSaveCardBillingDay() }}
-                className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors"
-              >
-                저장
-              </button>
-              <button
-                onClick={() => {
-                  setEditingCardBilling(false)
-                  setCardBillingError('')
-                }}
-                className="px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-xs font-bold"
-              >
-                취소
-              </button>
-            </div>
-            {cardBillingError && (
-              <p className="text-xs text-[#F25260] font-semibold mt-2">{cardBillingError}</p>
+            {editingCardBilling && (
+              <div className="mt-2 rounded-2xl px-3 py-2.5 bg-[#2C2C2E] border border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#8B95A1] font-semibold shrink-0">카드 결제일</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={cardBillingInput}
+                    onChange={(e) => { setCardBillingInput(e.target.value); setCardBillingError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && void handleSaveCardBillingDay()}
+                    className={`flex-1 bg-[#1C1C1E] text-white text-center rounded-xl px-3 py-2 text-sm focus:outline-none ${cardBillingError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-1 focus:ring-[#3D8EF8]/40'}`}
+                  />
+                  <button
+                    onClick={() => { void handleSaveCardBillingDay() }}
+                    className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors"
+                  >
+                    저장
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingCardBilling(false)
+                      setCardBillingError('')
+                    }}
+                    className="px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-xs font-bold"
+                  >
+                    취소
+                  </button>
+                </div>
+                {cardBillingError && (
+                  <p className="text-xs text-[#F25260] font-semibold mt-2">{cardBillingError}</p>
+                )}
+              </div>
             )}
+          </>
+        ) : (
+          <div className="mt-2 rounded-2xl px-3 py-2.5 border border-white/8 bg-[#2C2C2E]">
+            <p className="text-[11px] text-[#8B95A1] font-semibold">신용카드 내역이 없어 결제예정이 표시되지 않아요.</p>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import type { Transaction } from '../types'
+import type { PaymentMethod, Transaction } from '../types'
 
 export interface CardBillingRange {
   start: string
@@ -65,11 +65,9 @@ export function getCardBillingRange(statementYM: string, billingDay: number): Ca
 }
 
 export function calculateCardDueAmount(transactions: Transaction[], statementYM: string, billingDay: number): number {
-  const range = getCardBillingRange(statementYM, billingDay)
-
   return transactions
-    .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
-    .filter((t) => t.date >= range.start && t.date <= range.end)
+    .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
+    .filter((t) => getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, billingDay)) === statementYM)
     .reduce((sum, t) => sum + t.amount, 0)
 }
 
@@ -85,6 +83,18 @@ export function getStatementYMForCardExpense(date: string, billingDay: number): 
 
   if (!Number.isFinite(day)) return ym
   return day <= billingDay ? ym : toNextYM(ym)
+}
+
+export function isCreditPaymentMethod(method?: PaymentMethod): boolean {
+  return method === 'credit' || method === 'card'
+}
+
+function isValidBillingDay(day?: number): day is number {
+  return typeof day === 'number' && Number.isInteger(day) && day >= 1 && day <= 31
+}
+
+export function getTransactionBillingDay(transaction: Transaction, fallbackBillingDay: number): number {
+  return isValidBillingDay(transaction.creditBillingDay) ? transaction.creditBillingDay : fallbackBillingDay
 }
 
 export type BillingStage = 'current' | 'next' | 'later' | 'past'

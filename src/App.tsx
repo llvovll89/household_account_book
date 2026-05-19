@@ -292,7 +292,7 @@ export default function App() {
     const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
     const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
     const openTransactionsWithBilling = useCallback((billing: 'current' | 'next') => {
-        localStorage.setItem(METHOD_FILTER_KEY, 'card')
+        localStorage.setItem(METHOD_FILTER_KEY, 'credit')
         localStorage.setItem(BILLING_FILTER_KEY, billing)
         localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY)
         setMode('ledger')
@@ -467,7 +467,8 @@ export default function App() {
                             </div>
 
                             {(monthIncome > 0 || monthExpense > 0) && (
-                                <div className="flex items-center justify-center gap-4 mt-3 pb-1">
+                                <div className="mt-3 pb-1 space-y-1.5">
+                                    <div className="flex items-center justify-center gap-4">
                                     <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
                                     <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
                                     <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
@@ -475,23 +476,28 @@ export default function App() {
                                     <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
                                         {monthBalance.toLocaleString()}원
                                     </span>
-                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
-                                    <button
-                                        type="button"
-                                        onClick={() => openTransactionsWithBilling('current')}
-                                        className="text-[10px] font-bold text-[#F5BE3A] num hover:text-[#FFD66A] transition-colors"
-                                        title="카드 이번 청구 내역 보기"
-                                    >
-                                        이번청구 {monthCardDue.toLocaleString()}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => openTransactionsWithBilling('next')}
-                                        className="text-[10px] font-bold text-[#79B2FF] num hover:text-[#A9CCFF] transition-colors"
-                                        title="카드 다음 청구 내역 보기"
-                                    >
-                                        다음청구 {nextMonthCardDue.toLocaleString()}
-                                    </button>
+                                </div>
+
+                                    {(monthCardDue > 0 || nextMonthCardDue > 0) && (
+                                        <div className="flex items-center justify-center gap-2 flex-wrap">
+                                            <button
+                                                type="button"
+                                                onClick={() => openTransactionsWithBilling('current')}
+                                                className="text-[10px] font-bold text-[#F5BE3A] num hover:text-[#FFD66A] transition-colors px-2 py-0.5 rounded-full bg-[#F5BE3A]/12"
+                                                title="카드 이번 청구 내역 보기"
+                                            >
+                                                이번청구 {monthCardDue.toLocaleString()}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => openTransactionsWithBilling('next')}
+                                                className="text-[10px] font-bold text-[#79B2FF] num hover:text-[#A9CCFF] transition-colors px-2 py-0.5 rounded-full bg-[#3D8EF8]/12"
+                                                title="카드 다음 청구 내역 보기"
+                                            >
+                                                다음청구 {nextMonthCardDue.toLocaleString()}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>
