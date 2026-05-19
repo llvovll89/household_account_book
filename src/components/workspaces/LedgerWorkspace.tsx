@@ -93,7 +93,7 @@ export default function LedgerWorkspace({
           onArchiveDone={onTransactionArchive}
         />
       )}
-      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} />}
+      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} />}
       {activeTab === 'memos' && (
         <MemoSection
           memos={memos}

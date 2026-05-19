@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2, Search, X, CalendarDays, List as ListIcon, FileDown, Hash, ChevronDown, ChevronUp } from 'lucide-react'
 import type { Transaction } from '../types'
-import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
 import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
 import TransactionDetailModal from './TransactionDetailModal'
 import { fmt } from '../lib/format'
+import { loadSettings, saveSettings } from '../lib/storage'
+import { getBillingStage, getStatementYMForCardExpense } from '../lib/cardBilling'
+import { showToast } from '../lib/toast'
 
 interface Props {
   transactions: Transaction[]
@@ -19,10 +22,26 @@ interface Props {
 type ViewMode = 'list' | 'calendar'
 
 type FilterType = 'all' | 'income' | 'expense'
+type MethodFilterType = 'all' | 'cash' | 'card'
+type BillingFilterType = 'all' | 'current' | 'next' | 'later'
 type PeriodMode = 'day' | 'week' | 'month'
+
+const METHOD_FILTER_KEY = 'hb_tx_method_filter'
+const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
+const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
 
 export default function TransactionList({ transactions, yearMonth, onEdit, onDelete, onArchiveDone }: Props) {
   const [filter, setFilter] = useState<FilterType>('all')
+  const [methodFilter, setMethodFilter] = useState<MethodFilterType>(() => {
+    const saved = localStorage.getItem(METHOD_FILTER_KEY)
+    if (saved === 'cash' || saved === 'card' || saved === 'all') return saved
+    return 'all'
+  })
+  const [billingFilter, setBillingFilter] = useState<BillingFilterType>(() => {
+    const saved = localStorage.getItem(BILLING_FILTER_KEY)
+    if (saved === 'current' || saved === 'next' || saved === 'later' || saved === 'all') return saved
+    return 'all'
+  })
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showExport, setShowExport] = useState(false)
@@ -32,6 +51,61 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
   const [showTagSummary, setShowTagSummary] = useState(false)
   const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null)
+  const [cardBillingDay, setCardBillingDay] = useState(25)
+  const [editingBillingDay, setEditingBillingDay] = useState(false)
+  const [billingDayInput, setBillingDayInput] = useState('25')
+  const [statementMonthFilter, setStatementMonthFilter] = useState<string | null>(() => {
+    const saved = localStorage.getItem(STATEMENT_MONTH_FILTER_KEY)
+    if (!saved) return null
+    return /^\d{4}-\d{2}$/.test(saved) ? saved : null
+  })
+
+  useEffect(() => {
+    localStorage.setItem(METHOD_FILTER_KEY, methodFilter)
+  }, [methodFilter])
+
+  useEffect(() => {
+    localStorage.setItem(BILLING_FILTER_KEY, billingFilter)
+  }, [billingFilter])
+
+  useEffect(() => {
+    if (!statementMonthFilter) {
+      localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY)
+      return
+    }
+    localStorage.setItem(STATEMENT_MONTH_FILTER_KEY, statementMonthFilter)
+  }, [statementMonthFilter])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadSettings().then((settings) => {
+      if (!cancelled) {
+        setCardBillingDay(settings.cardBillingDay ?? 25)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  async function handleSaveBillingDay() {
+    const val = parseInt(billingDayInput, 10)
+    if (Number.isNaN(val) || val < 1 || val > 31) {
+      showToast('결제일은 1~31 사이 숫자여야 해요.')
+      return
+    }
+    try {
+      const current = await loadSettings()
+      await saveSettings({ ...current, cardBillingDay: val })
+      setCardBillingDay(val)
+      setEditingBillingDay(false)
+      showToast(`카드 결제일이 ${val}일로 저장됐어요.`)
+    } catch {
+      showToast('카드 결제일 저장에 실패했어요.')
+    }
+  }
 
   const monthTx = useMemo(
     () => transactions.filter((t) => t.date.startsWith(yearMonth)),
@@ -79,6 +153,20 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           return true
         })
         .filter((t) => filter === 'all' || t.type === filter)
+        .filter((t) => methodFilter === 'all' || (t.paymentMethod ?? 'cash') === methodFilter)
+        .filter((t) => {
+          if (statementMonthFilter) {
+            if (t.type !== 'expense' || (t.paymentMethod ?? 'cash') !== 'card') return false
+            const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+            if (statementYM !== statementMonthFilter) return false
+          }
+
+          if (billingFilter === 'all') return true
+          if (t.type !== 'expense' || (t.paymentMethod ?? 'cash') !== 'card') return false
+          const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+          const stage = getBillingStage(yearMonth, statementYM)
+          return stage === billingFilter
+        })
         .filter((t) =>
           !search ||
           t.category.toLowerCase().includes(normalizedSearch) ||
@@ -88,7 +176,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
         .filter((t) => !activeTag || (t.tags ?? []).includes(activeTag))
         .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
     },
-    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, search, activeTag]
+    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, search, activeTag, cardBillingDay, yearMonth]
   )
 
   const grouped = useMemo(() => {
@@ -115,6 +203,22 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
       })
     })
     return Array.from(map.entries()).sort((a, b) => (b[1].income + b[1].expense) - (a[1].income + a[1].expense))
+  }, [monthly])
+
+  const methodSummary = useMemo(() => {
+    const map: Record<'cash' | 'card', { income: number; expense: number }> = {
+      cash: { income: 0, expense: 0 },
+      card: { income: 0, expense: 0 },
+    }
+
+    monthly.forEach((t) => {
+      const method = t.paymentMethod ?? 'cash'
+      if (!(method in map)) return
+      if (t.type === 'income') map[method as 'cash' | 'card'].income += t.amount
+      else map[method as 'cash' | 'card'].expense += t.amount
+    })
+
+    return map
   }, [monthly])
 
   function formatDate(dateStr: string) {
@@ -260,7 +364,121 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
           ))}
         </div>
 
+        <div className="bg-[#1C1C1E] rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-[#8B95A1] font-semibold">카드 결제일</span>
+            <span className="text-xs text-[#9CC7FF] font-bold">매월 {cardBillingDay}일</span>
+          </div>
+          {!editingBillingDay ? (
+            <button
+              onClick={() => {
+                setBillingDayInput(String(cardBillingDay))
+                setEditingBillingDay(true)
+              }}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#3D8EF8]/20 text-[#79B2FF] font-bold hover:bg-[#3D8EF8]/30 transition-colors"
+            >
+              변경
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="1"
+                max="31"
+                value={billingDayInput}
+                onChange={(e) => setBillingDayInput(e.target.value)}
+                className="w-12 bg-[#2C2C2E] text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+              />
+              <button onClick={() => { void handleSaveBillingDay() }} className="text-[11px] px-2 py-1 rounded-lg bg-[#3D8EF8] text-white font-bold">저장</button>
+              <button onClick={() => setEditingBillingDay(false)} className="text-[11px] px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold">취소</button>
+            </div>
+          )}
+        </div>
+
+        {statementMonthFilter && (
+          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
+            <span className="text-xs text-[#9CC7FF] font-bold">청구월 필터: {statementMonthFilter}</span>
+            <button
+              onClick={() => setStatementMonthFilter(null)}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
+            >
+              해제
+            </button>
+          </div>
+        )}
+
+        <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
+          {([
+            { key: 'all', label: '결제수단 전체' },
+            { key: 'cash', label: '현금' },
+            { key: 'card', label: '카드' },
+          ] as { key: MethodFilterType; label: string }[]).map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setMethodFilter(f.key)}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${methodFilter === f.key
+                ? f.key === 'cash'
+                  ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
+                  : f.key === 'card'
+                    ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
+                    : 'bg-[#3D8EF8] text-white'
+                : 'text-[#4E5968] hover:text-[#8B95A1]'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
+          {([
+            { key: 'all', label: '청구 전체' },
+            { key: 'current', label: '이번 청구' },
+            { key: 'next', label: '다음 청구' },
+            { key: 'later', label: '이후 청구' },
+          ] as { key: BillingFilterType; label: string }[]).map((f) => (
+            <button
+              key={f.key}
+              onClick={() => {
+                setBillingFilter(f.key)
+                setStatementMonthFilter(null)
+              }}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${billingFilter === f.key
+                ? f.key === 'current'
+                  ? 'bg-[#F5BE3A]/22 text-[#F5BE3A]'
+                  : f.key === 'next'
+                    ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
+                    : f.key === 'later'
+                      ? 'bg-[#8B95A1]/22 text-[#B9C0C8]'
+                      : 'bg-[#3D8EF8] text-white'
+                : 'text-[#4E5968] hover:text-[#8B95A1]'
+                }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {/* 태그별 합계 */}
+        <div className="grid grid-cols-2 gap-2">
+          {(['cash', 'card'] as const).map((method) => {
+            const income = methodSummary[method].income
+            const expense = methodSummary[method].expense
+            const net = income - expense
+            return (
+              <div key={method} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
+                <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">{PAYMENT_METHOD_LABEL[method]} 잔액</p>
+                <p className={`text-[15px] font-extrabold num ${net >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
+                  {net >= 0 ? '+' : ''}{fmt(net)}원
+                </p>
+                <p className="text-[10px] text-[#4E5968] mt-1">
+                  수입 +{fmt(income)} / 지출 -{fmt(expense)}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+
         {tagSummary.length > 0 && (
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
@@ -334,6 +552,21 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
             <p className="font-bold text-white text-[15px]">
               {activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
             </p>
+            {(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) && (
+              <button
+                onClick={() => {
+                  setFilter('all')
+                  setMethodFilter('all')
+                  setBillingFilter('all')
+                  setStatementMonthFilter(null)
+                  setActiveTag(null)
+                  setSearch('')
+                }}
+                className="mt-4 text-xs font-bold px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+              >
+                필터 전체 초기화
+              </button>
+            )}
           </div>
         ) : (
           grouped.map(([date, list]) => {
@@ -356,7 +589,7 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                       <div
                         key={t.id}
                         onClick={() => setDetailTransaction(t)}
-                        className={`flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/[0.02] transition-colors ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
+                        className={`flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
                           }`}
                       >
                         <div
@@ -371,6 +604,33 @@ export default function TransactionList({ transactions, yearMonth, onEdit, onDel
                           {t.description && (
                             <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
                           )}
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${t.paymentMethod === 'card'
+                            ? 'bg-[#3D8EF8]/18 text-[#79B2FF]'
+                            : 'bg-[#2ACF6A]/18 text-[#2ACF6A]'
+                            }`}>
+                            {t.paymentMethod === 'card' ? '💳 카드' : '💵 현금'}
+                          </span>
+                          {t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card' && (() => {
+                            const statementYM = getStatementYMForCardExpense(t.date, cardBillingDay)
+                            const stage = getBillingStage(yearMonth, statementYM)
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 ml-1 font-bold ${stage === 'current'
+                                ? 'bg-[#F5BE3A]/20 text-[#F5BE3A]'
+                                : stage === 'next'
+                                  ? 'bg-[#3D8EF8]/20 text-[#79B2FF]'
+                                  : 'bg-[#8B95A1]/20 text-[#B9C0C8]'
+                                }`}
+                                title={`결제일 ${cardBillingDay}일 기준 · ${statementYM} 청구`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setStatementMonthFilter(statementYM)
+                                  setMethodFilter('card')
+                                }}
+                              >
+                                {stage === 'current' ? '이번 청구' : stage === 'next' ? '다음 청구' : `${statementYM.slice(5)}월 청구`}
+                              </span>
+                            )
+                          })()}
                           {t.dateEnd && (
                             <p className="text-[10px] text-[#3D8EF8] font-semibold mt-0.5">
                               ~ {(() => { const [, m, d] = t.dateEnd.split('-'); return `${parseInt(m)}.${d}` })()}까지

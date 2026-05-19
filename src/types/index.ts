@@ -1,9 +1,21 @@
 export type TransactionType = 'income' | 'expense'
+export type PaymentMethod = 'cash' | 'card'
+
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
+  { value: 'cash', label: '현금', emoji: '💵' },
+  { value: 'card', label: '카드', emoji: '💳' },
+]
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  cash: '현금',
+  card: '카드',
+}
 
 export interface Transaction {
   id: string
   type: TransactionType
   amount: number
+  paymentMethod?: PaymentMethod
   category: string
   description: string
   tags?: string[]

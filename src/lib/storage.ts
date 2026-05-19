@@ -24,11 +24,14 @@ const GOALS_KEY = 'hb_goals'
 const SETTINGS_KEY = 'hb_settings'
 // Firebase 저장 실패 시 로컬에 미동기화 변경사항이 있음을 표시
 const PENDING_SYNC_KEY = 'hb_pending_sync'
+// Firebase 모드에서 폴백 용도로 저장한 로컬 캐시 여부를 표시
+const FIREBASE_CACHE_KEY = 'hb_firebase_cache'
 
 type StorageMode = 'local' | 'firebase'
 
 export interface AppSettings {
   payday: number | 'last' | null
+  cardBillingDay: number | null
   customExpenseCategories: string[]
   customIncomeCategories: string[]
   stockWatchlist: string[]
@@ -71,8 +74,14 @@ interface MergeResult {
 let storageMode: StorageMode = 'local'
 let storageUid: string | null = null
 
+function emitSettingsUpdatedEvent(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('hb-settings-updated'))
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   payday: null,
+  cardBillingDay: null,
   customExpenseCategories: [],
   customIncomeCategories: [],
   stockWatchlist: [],
@@ -179,6 +188,9 @@ function loadLocalSettings(): AppSettings {
 
 function hasValidPayday(value: number | 'last' | null): boolean {
   return value === 'last' || (Number.isInteger(value) && value !== null && value >= 1 && value <= 31)
+}
+function hasValidBillingDay(value: number | null): boolean {
+  return Number.isInteger(value) && value !== null && value >= 1 && value <= 31
 }
 
 function getUserDocRef(uid: string) {
@@ -295,6 +307,7 @@ function mergeRecurring(remote: RecurringTransaction[], local: RecurringTransact
 function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
   return {
     payday: hasValidPayday(local.payday) ? local.payday : remote.payday,
+    cardBillingDay: hasValidBillingDay(local.cardBillingDay) ? local.cardBillingDay : remote.cardBillingDay,
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
     stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,
@@ -303,7 +316,7 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
 
 function backupAndClearLocalData(): void {
   const backupPrefix = `hb_backup_${Date.now()}`
-  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, STOCK_TRADES_KEY, SETTINGS_KEY]
+  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, STOCK_TRADES_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
 
   for (const key of keys) {
     const value = localStorage.getItem(key)
@@ -311,6 +324,16 @@ function backupAndClearLocalData(): void {
     localStorage.setItem(`${backupPrefix}_${key}`, value)
     localStorage.removeItem(key)
   }
+
+  localStorage.removeItem(FIREBASE_CACHE_KEY)
+}
+
+function markFirebaseCacheLocalData(): void {
+  localStorage.setItem(FIREBASE_CACHE_KEY, 'true')
+}
+
+function markUserLocalData(): void {
+  localStorage.removeItem(FIREBASE_CACHE_KEY)
 }
 
 export function setStorageContext(mode: StorageMode, uid: string | null = null): void {
@@ -380,6 +403,23 @@ export function getLocalDataCounts(): LocalDataCounts {
 
 export function hasLocalMigratableData(): boolean {
   const snapshot = localSnapshot()
+
+  // Firebase 모드에서 저장된 로컬 캐시는 병합 대상이 아니다.
+  // 다만 Firebase 캐시로 저장하지 않는 데이터가 있으면 병합 대상으로 본다.
+  if (localStorage.getItem(FIREBASE_CACHE_KEY) === 'true') {
+    return (
+      snapshot.memos.length > 0
+      || snapshot.budgets.length > 0
+      || snapshot.recurring.length > 0
+      || snapshot.stockTrades.length > 0
+      || hasValidPayday(snapshot.settings.payday)
+      || hasValidBillingDay(snapshot.settings.cardBillingDay)
+      || snapshot.settings.customExpenseCategories.length > 0
+      || snapshot.settings.customIncomeCategories.length > 0
+      || snapshot.settings.stockWatchlist.length > 0
+    )
+  }
+
   return (
     snapshot.transactions.length > 0
     || snapshot.memos.length > 0
@@ -387,6 +427,7 @@ export function hasLocalMigratableData(): boolean {
     || snapshot.recurring.length > 0
     || snapshot.stockTrades.length > 0
     || hasValidPayday(snapshot.settings.payday)
+    || hasValidBillingDay(snapshot.settings.cardBillingDay)
     || snapshot.settings.customExpenseCategories.length > 0
     || snapshot.settings.customIncomeCategories.length > 0
     || snapshot.settings.stockWatchlist.length > 0
@@ -491,7 +532,11 @@ export async function loadTransactions(): Promise<Transaction[]> {
 export async function saveTransactions(t: Transaction[]): Promise<void> {
   // 항상 로컬스토리지에 저장 (Firebase 실패 시 폴백용)
   safeSave(TRANSACTIONS_KEY, t)
-  if (storageMode === 'local') return
+  if (storageMode === 'local') {
+    markUserLocalData()
+    return
+  }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { transactions: t })
 }
 
@@ -503,6 +548,7 @@ export async function loadMemos(): Promise<Memo[]> {
 export async function saveMemos(m: Memo[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(MEMOS_KEY, m)
+    markUserLocalData()
     return
   }
   await saveRemotePatch(getStorageUid(), { memos: m })
@@ -516,6 +562,7 @@ export async function loadBudgets(): Promise<Budget[]> {
 export async function saveBudgets(b: Budget[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(BUDGETS_KEY, b)
+    markUserLocalData()
     return
   }
   await saveRemotePatch(getStorageUid(), { budgets: b })
@@ -529,6 +576,7 @@ export async function loadRecurring(): Promise<RecurringTransaction[]> {
 export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(RECURRING_KEY, r)
+    markUserLocalData()
     return
   }
   await saveRemotePatch(getStorageUid(), { recurring: r })
@@ -542,6 +590,7 @@ export async function loadStockTrades(): Promise<StockTrade[]> {
 export async function saveStockTrades(trades: StockTrade[]): Promise<void> {
   if (storageMode === 'local') {
     safeSave(STOCK_TRADES_KEY, trades)
+    markUserLocalData()
     return
   }
   await saveRemotePatch(getStorageUid(), { stockTrades: trades })
@@ -558,7 +607,11 @@ export async function loadSubscriptions(): Promise<Subscription[]> {
 
 export async function saveSubscriptions(subs: Subscription[]): Promise<void> {
   safeSave(SUBSCRIPTIONS_KEY, subs)
-  if (storageMode === 'local') return
+  if (storageMode === 'local') {
+    markUserLocalData()
+    return
+  }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { subscriptions: subs })
 }
 
@@ -573,7 +626,11 @@ export async function loadGoals(): Promise<SavingsGoal[]> {
 
 export async function saveGoals(goals: SavingsGoal[]): Promise<void> {
   safeSave(GOALS_KEY, goals)
-  if (storageMode === 'local') return
+  if (storageMode === 'local') {
+    markUserLocalData()
+    return
+  }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { goals })
 }
 
@@ -585,7 +642,10 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSettings(s: AppSettings): Promise<void> {
   if (storageMode === 'local') {
     safeSave(SETTINGS_KEY, s)
+    markUserLocalData()
+    emitSettingsUpdatedEvent()
     return
   }
   await saveRemotePatch(getStorageUid(), { settings: s })
+  emitSettingsUpdatedEvent()
 }

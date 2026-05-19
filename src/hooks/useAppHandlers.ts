@@ -139,6 +139,7 @@ export function useAppHandlers({
       id: generateId(),
       type: r.type,
       amount: r.amount,
+      paymentMethod: 'cash',
       category: r.category,
       description: r.description,
       date: `${ym}-${String(r.dayOfMonth).padStart(2, '0')}`,

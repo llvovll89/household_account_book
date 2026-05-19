@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react'
 import { X, Pencil, Trash2 } from 'lucide-react'
 import type { Transaction } from '../types'
-import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
 import { fmt } from '../lib/format'
+import { loadSettings } from '../lib/storage'
+import { getStatementYMForCardExpense } from '../lib/cardBilling'
 
 interface Props {
   transaction: Transaction
@@ -26,6 +29,25 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
   const tags = t.tags ?? []
   const isIncome = t.type === 'income'
   const amountColor = isIncome ? '#2ACF6A' : '#F25260'
+  const [cardBillingDay, setCardBillingDay] = useState(25)
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadSettings().then((settings) => {
+      if (!cancelled) {
+        setCardBillingDay(settings.cardBillingDay ?? 25)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const statementYM = t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card'
+    ? getStatementYMForCardExpense(t.date, cardBillingDay)
+    : null
 
   function handleEdit() {
     onEdit(t)
@@ -67,6 +89,10 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-[#8B95A1]">{t.category}</p>
+              <p className="text-[12px] text-[#4E5968] font-bold mt-1">{t.paymentMethod === 'card' ? '💳' : '💵'} {PAYMENT_METHOD_LABEL[t.paymentMethod ?? 'cash']}</p>
+              {statementYM && (
+                <p className="text-[11px] text-[#9CC7FF] font-bold mt-1">{statementYM.replace('-', '년 ')}월 청구 기준</p>
+              )}
               <p className="text-[28px] font-extrabold num leading-tight mt-0.5" style={{ color: amountColor }}>
                 {isIncome ? '+' : '-'}{fmt(t.amount)}원
               </p>
@@ -124,7 +150,7 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
             </button>
             <button
               onClick={handleEdit}
-              className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-[#3D8EF8] text-white hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
+              className="flex-2 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-[#3D8EF8] text-white hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
             >
               <Pencil size={15} />
               수정하기

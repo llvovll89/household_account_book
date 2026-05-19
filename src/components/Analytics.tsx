@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight, Hash } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 import type { Budget, Transaction } from '../types'
@@ -12,11 +12,14 @@ import DonutChart from './charts/DonutChart'
 import YearlyBarChart from './charts/YearlyBarChart'
 import CumulativeLineChart from './charts/CumulativeLineChart'
 import CashflowChart from './charts/CashflowChart'
+import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, shiftYM } from '../lib/cardBilling'
+import { loadSettings } from '../lib/storage'
 
 interface Props {
   transactions: Transaction[]
   yearMonth: string
   budgets: Budget[]
+  settingsVersion: number
 }
 
 function getYM(year: number, month: number) {
@@ -27,9 +30,24 @@ const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
 type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce'
 
-export default function Analytics({ transactions, yearMonth, budgets }: Props) {
+export default function Analytics({ transactions, yearMonth, budgets, settingsVersion }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [cardBillingDay, setCardBillingDay] = useState<number>(25)
+
+  useEffect(() => {
+    let cancelled = false
+
+    void loadSettings().then((settings) => {
+      if (!cancelled) {
+        setCardBillingDay(settings.cardBillingDay ?? 25)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [settingsVersion])
 
   // ── 월간 데이터 (공유 훅) ────────────────────────────────
   const monthlyData = useMonthlyData(transactions)
@@ -85,6 +103,65 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
   }, [currentMonthly])
 
   const topWeekday = weekdayData.reduce((max, d) => d.total > max.total ? d : max, weekdayData[0])
+
+  const paymentMethodStats = useMemo(() => {
+    const cashIncome = currentMonthly
+      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'cash')
+      .reduce((s, t) => s + t.amount, 0)
+    const cashExpense = currentMonthly
+      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
+      .reduce((s, t) => s + t.amount, 0)
+    const cardIncome = currentMonthly
+      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'card')
+      .reduce((s, t) => s + t.amount, 0)
+    const cardExpense = currentMonthly
+      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
+      .reduce((s, t) => s + t.amount, 0)
+
+    const methodCompareData = [
+      { label: '현금', income: cashIncome, expense: cashExpense },
+      { label: '카드', income: cardIncome, expense: cardExpense },
+    ]
+
+    const nextStatementYM = shiftYM(yearMonth, 1)
+
+    return {
+      cash: { income: cashIncome, expense: cashExpense, net: cashIncome - cashExpense },
+      card: { income: cardIncome, expense: cardExpense, net: cardIncome - cardExpense },
+      methodCompareData,
+      cardDue: calculateCardDueAmount(transactions, yearMonth, cardBillingDay),
+      nextCardDue: calculateCardDueAmount(transactions, nextStatementYM, cardBillingDay),
+      cardBillingRangeLabel: formatBillingRange(getCardBillingRange(yearMonth, cardBillingDay)),
+      nextCardBillingRangeLabel: formatBillingRange(getCardBillingRange(nextStatementYM, cardBillingDay)),
+    }
+  }, [currentMonthly, transactions, yearMonth, cardBillingDay])
+
+  const paymentMethodTrend = useMemo(
+    () => monthlyData.map((m) => {
+      const monthTx = transactions.filter((t) => t.date.startsWith(m.ym))
+      const cashExpense = monthTx
+        .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
+        .reduce((s, t) => s + t.amount, 0)
+      const cardExpense = monthTx
+        .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'card')
+        .reduce((s, t) => s + t.amount, 0)
+
+      return {
+        label: m.label,
+        cashExpense,
+        cardExpense,
+      }
+    }),
+    [monthlyData, transactions]
+  )
+
+  const cardStatementDueHistory = useMemo(
+    () => monthlyData.map((m) => ({
+      label: m.label,
+      due: calculateCardDueAmount(transactions, m.ym, cardBillingDay),
+    })),
+    [monthlyData, transactions, cardBillingDay]
+  )
 
   // ── 스마트 인사이트 ───────────────────────────────────
   const insights = useMemo(() => {
@@ -242,7 +319,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
               </div>
             </div>
             <TrendAreaChart data={monthlyData} currentYM={yearMonth} />
-            <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-2">
+            <div className="mt-4 pt-4 border-t border-white/6 space-y-2">
               {monthlyData.slice(-3).map((m) => (
                 <div key={m.ym} className="flex items-center justify-between">
                   <span className={`text-xs font-semibold ${m.ym === yearMonth ? 'text-white' : 'text-[#4E5968]'}`}>{m.label}</span>
@@ -278,7 +355,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
             ) : (
               <>
                 <WeekdayBarChart data={weekdayData} />
-                <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-2 gap-2">
+                <div className="mt-4 pt-4 border-t border-white/6 grid grid-cols-2 gap-2">
                   {weekdayData.filter((d) => d.total > 0).sort((a, b) => b.total - a.total).slice(0, 4).map((d, i) => (
                     <div key={i} className="flex items-center justify-between bg-[#2C2C2E] rounded-xl px-3 py-2">
                       <span className="text-xs font-bold text-[#8B95A1]">{d.label}요일</span>
@@ -291,6 +368,115 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           </div>
 
           {/* 카테고리 비율 - 도넛 차트 */}
+          {(paymentMethodStats.cash.income > 0
+            || paymentMethodStats.cash.expense > 0
+            || paymentMethodStats.card.income > 0
+            || paymentMethodStats.card.expense > 0) && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-1">결제수단 분석</p>
+              <p className="text-xs text-[#4E5968] mb-4">현금/카드 지출 흐름 비교</p>
+
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
+                  <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 순잔액</p>
+                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
+                    {paymentMethodStats.cash.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.cash.net)}원
+                  </p>
+                  <p className="text-[10px] text-[#8B95A1] mt-1">
+                    지출 -{fmt(paymentMethodStats.cash.expense)}
+                  </p>
+                </div>
+                <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/12 to-[#2C2C2E]">
+                  <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💳 카드 순잔액</p>
+                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.card.net >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+                    {paymentMethodStats.card.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.card.net)}원
+                  </p>
+                  <p className="text-[10px] text-[#8B95A1] mt-1">
+                    결제예정 {fmt(paymentMethodStats.cardDue)}원
+                  </p>
+                  <p className="text-[10px] text-[#6F7D90] mt-0.5">
+                    {paymentMethodStats.cardBillingRangeLabel}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#F5BE3A]/20">
+                  <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구 예정</p>
+                  <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.cardDue)}원</p>
+                  <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.cardBillingRangeLabel}</p>
+                </div>
+                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#3D8EF8]/20">
+                  <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구 예정</p>
+                  <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.nextCardDue)}원</p>
+                  <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.nextCardBillingRangeLabel}</p>
+                </div>
+              </div>
+
+              <div style={{ width: '100%', height: 210 }}>
+                <ResponsiveContainer width="100%" height={210}>
+                  <BarChart data={paymentMethodStats.methodCompareData} barCategoryGap={20}>
+                    <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#4E5968', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v)} />
+                    <Tooltip
+                      contentStyle={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
+                      formatter={(value, name) => [`${fmtFull(Number(value ?? 0))}원`, name === 'income' ? '수입' : '지출']}
+                      labelFormatter={(label) => `${label}`}
+                    />
+                    <Bar dataKey="income" radius={[6, 6, 0, 0]} fill="#2ACF6A" />
+                    <Bar dataKey="expense" radius={[6, 6, 0, 0]} fill="#3D8EF8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/6">
+                <p className="text-xs text-[#8B95A1] mb-3">최근 6개월 결제수단별 지출 추이</p>
+                <div style={{ width: '100%', height: 180 }}>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={paymentMethodTrend}>
+                      <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#4E5968', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v)} />
+                      <Tooltip
+                        contentStyle={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
+                        formatter={(value, name) => [
+                          `${fmtFull(Number(value ?? 0))}원`,
+                          name === 'cashExpense' ? '현금 지출' : '카드 지출',
+                        ]}
+                      />
+                      <Line type="monotone" dataKey="cashExpense" stroke="#2ACF6A" strokeWidth={2.2} dot={{ r: 2 }} />
+                      <Line type="monotone" dataKey="cardExpense" stroke="#3D8EF8" strokeWidth={2.2} dot={{ r: 2 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex items-center gap-4 text-[11px]">
+                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
+                    <span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />현금 지출
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
+                    <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />카드 지출
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-white/6">
+                <p className="text-xs text-[#8B95A1] mb-3">청구월별 카드 결제예정 (최근 6개월)</p>
+                <div style={{ width: '100%', height: 190 }}>
+                  <ResponsiveContainer width="100%" height={190}>
+                    <BarChart data={cardStatementDueHistory} barCategoryGap={22}>
+                      <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: '#4E5968', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v)} />
+                      <Tooltip
+                        contentStyle={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
+                        formatter={(value) => [`${fmtFull(Number(value ?? 0))}원`, '카드 결제예정']}
+                      />
+                      <Bar dataKey="due" radius={[6, 6, 0, 0]} fill="#79B2FF" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+
           {expenseByCategory.length > 0 && (
             <div className="bg-[#1C1C1E] rounded-2xl p-5">
               <p className="text-[15px] font-bold text-white mb-4">카테고리 비율</p>
@@ -307,7 +493,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={() => setSelectedYear((y) => y - 1)}
-              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/[0.06] flex items-center justify-center"
+              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center"
             >
               <ChevronLeft size={16} className="text-[#8B95A1]" />
             </button>
@@ -315,7 +501,7 @@ export default function Analytics({ transactions, yearMonth, budgets }: Props) {
             <button
               onClick={() => setSelectedYear((y) => y + 1)}
               disabled={selectedYear >= new Date().getFullYear()}
-              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/[0.06] flex items-center justify-center disabled:opacity-30"
+              className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center disabled:opacity-30"
             >
               <ChevronRight size={16} className="text-[#8B95A1]" />
             </button>

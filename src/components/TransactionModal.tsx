@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { X, ChevronDown, Plus, CalendarRange } from 'lucide-react'
-import type { Transaction, TransactionType } from '../types'
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import type { Transaction, TransactionType, PaymentMethod } from '../types'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
 import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
+import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense } from '../lib/cardBilling'
+import { loadSettings } from '../lib/storage'
 
 interface Props {
   transaction?: Transaction | null
@@ -32,6 +34,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
@@ -43,6 +46,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [receiptImageUrl, setReceiptImageUrl] = useState<string>('')
+  const [cardBillingDay, setCardBillingDay] = useState(25)
 
   const isEditMode = !!transaction
   const tags = parseHashtags(description)
@@ -54,6 +58,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   useEffect(() => {
     if (transaction) {
       setType(transaction.type)
+      setPaymentMethod(transaction.paymentMethod ?? 'cash')
       setAmount(transaction.amount.toLocaleString())
       setCategory(transaction.category)
       setDescription(transaction.description)
@@ -73,10 +78,37 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     if (!transaction) setCategory(categories[0])
   }, [type])
 
+  useEffect(() => {
+    let cancelled = false
+
+    void loadSettings().then((settings) => {
+      if (!cancelled) {
+        setCardBillingDay(settings.cardBillingDay ?? 25)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const billingPreview = useMemo(() => {
+    if (type !== 'expense' || paymentMethod !== 'card') return null
+    const statementYM = getStatementYMForCardExpense(date, cardBillingDay)
+    const stage = getBillingStage(date.slice(0, 7), statementYM)
+    const stageLabel = stage === 'current' ? '이번 청구' : stage === 'next' ? '다음 청구' : `${statementYM.slice(5)}월 청구`
+    return {
+      stage,
+      stageLabel,
+      statementYM,
+      rangeLabel: formatBillingRange(getCardBillingRange(statementYM, cardBillingDay)),
+    }
+  }, [type, paymentMethod, date, cardBillingDay])
+
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return null
-    const item: QueueItem = { type, amount: parsed, category, description, tags, date, receiptImageUrl }
+    const item: QueueItem = { type, amount: parsed, paymentMethod, category, description, tags, date, receiptImageUrl }
     if (showDateEnd && dateEnd) item.dateEnd = dateEnd
     return item
   }
@@ -221,6 +253,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
                       </span>
                       <span className="text-[11px] text-[#4E5968] ml-1.5">{item.category}</span>
+                      <span className="text-[11px] text-[#4E5968] ml-1">· {item.paymentMethod === 'cash' ? '현금' : '카드'}</span>
                       {item.description && (
                         <span className="text-[11px] text-[#4E5968] ml-1 truncate"> · {item.description}</span>
                       )}
@@ -256,6 +289,39 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 지출
               </button>
             </div>
+
+            <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
+              {PAYMENT_METHODS.map((method) => (
+                <button
+                  key={method.value}
+                  type="button"
+                  onClick={() => setPaymentMethod(method.value)}
+                  aria-pressed={paymentMethod === method.value}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${paymentMethod === method.value
+                    ? method.value === 'cash'
+                      ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
+                      : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
+                    : 'text-[#4E5968] border-transparent'
+                    }`}
+                >
+                  {method.emoji} {method.label}
+                </button>
+              ))}
+            </div>
+
+            {billingPreview && (
+              <div className={`rounded-2xl px-4 py-3 border ${billingPreview.stage === 'current'
+                ? 'bg-[#F5BE3A]/12 border-[#F5BE3A]/25'
+                : 'bg-[#3D8EF8]/12 border-[#3D8EF8]/25'
+                }`}>
+                <p className="text-[11px] font-semibold text-[#8B95A1] mb-1">카드 청구 미리보기</p>
+                <p className={`text-sm font-bold ${billingPreview.stage === 'current' ? 'text-[#F5BE3A]' : 'text-[#79B2FF]'}`}>
+                  {billingPreview.stageLabel}
+                </p>
+                <p className="text-[11px] text-[#8B95A1] mt-1">결제일 {cardBillingDay}일 기준 · {billingPreview.statementYM.replace('-', '년 ')}월 청구</p>
+                <p className="text-[11px] text-[#8B95A1] mt-0.5">집계 기간: {billingPreview.rangeLabel}</p>
+              </div>
+            )}
 
             {/* 금액 */}
             <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>

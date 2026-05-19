@@ -3,7 +3,8 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
-import { loadAllData } from './lib/storage'
+import { loadAllData, loadSettings } from './lib/storage'
+import { calculateCardDueAmount, shiftYM } from './lib/cardBilling'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
 import { useAppHandlers } from './hooks/useAppHandlers'
@@ -21,6 +22,9 @@ import MergeLocalDataModal from './components/MergeLocalDataModal'
 import AutoApplyRecurringModal from './components/AutoApplyRecurringModal'
 
 const DATA_LOAD_TIMEOUT_MS = 9000
+const METHOD_FILTER_KEY = 'hb_tx_method_filter'
+const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
+const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
 
 function getYearMonth(date: Date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -103,6 +107,8 @@ export default function App() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [stockTrades, setStockTrades] = useState<StockTrade[]>([])
     const [stockWatchlist, setStockWatchlist] = useState<string[]>([])
+    const [cardBillingDay, setCardBillingDay] = useState<number | null>(null)
+    const [settingsSyncTick, setSettingsSyncTick] = useState(0)
     const [memos, setMemos] = useState<Memo[]>([])
     const [budgets, setBudgets] = useState<Budget[]>([])
     const [recurring, setRecurring] = useState<RecurringTransaction[]>([])
@@ -155,6 +161,20 @@ export default function App() {
         }
     }, [])
 
+    useEffect(() => {
+        const onSettingsUpdated = () => {
+            void loadSettings().then((settings) => {
+                setCardBillingDay(settings.cardBillingDay ?? null)
+            })
+            setSettingsSyncTick((prev) => prev + 1)
+        }
+
+        window.addEventListener('hb-settings-updated', onSettingsUpdated)
+        return () => {
+            window.removeEventListener('hb-settings-updated', onSettingsUpdated)
+        }
+    }, [])
+
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
         const timeout = new Promise<never>((_, reject) => {
@@ -170,6 +190,7 @@ export default function App() {
         setSubscriptions(snapshot.subscriptions ?? [])
         setGoals(snapshot.goals ?? [])
         setStockWatchlist(snapshot.settings.stockWatchlist ?? [])
+        setCardBillingDay(snapshot.settings.cardBillingDay ?? null)
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
     }, [])
@@ -270,6 +291,14 @@ export default function App() {
 
     const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
     const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
+    const openTransactionsWithBilling = useCallback((billing: 'current' | 'next') => {
+        localStorage.setItem(METHOD_FILTER_KEY, 'card')
+        localStorage.setItem(BILLING_FILTER_KEY, billing)
+        localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY)
+        setMode('ledger')
+        setTab('transactions')
+        showToast(billing === 'current' ? '카드 이번 청구 내역만 표시합니다.' : '카드 다음 청구 내역만 표시합니다.')
+    }, [])
     const isCurrentMonth = () => {
         const now = new Date()
         return currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth()
@@ -294,6 +323,14 @@ export default function App() {
             monthBalance: opening + income - expense,
         }
     }, [transactions, yearMonth])
+    const monthCardDue = useMemo(
+        () => calculateCardDueAmount(transactions, yearMonth, cardBillingDay ?? 25),
+        [transactions, yearMonth, cardBillingDay]
+    )
+    const nextMonthCardDue = useMemo(
+        () => calculateCardDueAmount(transactions, shiftYM(yearMonth, 1), cardBillingDay ?? 25),
+        [transactions, yearMonth, cardBillingDay]
+    )
     const stockTickerCount = useMemo(() => new Set(stockTrades.map((t) => t.ticker)).size, [stockTrades])
 
     const showFAB = activeMode === 'stocks'
@@ -438,6 +475,23 @@ export default function App() {
                                     <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
                                         {monthBalance.toLocaleString()}원
                                     </span>
+                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
+                                    <button
+                                        type="button"
+                                        onClick={() => openTransactionsWithBilling('current')}
+                                        className="text-[10px] font-bold text-[#F5BE3A] num hover:text-[#FFD66A] transition-colors"
+                                        title="카드 이번 청구 내역 보기"
+                                    >
+                                        이번청구 {monthCardDue.toLocaleString()}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openTransactionsWithBilling('next')}
+                                        className="text-[10px] font-bold text-[#79B2FF] num hover:text-[#A9CCFF] transition-colors"
+                                        title="카드 다음 청구 내역 보기"
+                                    >
+                                        다음청구 {nextMonthCardDue.toLocaleString()}
+                                    </button>
                                 </div>
                             )}
                         </>
@@ -464,7 +518,7 @@ export default function App() {
                         stockTrades={stockTrades}
                         subscriptions={subscriptions}
                         goals={goals}
-                        settingsVersion={settingsVersion}
+                        settingsVersion={settingsVersion + settingsSyncTick}
                         yearMonth={yearMonth}
                         customExpenseCategories={customExpenseCategories}
                         memos={memos}
