@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction } from '../types'
+import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
 
 function safeSave(key: string, value: unknown): void {
   try {
@@ -32,6 +32,7 @@ type StorageMode = 'local' | 'firebase'
 export interface AppSettings {
   payday: number | 'last' | null
   cardBillingDay: number | null
+  userPaymentMethods: UserPaymentMethod[]
   customExpenseCategories: string[]
   customIncomeCategories: string[]
   stockWatchlist: string[]
@@ -82,9 +83,31 @@ function emitSettingsUpdatedEvent(): void {
 const DEFAULT_SETTINGS: AppSettings = {
   payday: null,
   cardBillingDay: null,
+  userPaymentMethods: [],
   customExpenseCategories: [],
   customIncomeCategories: [],
   stockWatchlist: [],
+}
+
+const DEFAULT_PAYMENT_METHODS: UserPaymentMethod[] = [
+  { id: 'cash', type: 'cash', label: '현금' },
+  { id: 'check_1', type: 'check', label: '체크카드' },
+  { id: 'credit_1', type: 'credit', label: '신용카드', billingDay: 25 },
+]
+
+function migrateSettings(settings: AppSettings): AppSettings {
+  if (!Array.isArray(settings.userPaymentMethods) || settings.userPaymentMethods.length === 0) {
+    const billingDay = settings.cardBillingDay ?? 25
+    return {
+      ...settings,
+      userPaymentMethods: [
+        { id: 'cash', type: 'cash', label: '현금' },
+        { id: 'check_1', type: 'check', label: '체크카드' },
+        { id: 'credit_1', type: 'credit', label: '신용카드', billingDay },
+      ],
+    }
+  }
+  return settings
 }
 
 function parseJSON<T>(value: string | null, fallback: T): T {
@@ -183,7 +206,7 @@ function loadLocalGoals(): SavingsGoal[] {
 }
 
 function loadLocalSettings(): AppSettings {
-  return { ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) }
+  return migrateSettings({ ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) })
 }
 
 function hasValidPayday(value: number | 'last' | null): boolean {
@@ -219,9 +242,11 @@ function normalizeRemoteState(raw: unknown): RemoteState {
   }
 
   const data = raw as Partial<RemoteState>
-  const settings = data.settings && typeof data.settings === 'object'
-    ? ({ ...DEFAULT_SETTINGS, ...data.settings } as AppSettings)
-    : { ...DEFAULT_SETTINGS }
+  const settings = migrateSettings(
+    data.settings && typeof data.settings === 'object'
+      ? ({ ...DEFAULT_SETTINGS, ...data.settings } as AppSettings)
+      : { ...DEFAULT_SETTINGS }
+  )
 
   return {
     transactions: Array.isArray(data.transactions) ? data.transactions : [],
@@ -308,6 +333,7 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
   return {
     payday: hasValidPayday(local.payday) ? local.payday : remote.payday,
     cardBillingDay: hasValidBillingDay(local.cardBillingDay) ? local.cardBillingDay : remote.cardBillingDay,
+    userPaymentMethods: local.userPaymentMethods.length > 0 ? local.userPaymentMethods : remote.userPaymentMethods,
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
     stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,

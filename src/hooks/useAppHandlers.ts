@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal } from '../types'
+import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from '../types'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
@@ -26,6 +26,7 @@ interface HandlersInput {
   setStockWatchlist: Dispatch<React.SetStateAction<string[]>>
   setCustomExpenseCategories: Dispatch<React.SetStateAction<string[]>>
   setCustomIncomeCategories: Dispatch<React.SetStateAction<string[]>>
+  setUserPaymentMethods: Dispatch<React.SetStateAction<UserPaymentMethod[]>>
   dispatchUI: Dispatch<UIAction>
 }
 
@@ -45,6 +46,7 @@ export function useAppHandlers({
   setStockWatchlist,
   setCustomExpenseCategories,
   setCustomIncomeCategories,
+  setUserPaymentMethods,
   dispatchUI,
 }: HandlersInput) {
   const handleSaveTransaction = useCallback(
@@ -164,6 +166,17 @@ export function useAppHandlers({
     })
   }, [transactions, persist, yearMonth, setTransactions, setRecurring])
 
+  const handleSavePaymentMethods = useCallback((methods: UserPaymentMethod[]) => {
+    setUserPaymentMethods(methods)
+    persist(
+      (async () => {
+        const current = await loadSettings()
+        await saveSettings({ ...current, userPaymentMethods: methods })
+      })(),
+      '결제수단 저장에 실패했습니다.'
+    )
+  }, [persist, setUserPaymentMethods])
+
   const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
@@ -253,6 +266,7 @@ export function useAppHandlers({
     handleSubscriptionsChange,
     handleGoalsChange,
     handleApplyRecurring,
+    handleSavePaymentMethods,
     handleSaveCategories,
     handleAddWatchTicker,
     handleRemoveWatchTicker,

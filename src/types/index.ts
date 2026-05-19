@@ -1,6 +1,13 @@
 export type TransactionType = 'income' | 'expense'
 export type PaymentMethod = 'cash' | 'check' | 'credit' | 'card'
 
+export interface UserPaymentMethod {
+  id: string
+  type: 'cash' | 'check' | 'credit'
+  label: string
+  billingDay?: number  // credit 타입만 사용
+}
+
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
   { value: 'cash', label: '현금', emoji: '💵' },
   { value: 'check', label: '체크카드', emoji: '💳' },
@@ -19,6 +26,7 @@ export interface Transaction {
   type: TransactionType
   amount: number
   paymentMethod?: PaymentMethod
+  paymentMethodId?: string   // UserPaymentMethod.id 참조 (신규 내역)
   creditBillingDay?: number
   category: string
   description: string

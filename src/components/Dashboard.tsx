@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart } from 'lucide-react'
-import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal } from '../types'
+import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -22,27 +22,26 @@ interface Props {
   settingsVersion: number
   yearMonth: string
   customExpenseCategories: string[]
+  userPaymentMethods: UserPaymentMethod[]
   onBudgetsChange: (b: Budget[]) => void
   onRecurringSave: (items: RecurringTransaction[]) => void
   onApplyRecurring: (items: RecurringTransaction[]) => void
   onOpenCategoryModal: () => void
+  onOpenPaymentMethodsModal: () => void
 }
 
 function calcNet(items: Transaction[]) {
   return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
 }
 
-export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
   const [cardBillingDay, setCardBillingDay] = useState<number | null>(null)
   const [editingPayday, setEditingPayday] = useState(false)
-  const [editingCardBilling, setEditingCardBilling] = useState(false)
   const [paydayInput, setPaydayInput] = useState('')
-  const [cardBillingInput, setCardBillingInput] = useState('')
   const [paydayError, setPaydayError] = useState('')
-  const [cardBillingError, setCardBillingError] = useState('')
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
   const lastNotifiedMonthRef = useRef<string>('')
 
@@ -84,25 +83,6 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       await saveSettings({ ...current, payday: val })
     })()
     setEditingPayday(false)
-  }
-
-  async function handleSaveCardBillingDay() {
-    const val = parseInt(cardBillingInput, 10)
-    if (isNaN(val) || val < 1 || val > 31) {
-      setCardBillingError('1~31 사이의 숫자를 입력하세요')
-      return
-    }
-
-    setCardBillingError('')
-    setCardBillingDay(val)
-
-    try {
-      const current = await loadSettings()
-      await saveSettings({ ...current, cardBillingDay: val })
-      setEditingCardBilling(false)
-    } catch {
-      showToast('카드 결제일 저장에 실패했습니다.')
-    }
   }
 
   // 월급날까지 남은 일수 + 하루 가용 예산 계산
@@ -194,27 +174,39 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     [transactions]
   )
 
+  const creditCards = useMemo(
+    () => userPaymentMethods.filter((m) => m.type === 'credit'),
+    [userPaymentMethods]
+  )
+
+  const showCreditSection = hasCreditTransactions || creditCards.length > 0
+
+  const effectiveBillingDay = useMemo(
+    () => creditCards[0]?.billingDay ?? cardBillingDay ?? 25,
+    [creditCards, cardBillingDay]
+  )
+
   const monthlyCardDue = useMemo(
-    () => calculateCardDueAmount(transactions, yearMonth, cardBillingDay ?? 25),
-    [transactions, yearMonth, cardBillingDay]
+    () => calculateCardDueAmount(transactions, yearMonth, effectiveBillingDay),
+    [transactions, yearMonth, effectiveBillingDay]
   )
 
   const nextStatementYM = useMemo(() => shiftYM(yearMonth, 1), [yearMonth])
 
   const nextMonthlyCardDue = useMemo(
-    () => calculateCardDueAmount(transactions, nextStatementYM, cardBillingDay ?? 25),
-    [transactions, nextStatementYM, cardBillingDay]
+    () => calculateCardDueAmount(transactions, nextStatementYM, effectiveBillingDay),
+    [transactions, nextStatementYM, effectiveBillingDay]
   )
 
   const cardBillingRangeLabel = useMemo(() => {
-    const range = getCardBillingRange(yearMonth, cardBillingDay ?? 25)
+    const range = getCardBillingRange(yearMonth, effectiveBillingDay)
     return formatBillingRange(range)
-  }, [yearMonth, cardBillingDay])
+  }, [yearMonth, effectiveBillingDay])
 
   const nextCardBillingRangeLabel = useMemo(() => {
-    const range = getCardBillingRange(nextStatementYM, cardBillingDay ?? 25)
+    const range = getCardBillingRange(nextStatementYM, effectiveBillingDay)
     return formatBillingRange(range)
-  }, [nextStatementYM, cardBillingDay])
+  }, [nextStatementYM, effectiveBillingDay])
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {}
@@ -496,76 +488,40 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
           </div>
         </div>
 
-        {hasCreditTransactions ? (
-          <>
-            <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <p className="text-[10px] text-[#9CC7FF] font-semibold">신용 결제예정</p>
+        {showCreditSection ? (
+          <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[10px] text-[#9CC7FF] font-semibold">신용 결제예정</p>
+              <div className="flex items-center gap-2">
+                {creditCards.length > 0 && (
+                  <span className="text-[10px] text-[#9CC7FF]">
+                    {creditCards.length === 1
+                      ? `${creditCards[0].label} · ${effectiveBillingDay}일`
+                      : `${creditCards.length}개 카드 · ${effectiveBillingDay}일 기준`}
+                  </span>
+                )}
                 <button
-                  onClick={() => {
-                    setEditingCardBilling(true)
-                    setCardBillingInput(String(cardBillingDay ?? 25))
-                    setCardBillingError('')
-                  }}
+                  onClick={onOpenPaymentMethodsModal}
                   className="text-[10px] font-bold text-[#9CC7FF] hover:text-white transition-colors"
                 >
-                  결제일 {cardBillingDay ?? 25}일
+                  설정
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-2 mt-1">
-                <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-                  <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
-                  <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
-                  <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
-                </div>
-                <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-                  <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
-                  <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
-                  <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
+                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
+                <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
+              </div>
+              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
+                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
+                <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
               </div>
             </div>
-
-            {editingCardBilling && (
-              <div className="mt-2 rounded-2xl px-3 py-2.5 bg-[#2C2C2E] border border-white/10">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#8B95A1] font-semibold shrink-0">카드 결제일</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={cardBillingInput}
-                    onChange={(e) => { setCardBillingInput(e.target.value); setCardBillingError('') }}
-                    onKeyDown={(e) => e.key === 'Enter' && void handleSaveCardBillingDay()}
-                    className={`flex-1 bg-[#1C1C1E] text-white text-center rounded-xl px-3 py-2 text-sm focus:outline-none ${cardBillingError ? 'ring-1 ring-[#F25260]/60' : 'focus:ring-1 focus:ring-[#3D8EF8]/40'}`}
-                  />
-                  <button
-                    onClick={() => { void handleSaveCardBillingDay() }}
-                    className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors"
-                  >
-                    저장
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditingCardBilling(false)
-                      setCardBillingError('')
-                    }}
-                    className="px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-xs font-bold"
-                  >
-                    취소
-                  </button>
-                </div>
-                {cardBillingError && (
-                  <p className="text-xs text-[#F25260] font-semibold mt-2">{cardBillingError}</p>
-                )}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="mt-2 rounded-2xl px-3 py-2.5 border border-white/8 bg-[#2C2C2E]">
-            <p className="text-[11px] text-[#8B95A1] font-semibold">신용카드 내역이 없어 결제예정이 표시되지 않아요.</p>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* 6개월 스파크라인 요약 */}
@@ -736,6 +692,12 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
             >
               <Tag size={11} />
               카테고리
+            </button>
+            <button
+              onClick={onOpenPaymentMethodsModal}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
+            >
+              💳 결제수단
             </button>
             <button
               onClick={() => setShowRecurring(true)}

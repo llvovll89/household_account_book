@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal } from './types'
+import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
 import { calculateCardDueAmount, shiftYM } from './lib/cardBilling'
@@ -15,6 +15,7 @@ import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
 import StockTradeModal from './components/StockTradeModal'
 import CategoryModal from './components/CategoryModal'
+import PaymentMethodsModal from './components/PaymentMethodsModal'
 import LedgerWorkspace from './components/workspaces/LedgerWorkspace'
 import StocksWorkspace from './components/workspaces/StocksWorkspace'
 import BottomNavigation from './components/layout/BottomNavigation'
@@ -50,6 +51,7 @@ interface UIState {
     editingTrade: StockTrade | null
     stockSubTab: StockSubTab
     showCategoryModal: boolean
+    showPaymentMethodsModal: boolean
     memoAddTrigger: number
     subscriptionAddTrigger: number
     goalAddTrigger: number
@@ -59,7 +61,7 @@ const UI_INIT: UIState = {
     showModal: false, editingTransaction: null,
     showImport: false, showHelp: false,
     showStockModal: false, editingTrade: null,
-    stockSubTab: 'portfolio', showCategoryModal: false,
+    stockSubTab: 'portfolio', showCategoryModal: false, showPaymentMethodsModal: false,
     memoAddTrigger: 0, subscriptionAddTrigger: 0, goalAddTrigger: 0,
 }
 
@@ -72,6 +74,7 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         case 'SET_IMPORT': return { ...state, showImport: action.value }
         case 'SET_HELP': return { ...state, showHelp: action.value }
         case 'SET_CATEGORY': return { ...state, showCategoryModal: action.value }
+        case 'SET_PAYMENT_METHODS': return { ...state, showPaymentMethodsModal: action.value }
         case 'SET_STOCK_SUBTAB': return { ...state, stockSubTab: action.value }
         case 'TRIGGER_MEMO': return { ...state, memoAddTrigger: state.memoAddTrigger + 1 }
         case 'TRIGGER_SUB': return { ...state, subscriptionAddTrigger: state.subscriptionAddTrigger + 1 }
@@ -115,6 +118,7 @@ export default function App() {
 
     const [customExpenseCategories, setCustomExpenseCategories] = useState<string[]>([])
     const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([])
+    const [userPaymentMethods, setUserPaymentMethods] = useState<UserPaymentMethod[]>([])
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [goals, setGoals] = useState<SavingsGoal[]>([])
 
@@ -122,7 +126,7 @@ export default function App() {
     const [ui, dispatchUI] = useReducer(uiReducer, UI_INIT)
     const {
         showModal, editingTransaction, showImport, showHelp,
-        showStockModal, editingTrade, stockSubTab, showCategoryModal,
+        showStockModal, editingTrade, stockSubTab, showCategoryModal, showPaymentMethodsModal,
         memoAddTrigger, subscriptionAddTrigger, goalAddTrigger,
     } = ui
 
@@ -165,6 +169,7 @@ export default function App() {
         const onSettingsUpdated = () => {
             void loadSettings().then((settings) => {
                 setCardBillingDay(settings.cardBillingDay ?? null)
+                setUserPaymentMethods(settings.userPaymentMethods)
             })
             setSettingsSyncTick((prev) => prev + 1)
         }
@@ -191,6 +196,7 @@ export default function App() {
         setGoals(snapshot.goals ?? [])
         setStockWatchlist(snapshot.settings.stockWatchlist ?? [])
         setCardBillingDay(snapshot.settings.cardBillingDay ?? null)
+        setUserPaymentMethods(snapshot.settings.userPaymentMethods ?? [])
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
     }, [])
@@ -263,6 +269,7 @@ export default function App() {
         handleSubscriptionsChange,
         handleGoalsChange,
         handleApplyRecurring,
+        handleSavePaymentMethods,
         handleSaveCategories,
         handleAddWatchTicker,
         handleRemoveWatchTicker,
@@ -286,6 +293,7 @@ export default function App() {
         setStockWatchlist,
         setCustomExpenseCategories,
         setCustomIncomeCategories,
+        setUserPaymentMethods,
         dispatchUI,
     })
 
@@ -527,6 +535,7 @@ export default function App() {
                         settingsVersion={settingsVersion + settingsSyncTick}
                         yearMonth={yearMonth}
                         customExpenseCategories={customExpenseCategories}
+                        userPaymentMethods={userPaymentMethods}
                         memos={memos}
                         memoAddTrigger={memoAddTrigger}
                         subscriptionAddTrigger={subscriptionAddTrigger}
@@ -537,6 +546,7 @@ export default function App() {
                         onSubscriptionsChange={handleSubscriptionsChange}
                         onGoalsChange={handleGoalsChange}
                         onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
+                        onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
                         onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                         onTransactionDelete={handleDeleteTransaction}
                         onTransactionArchive={handleTransactionArchive}
@@ -647,6 +657,7 @@ export default function App() {
                     onClose={() => dispatchUI({ type: 'CLOSE_TX_MODAL' })}
                     customExpenseCategories={customExpenseCategories}
                     customIncomeCategories={customIncomeCategories}
+                    userPaymentMethods={userPaymentMethods}
                 />
             )}
             {showCategoryModal && (
@@ -655,6 +666,13 @@ export default function App() {
                     customIncomeCategories={customIncomeCategories}
                     onSave={handleSaveCategories}
                     onClose={() => dispatchUI({ type: 'SET_CATEGORY', value: false })}
+                />
+            )}
+            {showPaymentMethodsModal && (
+                <PaymentMethodsModal
+                    userPaymentMethods={userPaymentMethods}
+                    onSave={handleSavePaymentMethods}
+                    onClose={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: false })}
                 />
             )}
 
