@@ -89,12 +89,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   stockWatchlist: [],
 }
 
-const DEFAULT_PAYMENT_METHODS: UserPaymentMethod[] = [
-  { id: 'cash', type: 'cash', label: '현금' },
-  { id: 'check_1', type: 'check', label: '체크카드' },
-  { id: 'credit_1', type: 'credit', label: '신용카드', billingDay: 25 },
-]
-
 function migrateSettings(settings: AppSettings): AppSettings {
   if (!Array.isArray(settings.userPaymentMethods) || settings.userPaymentMethods.length === 0) {
     const billingDay = settings.cardBillingDay ?? 25
