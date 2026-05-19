@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Sparkles, ChevronLeft, ChevronRight, Hash } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
-import type { Budget, Transaction } from '../types'
+import type { Budget, Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI } from '../types'
 import SpendingAnalysisView from './SpendingAnalysisView'
 import { useMonthlyData } from '../lib/useMonthlyData'
@@ -20,6 +20,7 @@ interface Props {
   yearMonth: string
   budgets: Budget[]
   settingsVersion: number
+  userPaymentMethods?: UserPaymentMethod[]
 }
 
 function getYM(year: number, month: number) {
@@ -30,7 +31,7 @@ const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
 type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce'
 
-export default function Analytics({ transactions, yearMonth, budgets, settingsVersion }: Props) {
+export default function Analytics({ transactions, yearMonth, budgets, settingsVersion, userPaymentMethods = [] }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [cardBillingDay, setCardBillingDay] = useState<number>(25)
@@ -40,7 +41,8 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
 
     void loadSettings().then((settings) => {
       if (!cancelled) {
-        setCardBillingDay(settings.cardBillingDay ?? 25)
+        const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
+        setCardBillingDay(firstCredit?.billingDay ?? settings.cardBillingDay ?? 25)
       }
     })
 

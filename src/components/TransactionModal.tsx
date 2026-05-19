@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { X, ChevronDown, Plus, CalendarRange } from 'lucide-react'
-import type { Transaction, TransactionType, PaymentMethod } from '../types'
+import type { Transaction, TransactionType, PaymentMethod, UserPaymentMethod } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
@@ -15,6 +15,7 @@ interface Props {
   onClose: () => void
   customExpenseCategories?: string[]
   customIncomeCategories?: string[]
+  userPaymentMethods?: UserPaymentMethod[]
 }
 
 type QueueItem = Omit<Transaction, 'id' | 'createdAt'>
@@ -30,11 +31,12 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [] }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [] }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<TransactionType>('expense')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
@@ -57,10 +59,25 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
 
   useEffect(() => {
+    if (!transaction && userPaymentMethods.length > 0) {
+      const first = userPaymentMethods[0]
+      setPaymentMethod(first.type as PaymentMethod)
+      setSelectedMethodId(first.id)
+      if (first.type === 'credit' && first.billingDay) {
+        setCreditBillingDayInput(String(first.billingDay))
+      }
+    }
+  }, []) // 신규 내역 첫 렌더 시 기본값 설정
+
+  useEffect(() => {
     if (transaction) {
       setType(transaction.type)
       setPaymentMethod(transaction.paymentMethod ?? 'cash')
-      if (typeof transaction.creditBillingDay === 'number') {
+      if (transaction.paymentMethodId) {
+        setSelectedMethodId(transaction.paymentMethodId)
+        const card = userPaymentMethods.find((m) => m.id === transaction.paymentMethodId)
+        if (card?.billingDay) setCreditBillingDayInput(String(card.billingDay))
+      } else if (typeof transaction.creditBillingDay === 'number') {
         setCreditBillingDayInput(String(transaction.creditBillingDay))
       }
       setAmount(transaction.amount.toLocaleString())
@@ -87,9 +104,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
     void loadSettings().then((settings) => {
       if (!cancelled) {
-        const defaultDay = settings.cardBillingDay ?? 25
+        const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
+        const defaultDay = firstCredit?.billingDay ?? settings.cardBillingDay ?? 25
         setCardBillingDay(defaultDay)
-        setCreditBillingDayInput(String(defaultDay))
+        if (!transaction) setCreditBillingDayInput(String(defaultDay))
       }
     })
 
@@ -120,6 +138,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     if (!parsed || parsed <= 0) return null
     const item: QueueItem = { type, amount: parsed, paymentMethod, category, description, tags, date, receiptImageUrl }
+    if (selectedMethodId) item.paymentMethodId = selectedMethodId
     if (type === 'expense' && isCreditPaymentMethod(paymentMethod) && billingPreview) {
       item.creditBillingDay = billingPreview.effectiveBillingDay
     }
@@ -304,24 +323,59 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </button>
             </div>
 
-            <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
-              {PAYMENT_METHODS.map((method) => (
-                <button
-                  key={method.value}
-                  type="button"
-                  onClick={() => setPaymentMethod(method.value)}
-                  aria-pressed={paymentMethod === method.value}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${paymentMethod === method.value
-                    ? method.value === 'cash'
-                      ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
-                      : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
-                    : 'text-[#4E5968] border-transparent'
+            {userPaymentMethods.length > 0 ? (
+              <div
+                role="group"
+                aria-label="결제 수단"
+                className={`bg-[#2C2C2E] p-1 rounded-2xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
+              >
+                {userPaymentMethods.map((m) => {
+                  const isSelected = selectedMethodId === m.id
+                  const emoji = m.type === 'cash' ? '💵' : m.type === 'check' ? '💳' : '💎'
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMethodId(m.id)
+                        setPaymentMethod(m.type as PaymentMethod)
+                        if (m.type === 'credit' && m.billingDay) {
+                          setCreditBillingDayInput(String(m.billingDay))
+                        }
+                      }}
+                      aria-pressed={isSelected}
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all border truncate px-1 ${isSelected
+                        ? m.type === 'cash'
+                          ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
+                          : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
+                        : 'text-[#4E5968] border-transparent'
+                      }`}
+                    >
+                      {emoji} {m.label}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
+                {PAYMENT_METHODS.map((method) => (
+                  <button
+                    key={method.value}
+                    type="button"
+                    onClick={() => { setPaymentMethod(method.value); setSelectedMethodId(null) }}
+                    aria-pressed={paymentMethod === method.value}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${paymentMethod === method.value
+                      ? method.value === 'cash'
+                        ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
+                        : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
+                      : 'text-[#4E5968] border-transparent'
                     }`}
-                >
-                  {method.emoji} {method.label}
-                </button>
-              ))}
-            </div>
+                  >
+                    {method.emoji} {method.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {billingPreview && (
               <div className={`rounded-2xl px-4 py-3 border ${billingPreview.stage === 'current'

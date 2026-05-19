@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { X, Pencil, Trash2 } from 'lucide-react'
-import type { Transaction } from '../types'
-import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
+import type { Transaction, UserPaymentMethod } from '../types'
+import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt } from '../lib/format'
 import { loadSettings } from '../lib/storage'
-import { getStatementYMForCardExpense, getTransactionBillingDay, isCreditPaymentMethod } from '../lib/cardBilling'
+import { getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
 
 interface Props {
   transaction: Transaction
+  userPaymentMethods?: UserPaymentMethod[]
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
   onClose: () => void
@@ -24,7 +25,7 @@ function formatShortDate(dateStr: string) {
   return `${parseInt(m)}월 ${parseInt(d)}일`
 }
 
-export default function TransactionDetailModal({ transaction: t, onEdit, onDelete, onClose }: Props) {
+export default function TransactionDetailModal({ transaction: t, userPaymentMethods = [], onEdit, onDelete, onClose }: Props) {
   const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
   const tags = t.tags ?? []
   const isIncome = t.type === 'income'
@@ -36,7 +37,8 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
 
     void loadSettings().then((settings) => {
       if (!cancelled) {
-        setCardBillingDay(settings.cardBillingDay ?? 25)
+        const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
+        setCardBillingDay(firstCredit?.billingDay ?? settings.cardBillingDay ?? 25)
       }
     })
 
@@ -45,8 +47,9 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
     }
   }, [])
 
+  const resolvedMethod = resolvePaymentMethod(t, userPaymentMethods)
   const statementYM = t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod)
-    ? getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, cardBillingDay))
+    ? getStatementYMForCardExpense(t.date, resolveCardBillingDay(t, userPaymentMethods, cardBillingDay))
     : null
 
   function handleEdit() {
@@ -89,7 +92,9 @@ export default function TransactionDetailModal({ transaction: t, onEdit, onDelet
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-semibold text-[#8B95A1]">{t.category}</p>
-              <p className="text-[12px] text-[#4E5968] font-bold mt-1">{t.paymentMethod === 'cash' ? '💵' : t.paymentMethod === 'check' ? '💳' : '💎'} {PAYMENT_METHOD_LABEL[t.paymentMethod ?? 'cash']}</p>
+              <p className="text-[12px] text-[#4E5968] font-bold mt-1">
+                {resolvedMethod.type === 'cash' ? '💵' : resolvedMethod.type === 'check' ? '💳' : '💎'} {resolvedMethod.label}
+              </p>
               {statementYM && (
                 <p className="text-[11px] text-[#9CC7FF] font-bold mt-1">{statementYM.replace('-', '년 ')}월 청구 기준</p>
               )}

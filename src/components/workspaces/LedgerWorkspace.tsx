@@ -1,4 +1,4 @@
-import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType } from '../../types'
+import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
 import type { Tab } from '../../types/navigation'
 import Dashboard from '../Dashboard'
 import TransactionList from '../TransactionList'
@@ -18,6 +18,7 @@ interface Props {
   settingsVersion: number
   yearMonth: string
   customExpenseCategories: string[]
+  userPaymentMethods: UserPaymentMethod[]
   memos: Memo[]
   memoAddTrigger: number
   subscriptionAddTrigger: number
@@ -28,6 +29,7 @@ interface Props {
   onSubscriptionsChange: (items: Subscription[]) => void
   onGoalsChange: (items: SavingsGoal[]) => void
   onOpenCategoryModal: () => void
+  onOpenPaymentMethodsModal: () => void
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
   onTransactionArchive: (cutoff: string) => void
@@ -48,6 +50,7 @@ export default function LedgerWorkspace({
   settingsVersion,
   yearMonth,
   customExpenseCategories,
+  userPaymentMethods,
   memos,
   memoAddTrigger,
   subscriptionAddTrigger,
@@ -58,6 +61,7 @@ export default function LedgerWorkspace({
   onSubscriptionsChange,
   onGoalsChange,
   onOpenCategoryModal,
+  onOpenPaymentMethodsModal,
   onTransactionEdit,
   onTransactionDelete,
   onTransactionArchive,
@@ -78,22 +82,25 @@ export default function LedgerWorkspace({
           settingsVersion={settingsVersion}
           yearMonth={yearMonth}
           customExpenseCategories={customExpenseCategories}
+          userPaymentMethods={userPaymentMethods}
           onBudgetsChange={onBudgetsChange}
           onRecurringSave={onRecurringSave}
           onApplyRecurring={onApplyRecurring}
           onOpenCategoryModal={onOpenCategoryModal}
+          onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
         />
       )}
       {activeTab === 'transactions' && (
         <TransactionList
           transactions={transactions}
           yearMonth={yearMonth}
+          userPaymentMethods={userPaymentMethods}
           onEdit={onTransactionEdit}
           onDelete={onTransactionDelete}
           onArchiveDone={onTransactionArchive}
         />
       )}
-      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} />}
+      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />}
       {activeTab === 'memos' && (
         <MemoSection
           memos={memos}

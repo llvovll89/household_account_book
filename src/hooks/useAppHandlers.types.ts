@@ -9,6 +9,7 @@ export type UIAction =
   | { type: 'SET_IMPORT'; value: boolean }
   | { type: 'SET_HELP'; value: boolean }
   | { type: 'SET_CATEGORY'; value: boolean }
+  | { type: 'SET_PAYMENT_METHODS'; value: boolean }
   | { type: 'SET_STOCK_SUBTAB'; value: StockSubTab }
   | { type: 'TRIGGER_MEMO' }
   | { type: 'TRIGGER_SUB' }

@@ -1,4 +1,5 @@
-import type { PaymentMethod, Transaction } from '../types'
+import type { PaymentMethod, Transaction, UserPaymentMethod } from '../types'
+import { PAYMENT_METHOD_LABEL } from '../types'
 
 export interface CardBillingRange {
   start: string
@@ -105,4 +106,36 @@ export function getBillingStage(currentYM: string, statementYM: string): Billing
   if (diff === 1) return 'next'
   if (diff > 1) return 'later'
   return 'past'
+}
+
+export function resolvePaymentMethod(
+  tx: Transaction,
+  methods: UserPaymentMethod[]
+): { type: 'cash' | 'check' | 'credit'; label: string; billingDay?: number } {
+  if (tx.paymentMethodId) {
+    const found = methods.find((m) => m.id === tx.paymentMethodId)
+    if (found) return { type: found.type, label: found.label, billingDay: found.billingDay }
+  }
+  const type: 'cash' | 'check' | 'credit' =
+    isCreditPaymentMethod(tx.paymentMethod) ? 'credit'
+    : tx.paymentMethod === 'check' ? 'check'
+    : 'cash'
+  const label = PAYMENT_METHOD_LABEL[tx.paymentMethod ?? 'cash']
+  const creditCard = methods.find((m) => m.type === 'credit')
+  return { type, label, billingDay: type === 'credit' ? creditCard?.billingDay : undefined }
+}
+
+export function resolveCardBillingDay(
+  tx: Transaction,
+  methods: UserPaymentMethod[],
+  globalFallback: number
+): number {
+  if (tx.paymentMethodId) {
+    const found = methods.find((m) => m.id === tx.paymentMethodId)
+    if (found?.billingDay && isValidBillingDay(found.billingDay)) return found.billingDay
+  }
+  if (isValidBillingDay(tx.creditBillingDay)) return tx.creditBillingDay
+  const creditCard = methods.find((m) => m.type === 'credit')
+  if (creditCard?.billingDay && isValidBillingDay(creditCard.billingDay)) return creditCard.billingDay
+  return globalFallback
 }
