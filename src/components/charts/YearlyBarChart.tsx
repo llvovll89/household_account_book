@@ -48,7 +48,7 @@ function YearlyTooltip({ active, payload, label }: YearlyTooltipProps) {
 export default function YearlyBarChart({ data, currentYM }: Props) {
   return (
     <ResponsiveContainer width="100%" height={130}>
-      <BarChart data={data} margin={{ top: 4, right: 4, left: -24, bottom: 0 }} barCategoryGap="18%" barGap={2}>
+      <BarChart data={data} margin={{ top: 4, right: 12, left: -24, bottom: 0 }} barCategoryGap="18%" barGap={2}>
         <CartesianGrid {...GRID_PROPS} />
         <XAxis
           dataKey="label"

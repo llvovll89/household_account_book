@@ -689,7 +689,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart
                       data={tagData.slice(0, 6).map(d => ({ name: `#${d.tag}`, 지출: d.expense }))}
-                      margin={{ top: 0, right: 0, left: -20, bottom: 0 }}
+                      margin={{ top: 0, right: 12, left: -16, bottom: 0 }}
                     >
                       <XAxis
                         dataKey="name"
@@ -729,7 +729,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                     ))}
                   </div>
                   <ResponsiveContainer width="100%" height={180}>
-                    <LineChart data={tagTrend} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <LineChart data={tagTrend} margin={{ top: 0, right: 12, left: -16, bottom: 0 }}>
                       <XAxis
                         dataKey="label"
                         tick={{ fill: '#8B95A1', fontSize: 10 }}

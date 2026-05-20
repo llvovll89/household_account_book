@@ -42,7 +42,7 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
 
   return (
     <ResponsiveContainer width="100%" height={120}>
-      <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+      <LineChart data={chartData} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
         <CartesianGrid {...GRID_PROPS} />
         <XAxis
           dataKey="label"

@@ -31,7 +31,7 @@ export default function WeekdayBarChart({ data }: Props) {
 
   return (
     <ResponsiveContainer width="100%" height={100}>
-      <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }} barCategoryGap="20%">
+      <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 0 }} barCategoryGap="20%">
         <XAxis
           dataKey="label"
           tick={(props) => {
@@ -52,7 +52,7 @@ export default function WeekdayBarChart({ data }: Props) {
           axisLine={false}
           tickLine={false}
         />
-        <YAxis hide domain={[0, maxTotal * 1.15]} />
+        <YAxis hide width={0} domain={[0, maxTotal * 1.15]} />
         <Tooltip
           contentStyle={TOOLTIP_CONTENT_STYLE}
           cursor={TOOLTIP_CURSOR_STYLE}
