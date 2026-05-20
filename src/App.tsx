@@ -143,6 +143,20 @@ export default function App() {
     const [showAutoApplyModal, setShowAutoApplyModal] = useState(false)
     const autoApplyCheckedRef = useRef(false)
 
+    const [showUserMenu, setShowUserMenu] = useState(false)
+    const userMenuRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (!showUserMenu) return
+        const handleOutside = (e: MouseEvent) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+                setShowUserMenu(false)
+            }
+        }
+        document.addEventListener('mousedown', handleOutside)
+        return () => document.removeEventListener('mousedown', handleOutside)
+    }, [showUserMenu])
+
     useEffect(() => {
         return registerToastHandler((msg, duration = 2500) => {
             setToastMsg(msg)
@@ -388,12 +402,6 @@ export default function App() {
                             <h1 className="text-[20px] font-extrabold text-white tracking-tight">잔고플랜</h1>
                         </div>
                         <div className="flex items-center gap-2">
-                            {activeMode === 'ledger' && (
-                                <button onClick={() => dispatchUI({ type: 'SET_IMPORT', value: true })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
-                                    <FileDown size={13} />
-                                    가져오기
-                                </button>
-                            )}
                             {/* 오프라인 / 미동기화 상태 배지 */}
                             {(!isOnline || hasPendingSync) && (
                                 <div
@@ -410,25 +418,58 @@ export default function App() {
                                 </div>
                             )}
                             {user ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-2 pl-1 pr-2 py-1.5 rounded-xl bg-[#2C2C2E] border border-[rgba(255,255,255,0.06)] max-w-37.5">
+                                <div className="relative" ref={userMenuRef}>
+                                    <button
+                                        onClick={() => setShowUserMenu((v) => !v)}
+                                        aria-label="메뉴"
+                                        className="w-8 h-8 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center overflow-hidden"
+                                    >
                                         {user.photoURL ? (
-                                            <img src={user.photoURL} alt="profile" className="w-5 h-5 rounded-full object-cover" referrerPolicy="no-referrer" />
+                                            <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                         ) : (
-                                            <div className="w-5 h-5 rounded-full bg-[#3D8EF8]/25 text-[#79B2FF] text-[10px] font-bold flex items-center justify-center">
+                                            <span className="text-[12px] font-bold text-[#79B2FF]">
                                                 {(user.email?.[0] ?? 'U').toUpperCase()}
-                                            </div>
+                                            </span>
                                         )}
-                                        <span className="text-[11px] text-[#C8D1DC] truncate">{user.email?.split('@')[0] ?? '로그인 사용자'}</span>
-                                    </div>
-                                    <button onClick={handleLogout} aria-label="로그아웃" title="로그아웃" className="w-8 h-8 rounded-xl text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center">
-                                        <LogOut size={14} />
                                     </button>
+                                    {showUserMenu && (
+                                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 rounded-2xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 overflow-hidden">
+                                            <div className="px-3.5 py-3 border-b border-[rgba(255,255,255,0.06)]">
+                                                <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide mb-0.5">로그인 계정</p>
+                                                <p className="text-[12px] font-semibold text-[#C8D1DC] truncate">{user.email ?? '로그인 사용자'}</p>
+                                            </div>
+                                            <div className="p-1">
+                                                {activeMode === 'ledger' && (
+                                                    <button
+                                                        onClick={() => { dispatchUI({ type: 'SET_IMPORT', value: true }); setShowUserMenu(false) }}
+                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                    >
+                                                        <FileDown size={14} className="text-[#8B95A1]" />
+                                                        가져오기
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => { handleLogout(); setShowUserMenu(false) }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#F25260] hover:bg-[#F25260]/10 transition-colors text-left"
+                                                >
+                                                    <LogOut size={14} />
+                                                    로그아웃
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <button onClick={() => setShowAuthModal(true)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15">
-                                    로그인
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {activeMode === 'ledger' && (
+                                        <button onClick={() => dispatchUI({ type: 'SET_IMPORT', value: true })} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
+                                            <FileDown size={12} />
+                                        </button>
+                                    )}
+                                    <button onClick={() => setShowAuthModal(true)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15">
+                                        로그인
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
