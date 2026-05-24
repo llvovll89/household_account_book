@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
 import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from '../types'
+import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
@@ -15,7 +16,7 @@ interface HandlersInput {
   editingTransaction: Transaction | null
   editingTrade: StockTrade | null
   yearMonth: string
-  persist: (task: Promise<void>, failMsg: string) => void
+  persist: (task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => void
   setTransactions: Dispatch<React.SetStateAction<Transaction[]>>
   setStockTrades: Dispatch<React.SetStateAction<StockTrade[]>>
   setBudgets: Dispatch<React.SetStateAction<Budget[]>>
@@ -60,7 +61,7 @@ export function useAppHandlers({
         } else {
           next = [...prev, ...items.map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))]
         }
-        persist(saveTransactions(next), '거래 저장에 실패했습니다.')
+        persist(() => saveTransactions(next), '거래 저장에 실패했습니다.', 'transactions')
         return next
       })
       dispatchUI({ type: 'CLOSE_TX_MODAL' })
@@ -78,7 +79,7 @@ export function useAppHandlers({
         })
       }
       const next = prev.filter((t) => t.id !== id)
-      persist(saveTransactions(next), '거래 삭제 저장에 실패했습니다.')
+      persist(() => saveTransactions(next), '거래 삭제 저장에 실패했습니다.', 'transactions')
       return next
     })
   }, [persist, setTransactions])
@@ -90,7 +91,7 @@ export function useAppHandlers({
   const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
     setTransactions((prev) => {
       const next = [...prev, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
-      persist(saveTransactions(next), '가져오기 저장에 실패했습니다.')
+      persist(() => saveTransactions(next), '가져오기 저장에 실패했습니다.', 'transactions')
       return next
     })
   }, [persist, setTransactions])
@@ -100,7 +101,7 @@ export function useAppHandlers({
       const next = editingTrade
         ? prev.map((t) => t.id === editingTrade.id ? { ...t, ...data } : t)
         : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
-      persist(saveStockTrades(next), '주식 거래 저장에 실패했습니다.')
+      persist(() => saveStockTrades(next), '주식 거래 저장에 실패했습니다.', 'stockTrades')
       return next
     })
     dispatchUI({ type: 'CLOSE_STOCK_MODAL' })
@@ -110,29 +111,29 @@ export function useAppHandlers({
     if (!confirm('이 거래를 삭제할까요?')) return
     setStockTrades((prev) => {
       const next = prev.filter((t) => t.id !== id)
-      persist(saveStockTrades(next), '주식 거래 삭제에 실패했습니다.')
+      persist(() => saveStockTrades(next), '주식 거래 삭제에 실패했습니다.', 'stockTrades')
       return next
     })
   }, [persist, setStockTrades])
 
   const handleBudgetsChange = useCallback((b: Budget[]) => {
     setBudgets(b)
-    persist(saveBudgets(b), '예산 저장에 실패했습니다.')
+    persist(() => saveBudgets(b), '예산 저장에 실패했습니다.', 'budgets')
   }, [persist, setBudgets])
 
   const handleRecurringSave = useCallback((items: RecurringTransaction[]) => {
     setRecurring(items)
-    persist(saveRecurring(items), '정기내역 저장에 실패했습니다.')
+    persist(() => saveRecurring(items), '정기내역 저장에 실패했습니다.', 'recurring')
   }, [persist, setRecurring])
 
   const handleSubscriptionsChange = useCallback((items: Subscription[]) => {
     setSubscriptions(items)
-    persist(saveSubscriptions(items), '구독 저장에 실패했습니다.')
+    persist(() => saveSubscriptions(items), '구독 저장에 실패했습니다.', 'subscriptions')
   }, [persist, setSubscriptions])
 
   const handleGoalsChange = useCallback((items: SavingsGoal[]) => {
     setGoals(items)
-    persist(saveGoals(items), '목표 저장에 실패했습니다.')
+    persist(() => saveGoals(items), '목표 저장에 실패했습니다.', 'goals')
   }, [persist, setGoals])
 
   const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
@@ -161,7 +162,7 @@ export function useAppHandlers({
     setRecurring((prev) => {
       const ids = new Set(pending.map((r) => r.id))
       const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: ym } : r)
-      persist(saveRecurring(next), '정기내역 상태 저장에 실패했습니다.')
+      persist(() => saveRecurring(next), '정기내역 상태 저장에 실패했습니다.', 'recurring')
       return next
     })
   }, [transactions, persist, yearMonth, setTransactions, setRecurring])
@@ -169,11 +170,12 @@ export function useAppHandlers({
   const handleSavePaymentMethods = useCallback((methods: UserPaymentMethod[]) => {
     setUserPaymentMethods(methods)
     persist(
-      (async () => {
+      async () => {
         const current = await loadSettings()
         await saveSettings({ ...current, userPaymentMethods: methods })
-      })(),
-      '결제수단 저장에 실패했습니다.'
+      },
+      '결제수단 저장에 실패했습니다.',
+      'settings'
     )
   }, [persist, setUserPaymentMethods])
 
@@ -181,11 +183,12 @@ export function useAppHandlers({
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
     persist(
-      (async () => {
+      async () => {
         const current = await loadSettings()
         await saveSettings({ ...current, customExpenseCategories: expense, customIncomeCategories: income })
-      })(),
-      '카테고리 저장에 실패했습니다.'
+      },
+      '카테고리 저장에 실패했습니다.',
+      'settings'
     )
   }, [persist, setCustomExpenseCategories, setCustomIncomeCategories])
 
@@ -196,11 +199,12 @@ export function useAppHandlers({
       if (prev.includes(normalized)) return prev
       const next = [...prev, normalized]
       persist(
-        (async () => {
+        async () => {
           const current = await loadSettings()
           await saveSettings({ ...current, stockWatchlist: next })
-        })(),
-        '관심종목 저장에 실패했습니다.'
+        },
+        '관심종목 저장에 실패했습니다.',
+        'settings'
       )
       return next
     })
@@ -210,11 +214,12 @@ export function useAppHandlers({
     setStockWatchlist((prev) => {
       const next = prev.filter((item) => item !== ticker)
       persist(
-        (async () => {
+        async () => {
           const current = await loadSettings()
           await saveSettings({ ...current, stockWatchlist: next })
-        })(),
-        '관심종목 저장에 실패했습니다.'
+        },
+        '관심종목 저장에 실패했습니다.',
+        'settings'
       )
       return next
     })
@@ -224,7 +229,7 @@ export function useAppHandlers({
     setMemos((prev) => {
       const now = Date.now()
       const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, dateEnd, amount, transactionType, category }]
-      persist(saveMemos(next), '메모 저장에 실패했습니다.')
+      persist(() => saveMemos(next), '메모 저장에 실패했습니다.', 'memos')
       return next
     })
   }, [persist, setMemos])
@@ -232,7 +237,7 @@ export function useAppHandlers({
   const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
     setMemos((prev) => {
       const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, dateEnd, amount, transactionType, category } : m)
-      persist(saveMemos(next), '메모 수정 저장에 실패했습니다.')
+      persist(() => saveMemos(next), '메모 수정 저장에 실패했습니다.', 'memos')
       return next
     })
   }, [persist, setMemos])
@@ -241,7 +246,7 @@ export function useAppHandlers({
     if (!confirm('이 메모를 삭제할까요?')) return
     setMemos((prev) => {
       const next = prev.filter((m) => m.id !== id)
-      persist(saveMemos(next), '메모 삭제 저장에 실패했습니다.')
+      persist(() => saveMemos(next), '메모 삭제 저장에 실패했습니다.', 'memos')
       return next
     })
   }, [persist, setMemos])
@@ -249,7 +254,7 @@ export function useAppHandlers({
   const handleTogglePin = useCallback((id: string) => {
     setMemos((prev) => {
       const next = prev.map((m) => m.id === id ? { ...m, pinned: !m.pinned } : m)
-      persist(saveMemos(next), '메모 고정 상태 저장에 실패했습니다.')
+      persist(() => saveMemos(next), '메모 고정 상태 저장에 실패했습니다.', 'memos')
       return next
     })
   }, [persist, setMemos])

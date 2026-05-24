@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, runTransaction } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
 
@@ -49,6 +49,45 @@ interface RemoteState {
   settings: AppSettings
 }
 
+export const VERSION_KEYS = ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals', 'settings'] as const
+export type RemoteVersionKey = (typeof VERSION_KEYS)[number]
+type RemoteVersions = Record<RemoteVersionKey, number>
+type ConflictCountDiff = Partial<Record<RemoteVersionKey, { localCount: number | null; remoteCount: number | null }>>
+
+function valueCount(value: unknown): number | null {
+  if (Array.isArray(value)) return value.length
+  if (value && typeof value === 'object') return Object.keys(value as Record<string, unknown>).length
+  return null
+}
+
+export class StorageConflictError extends Error {
+  conflictKeys: RemoteVersionKey[]
+  expectedVersions: RemoteVersions
+  remoteVersions: RemoteVersions
+  countDiffs: ConflictCountDiff
+  remoteUpdatedAt: number | null
+
+  constructor(
+    conflictKeys: RemoteVersionKey[],
+    expectedVersions: RemoteVersions,
+    remoteVersions: RemoteVersions,
+    countDiffs: ConflictCountDiff = {},
+    remoteUpdatedAt: number | null = null,
+  ) {
+    super('remote-data-conflict')
+    this.name = 'StorageConflictError'
+    this.conflictKeys = conflictKeys
+    this.expectedVersions = expectedVersions
+    this.remoteVersions = remoteVersions
+    this.countDiffs = countDiffs
+    this.remoteUpdatedAt = remoteUpdatedAt
+  }
+}
+
+export function isStorageConflictError(error: unknown): error is StorageConflictError {
+  return error instanceof StorageConflictError
+}
+
 export interface AppDataSnapshot {
   transactions: Transaction[]
   memos: Memo[]
@@ -74,6 +113,36 @@ interface MergeResult {
 
 let storageMode: StorageMode = 'local'
 let storageUid: string | null = null
+let cachedRemoteVersions: RemoteVersions | null = null
+
+function emptyVersions(): RemoteVersions {
+  return {
+    transactions: 0,
+    memos: 0,
+    budgets: 0,
+    recurring: 0,
+    stockTrades: 0,
+    subscriptions: 0,
+    goals: 0,
+    settings: 0,
+  }
+}
+
+function normalizeVersions(raw: unknown): RemoteVersions {
+  const base = emptyVersions()
+  if (!raw || typeof raw !== 'object') return base
+
+  const obj = raw as Record<string, unknown>
+  for (const key of VERSION_KEYS) {
+    const value = obj[key]
+    base[key] = Number.isInteger(value) ? Number(value) : 0
+  }
+  return base
+}
+
+function extractPatchKeys(patch: Partial<RemoteState>): RemoteVersionKey[] {
+  return VERSION_KEYS.filter((key) => key in patch)
+}
 
 function emitSettingsUpdatedEvent(): void {
   if (typeof window === 'undefined') return
@@ -256,16 +325,52 @@ function normalizeRemoteState(raw: unknown): RemoteState {
 
 async function loadRemoteState(uid: string): Promise<RemoteState> {
   const snap = await getDoc(getUserDocRef(uid))
-  return normalizeRemoteState(snap.data())
+  const raw = snap.data()
+  cachedRemoteVersions = normalizeVersions(raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined)
+  return normalizeRemoteState(raw)
 }
 
 async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promise<void> {
+  const patchKeys = extractPatchKeys(patch)
+  if (patchKeys.length === 0) return
+
+  let committedVersions: RemoteVersions | null = null
   try {
-    await setDoc(
-      getUserDocRef(uid),
-      { ...patch, updatedAt: Date.now() },
-      { merge: true }
-    )
+    await runTransaction(db, async (tx) => {
+      const ref = getUserDocRef(uid)
+      const snap = await tx.get(ref)
+      const raw = snap.data() ?? {}
+      const remoteVersions = normalizeVersions(
+        raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined
+      )
+      const expectedVersions = cachedRemoteVersions ?? remoteVersions
+
+      const conflictKeys = patchKeys.filter((key) => remoteVersions[key] !== expectedVersions[key])
+      if (conflictKeys.length > 0) {
+        const countDiffs: ConflictCountDiff = {}
+        for (const key of conflictKeys) {
+          countDiffs[key] = {
+            localCount: valueCount(patch[key]),
+            remoteCount: valueCount((raw as Record<string, unknown>)[key]),
+          }
+        }
+        const remoteUpdatedAtRaw = (raw as Record<string, unknown>).updatedAt
+        const remoteUpdatedAt = Number.isFinite(remoteUpdatedAtRaw) ? Number(remoteUpdatedAtRaw) : null
+        throw new StorageConflictError(conflictKeys, expectedVersions, remoteVersions, countDiffs, remoteUpdatedAt)
+      }
+
+      const nextVersions = { ...remoteVersions }
+      for (const key of patchKeys) {
+        nextVersions[key] = nextVersions[key] + 1
+      }
+
+      committedVersions = nextVersions
+      tx.set(ref, { ...patch, versions: nextVersions, updatedAt: Date.now() }, { merge: true })
+    })
+
+    if (committedVersions) {
+      cachedRemoteVersions = committedVersions
+    }
     localStorage.removeItem(PENDING_SYNC_KEY)
   } catch (e) {
     localStorage.setItem(PENDING_SYNC_KEY, 'true')
@@ -359,6 +464,7 @@ function markUserLocalData(): void {
 export function setStorageContext(mode: StorageMode, uid: string | null = null): void {
   storageMode = mode
   storageUid = uid
+  cachedRemoteVersions = null
 }
 
 // ─── 스토리지 사용량 ────────────────────────────────────────────────

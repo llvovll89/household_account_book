@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, Stic
 import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
+import type { RemoteVersionKey } from './lib/storage'
+import { isStorageConflictError } from './lib/storage'
 import { calculateCardDueAmount, shiftYM } from './lib/cardBilling'
 import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
@@ -21,14 +23,65 @@ import StocksWorkspace from './components/workspaces/StocksWorkspace'
 import BottomNavigation from './components/layout/BottomNavigation'
 import MergeLocalDataModal from './components/MergeLocalDataModal'
 import AutoApplyRecurringModal from './components/AutoApplyRecurringModal'
+import SyncConflictModal from './components/SyncConflictModal'
+import SyncRecoveryGuideModal from './components/SyncRecoveryGuideModal'
 
 const DATA_LOAD_TIMEOUT_MS = 9000
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
+const CONFLICT_SCOPE_PREF_KEY = 'hb_conflict_scope_pref'
+const CONFLICT_POLICY_REMEMBER_KEY = 'hb_conflict_policy_remember'
 
 function getYearMonth(date: Date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function parseConflictScopePreference(): RemoteVersionKey[] {
+    try {
+        const raw = localStorage.getItem(CONFLICT_SCOPE_PREF_KEY)
+        if (!raw) return ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals']
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals']
+        const allowed: RemoteVersionKey[] = ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals', 'settings']
+        const result = parsed.filter((item): item is RemoteVersionKey => allowed.includes(item as RemoteVersionKey))
+        return result.length > 0 ? result : ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals']
+    } catch {
+        return ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals']
+    }
+}
+
+function parseConflictPolicyRemember(): boolean {
+    const raw = localStorage.getItem(CONFLICT_POLICY_REMEMBER_KEY)
+    if (raw === '0') return false
+    return true
+}
+
+function getDefaultSelectedConflictKeys(keys: RemoteVersionKey[], preferredScopes: RemoteVersionKey[]): RemoteVersionKey[] {
+    const preferred = keys.filter((key) => preferredScopes.includes(key))
+    if (preferred.length > 0) return preferred
+    if (keys.length <= 1) return keys
+    const withoutSettings = keys.filter((key) => key !== 'settings')
+    return withoutSettings.length > 0 ? withoutSettings : keys
+}
+
+function scopeLabel(scope: RemoteVersionKey): string {
+    const labels: Record<RemoteVersionKey, string> = {
+        transactions: '거래내역',
+        memos: '메모',
+        budgets: '예산',
+        recurring: '반복거래',
+        stockTrades: '주식거래',
+        subscriptions: '구독',
+        goals: '목표',
+        settings: '설정',
+    }
+    return labels[scope]
+}
+
+function failureReasonLabel(code: 'conflict' | 'save-failed'): string {
+    if (code === 'conflict') return '충돌'
+    return '저장오류'
 }
 
 
@@ -55,6 +108,29 @@ interface UIState {
     memoAddTrigger: number
     subscriptionAddTrigger: number
     goalAddTrigger: number
+}
+
+interface FailedPersistTask {
+    id: string
+    message: string
+    run: () => Promise<void>
+    scope: RemoteVersionKey
+    attempts: number
+    lastFailedAt: number
+}
+
+type ConflictVersionDiff = Partial<Record<RemoteVersionKey, { expected: number; remote: number }>>
+type ConflictCountDiff = Partial<Record<RemoteVersionKey, { localCount: number | null; remoteCount: number | null }>>
+type RetryReasonCode = 'conflict' | 'save-failed'
+type RetryRunMode = 'all' | 'conflict-only' | 'save-failed-only'
+
+interface RetryResultSummary {
+    attempted: number
+    succeeded: number
+    failed: number
+    mode: RetryRunMode
+    finishedAt: number
+    failedByScope: Array<{ scope: RemoteVersionKey; count: number }>
 }
 
 const UI_INIT: UIState = {
@@ -135,6 +211,20 @@ export default function App() {
     const [hasPendingSync, setHasPendingSync] = useState(
         () => localStorage.getItem('hb_pending_sync') === 'true'
     )
+    const [failedPersistTasks, setFailedPersistTasks] = useState<FailedPersistTask[]>([])
+    const [lastRetryReasons, setLastRetryReasons] = useState<Partial<Record<RemoteVersionKey, RetryReasonCode[]>>>({})
+    const [isRetryingPersist, setIsRetryingPersist] = useState(false)
+    const [retryProgress, setRetryProgress] = useState<{ done: number; total: number } | null>(null)
+    const [lastRetryResult, setLastRetryResult] = useState<RetryResultSummary | null>(null)
+    const [showSyncConflictModal, setShowSyncConflictModal] = useState(false)
+    const [showSyncRecoveryGuideModal, setShowSyncRecoveryGuideModal] = useState(false)
+    const [conflictKeys, setConflictKeys] = useState<RemoteVersionKey[]>([])
+    const [selectedConflictKeys, setSelectedConflictKeys] = useState<RemoteVersionKey[]>([])
+    const [conflictVersionDiffs, setConflictVersionDiffs] = useState<ConflictVersionDiff>({})
+    const [conflictCountDiffs, setConflictCountDiffs] = useState<ConflictCountDiff>({})
+    const [conflictRemoteUpdatedAt, setConflictRemoteUpdatedAt] = useState<number | null>(null)
+    const [conflictPreferredScopes, setConflictPreferredScopes] = useState<RemoteVersionKey[]>(() => parseConflictScopePreference())
+    const [rememberConflictPolicy, setRememberConflictPolicy] = useState<boolean>(() => parseConflictPolicyRemember())
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -193,6 +283,14 @@ export default function App() {
             window.removeEventListener('hb-settings-updated', onSettingsUpdated)
         }
     }, [])
+
+    useEffect(() => {
+        localStorage.setItem(CONFLICT_SCOPE_PREF_KEY, JSON.stringify(conflictPreferredScopes))
+    }, [conflictPreferredScopes])
+
+    useEffect(() => {
+        localStorage.setItem(CONFLICT_POLICY_REMEMBER_KEY, rememberConflictPolicy ? '1' : '0')
+    }, [rememberConflictPolicy])
 
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
@@ -261,14 +359,247 @@ export default function App() {
     const visibleTabs = LEDGER_TABS
     const activeTab: Tab = activeMode === 'stocks' ? 'stocks' : (tab === 'stocks' ? 'home' : tab)
 
-    const persist = useCallback((task: Promise<void>, failMsg: string) => {
-        void task
+    const persist = useCallback((task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => {
+        void task()
             .then(() => setHasPendingSync(false))
             .catch((e) => {
                 console.error('[persist]', failMsg, e)
-                showToast(failMsg)
+                const message = isStorageConflictError(e)
+                    ? '다른 기기에서 데이터가 변경되어 저장 충돌이 발생했어요. 동기화 후 다시 시도해주세요.'
+                    : failMsg
+                if (isStorageConflictError(e)) {
+                    const keys = Array.from(new Set(e.conflictKeys))
+                    setConflictKeys(keys)
+                    setSelectedConflictKeys(getDefaultSelectedConflictKeys(keys, conflictPreferredScopes))
+                    const nextDiffs: ConflictVersionDiff = {}
+                    for (const key of keys) {
+                        nextDiffs[key] = {
+                            expected: e.expectedVersions[key],
+                            remote: e.remoteVersions[key],
+                        }
+                    }
+                    setConflictVersionDiffs(nextDiffs)
+                    setConflictCountDiffs(e.countDiffs)
+                    setConflictRemoteUpdatedAt(e.remoteUpdatedAt)
+                    setShowSyncConflictModal(true)
+                }
+                showToast(message)
                 setHasPendingSync(true)
+                setFailedPersistTasks((prev) => {
+                    const idx = prev.findIndex((item) => item.message === message && item.scope === scope)
+                    if (idx >= 0) {
+                        const copy = [...prev]
+                        const current = copy[idx]
+                        copy[idx] = {
+                            ...current,
+                            run: task,
+                            scope,
+                            attempts: current.attempts + 1,
+                            lastFailedAt: Date.now(),
+                        }
+                        return copy
+                    }
+                    return [
+                        ...prev,
+                        {
+                            id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                            message,
+                            run: task,
+                            scope,
+                            attempts: 1,
+                            lastFailedAt: Date.now(),
+                        },
+                    ]
+                })
             })
+    }, [])
+
+    const retryFailedPersistTasks = useCallback((allowedScopes?: RemoteVersionKey[], mode: RetryRunMode = 'all') => {
+        if (isRetryingPersist) return
+        const allow = allowedScopes && allowedScopes.length > 0 ? new Set<RemoteVersionKey>(allowedScopes) : null
+        const queued = allow
+            ? failedPersistTasks.filter((item) => allow.has(item.scope))
+            : [...failedPersistTasks]
+        if (queued.length === 0) {
+            showToast('재시도할 저장 실패 항목이 없어요.')
+            return
+        }
+        const untouched = allow
+            ? failedPersistTasks.filter((item) => !allow.has(item.scope))
+            : []
+        setFailedPersistTasks(untouched)
+        if (!allow) setLastRetryReasons({})
+        setIsRetryingPersist(true)
+        setRetryProgress({ done: 0, total: queued.length })
+
+        void (async () => {
+            try {
+                const stillFailed: FailedPersistTask[] = []
+                let succeededCount = 0
+                const succeededScopes = new Set<RemoteVersionKey>()
+                const failedScopes = new Set<RemoteVersionKey>()
+                const failedReasons = new Map<RemoteVersionKey, Set<'conflict' | 'save-failed'>>()
+                for (let i = 0; i < queued.length; i++) {
+                    const item = queued[i]
+                    try {
+                        await item.run()
+                        succeededCount += 1
+                        succeededScopes.add(item.scope)
+                    } catch (e) {
+                        console.error('[persist-retry]', item.message, e)
+                        const reason: 'conflict' | 'save-failed' = isStorageConflictError(e) ? 'conflict' : 'save-failed'
+                        if (isStorageConflictError(e)) {
+                            const keys = Array.from(new Set(e.conflictKeys))
+                            setConflictKeys(keys)
+                            setSelectedConflictKeys(getDefaultSelectedConflictKeys(keys, conflictPreferredScopes))
+                            const nextDiffs: ConflictVersionDiff = {}
+                            for (const key of keys) {
+                                nextDiffs[key] = {
+                                    expected: e.expectedVersions[key],
+                                    remote: e.remoteVersions[key],
+                                }
+                            }
+                            setConflictVersionDiffs(nextDiffs)
+                            setConflictCountDiffs(e.countDiffs)
+                            setConflictRemoteUpdatedAt(e.remoteUpdatedAt)
+                            setShowSyncConflictModal(true)
+                        }
+                        failedScopes.add(item.scope)
+                        const reasons = failedReasons.get(item.scope) ?? new Set<'conflict' | 'save-failed'>()
+                        reasons.add(reason)
+                        failedReasons.set(item.scope, reasons)
+                        stillFailed.push({
+                            ...item,
+                            attempts: item.attempts + 1,
+                            lastFailedAt: Date.now(),
+                        })
+                    } finally {
+                        setRetryProgress({ done: i + 1, total: queued.length })
+                    }
+                }
+
+                setLastRetryResult({
+                    attempted: queued.length,
+                    succeeded: succeededCount,
+                    failed: stillFailed.length,
+                    mode,
+                    finishedAt: Date.now(),
+                    failedByScope: Array.from(
+                        stillFailed.reduce((acc, item) => {
+                            acc.set(item.scope, (acc.get(item.scope) ?? 0) + 1)
+                            return acc
+                        }, new Map<RemoteVersionKey, number>())
+                    ).map(([scope, count]) => ({ scope, count })),
+                })
+
+                setFailedPersistTasks((prev) => {
+                    const merged = [...prev]
+                    for (const failed of stillFailed) {
+                        const idx = merged.findIndex((item) => item.id === failed.id)
+                        if (idx >= 0) {
+                            merged[idx] = failed
+                        } else {
+                            merged.push(failed)
+                        }
+                    }
+                    return merged
+                })
+
+                const nextReasonState: Partial<Record<RemoteVersionKey, RetryReasonCode[]>> = {}
+                for (const [scope, reasons] of failedReasons.entries()) {
+                    nextReasonState[scope] = Array.from(reasons)
+                }
+                setLastRetryReasons(nextReasonState)
+
+                if (stillFailed.length === 0) {
+                    setHasPendingSync(false)
+                    const successLabels = Array.from(succeededScopes).map(scopeLabel)
+                    const summary = successLabels.length > 0 ? ` (${successLabels.join(', ')})` : ''
+                    showToast(`미동기화 변경사항을 저장했어요.${summary}`)
+                    setLastRetryReasons({})
+                    return
+                }
+
+                setHasPendingSync(true)
+                const failedLabels = Array.from(failedScopes).map(scopeLabel)
+                const failedSummary = failedLabels.length > 0 ? ` (${failedLabels.join(', ')})` : ''
+                const reasonSummary = Array.from(failedReasons.entries())
+                    .map(([scope, reasons]) => `${scopeLabel(scope)}:${Array.from(reasons).map(failureReasonLabel).join('/')}`)
+                    .join(', ')
+                const reasonSuffix = reasonSummary ? ` [${reasonSummary}]` : ''
+                showToast(`재시도 후 ${stillFailed.length}건이 남았어요.${failedSummary}${reasonSuffix}`)
+            } finally {
+                setIsRetryingPersist(false)
+                setRetryProgress(null)
+            }
+        })()
+    }, [failedPersistTasks, conflictPreferredScopes, isRetryingPersist])
+
+    const getScopesByReasons = useCallback((targets: RetryReasonCode[]): RemoteVersionKey[] => {
+        const targetSet = new Set<RetryReasonCode>(targets)
+        return Object.entries(lastRetryReasons)
+            .filter(([, codes]) => (codes ?? []).some((code) => targetSet.has(code)))
+            .map(([scope]) => scope as RemoteVersionKey)
+    }, [lastRetryReasons])
+
+    const handleUseRemoteData = useCallback(() => {
+        setShowSyncConflictModal(false)
+        setConflictVersionDiffs({})
+        setConflictCountDiffs({})
+        setConflictRemoteUpdatedAt(null)
+        setFailedPersistTasks([])
+        setLastRetryReasons({})
+        setLastRetryResult(null)
+        setHasPendingSync(false)
+        void hydrateData()
+            .then(() => showToast('원격 데이터로 동기화했어요.'))
+            .catch(() => showToast('원격 데이터를 불러오지 못했어요.'))
+    }, [hydrateData])
+
+    const handleRetryMineAfterSync = useCallback(() => {
+        if (rememberConflictPolicy) {
+            setConflictPreferredScopes((prev) => {
+                const next = new Set<RemoteVersionKey>(prev)
+                const selected = new Set<RemoteVersionKey>(selectedConflictKeys)
+                for (const key of conflictKeys) {
+                    if (selected.has(key)) next.add(key)
+                    else next.delete(key)
+                }
+                return Array.from(next)
+            })
+        }
+        setShowSyncConflictModal(false)
+        setConflictVersionDiffs({})
+        setConflictCountDiffs({})
+        setConflictRemoteUpdatedAt(null)
+        void hydrateData()
+            .then(() => {
+                retryFailedPersistTasks(selectedConflictKeys)
+            })
+            .catch(() => {
+                showToast('동기화 후 재시도에 실패했어요.')
+            })
+    }, [hydrateData, retryFailedPersistTasks, selectedConflictKeys, conflictKeys, rememberConflictPolicy])
+
+    const toggleConflictKey = useCallback((key: RemoteVersionKey) => {
+        setSelectedConflictKeys((prev) => {
+            if (prev.includes(key)) {
+                return prev.filter((item) => item !== key)
+            }
+            return [...prev, key]
+        })
+    }, [])
+
+    const selectRecommendedConflictKeys = useCallback(() => {
+        setSelectedConflictKeys(getDefaultSelectedConflictKeys(conflictKeys, conflictPreferredScopes))
+    }, [conflictKeys, conflictPreferredScopes])
+
+    const selectAllConflictKeys = useCallback(() => {
+        setSelectedConflictKeys(conflictKeys)
+    }, [conflictKeys])
+
+    const clearConflictKeySelection = useCallback(() => {
+        setSelectedConflictKeys([])
     }, [])
 
     const {
@@ -518,14 +849,14 @@ export default function App() {
                             {(monthIncome > 0 || monthExpense > 0) && (
                                 <div className="mt-3 pb-1 space-y-1.5">
                                     <div className="flex items-center justify-center gap-4">
-                                    <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
-                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
-                                    <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
-                                    <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
-                                    <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-                                        {monthBalance.toLocaleString()}원
-                                    </span>
-                                </div>
+                                        <span className="text-xs font-semibold text-[#2ACF6A] num">+{monthIncome.toLocaleString()}</span>
+                                        <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
+                                        <span className="text-xs font-semibold text-[#F25260] num">-{monthExpense.toLocaleString()}</span>
+                                        <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
+                                        <span className={`text-xs font-bold num ${monthBalance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+                                            {monthBalance.toLocaleString()}원
+                                        </span>
+                                    </div>
 
                                     {(monthCardDue > 0 || nextMonthCardDue > 0) && (
                                         <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -556,6 +887,40 @@ export default function App() {
                             <div className="flex items-center justify-between">
                                 <p className="text-sm font-bold text-[#F5F7FA]">총 거래 {stockTrades.length.toLocaleString()}건</p>
                                 <p className="text-xs font-semibold text-[#8B95A1]">보유 종목 {stockTickerCount}개</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {failedPersistTasks.length > 0 && (
+                        <div className="mt-3 rounded-2xl bg-[#2B1E1E] border border-[#F25260]/25 px-3 py-2.5 flex items-center gap-3">
+                            <CloudOff size={14} className="text-[#F25260] shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-bold text-[#FFD5D9]">저장 실패 {failedPersistTasks.length}건</p>
+                                <p className="text-[10px] text-[#F5AAB1] truncate">네트워크 복구 후 다시 저장해주세요.</p>
+                                {Object.keys(lastRetryReasons).length > 0 && (
+                                    <p className="text-[10px] text-[#F0B7BE] mt-0.5 truncate">
+                                        {Object.entries(lastRetryReasons)
+                                            .map(([scope, reasons]) => `${scopeLabel(scope as RemoteVersionKey)}:${(reasons ?? []).map(failureReasonLabel).join('/')}`)
+                                            .join(', ')}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                {Object.keys(lastRetryReasons).length > 0 && (
+                                    <button
+                                        onClick={() => setShowSyncRecoveryGuideModal(true)}
+                                        className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
+                                    >
+                                        가이드
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => retryFailedPersistTasks(undefined, 'all')}
+                                    disabled={isRetryingPersist}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[#F25260] disabled:opacity-40 text-white text-[11px] font-bold hover:bg-[#FF6E7A] transition-colors"
+                                >
+                                    {isRetryingPersist ? '재시도 중...' : '전체 재시도'}
+                                </button>
                             </div>
                         </div>
                     )}
@@ -719,6 +1084,78 @@ export default function App() {
 
             {showMergeModal && (
                 <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} counts={localDataCounts} />
+            )}
+
+            {showSyncConflictModal && (
+                <SyncConflictModal
+                    conflictKeys={conflictKeys}
+                    selectedKeys={selectedConflictKeys}
+                    versionDiffs={conflictVersionDiffs}
+                    countDiffs={conflictCountDiffs}
+                    remoteUpdatedAt={conflictRemoteUpdatedAt}
+                    rememberPolicy={rememberConflictPolicy}
+                    onToggleKey={(key) => toggleConflictKey(key as RemoteVersionKey)}
+                    onSelectRecommended={selectRecommendedConflictKeys}
+                    onSelectAll={selectAllConflictKeys}
+                    onClearSelection={clearConflictKeySelection}
+                    onToggleRememberPolicy={setRememberConflictPolicy}
+                    onUseRemote={handleUseRemoteData}
+                    onRetryMine={handleRetryMineAfterSync}
+                    onClose={() => {
+                        setShowSyncConflictModal(false)
+                        setConflictVersionDiffs({})
+                        setConflictCountDiffs({})
+                        setConflictRemoteUpdatedAt(null)
+                    }}
+                />
+            )}
+
+            {showSyncRecoveryGuideModal && (
+                <SyncRecoveryGuideModal
+                    reasons={Array.from(new Set(Object.values(lastRetryReasons).flatMap((codes) => codes ?? [])))}
+                    onOpenConflict={() => {
+                        setShowSyncRecoveryGuideModal(false)
+                        if (conflictKeys.length > 0) {
+                            setShowSyncConflictModal(true)
+                        } else {
+                            showToast('현재 충돌 항목이 없어요.')
+                        }
+                    }}
+                    onRetryNow={() => {
+                        retryFailedPersistTasks(undefined, 'all')
+                    }}
+                    onRetryConflictOnly={() => {
+                        const scopes = getScopesByReasons(['conflict'])
+                        if (scopes.length === 0) {
+                            showToast('충돌 항목이 없어요.')
+                            return
+                        }
+                        retryFailedPersistTasks(scopes, 'conflict-only')
+                    }}
+                    onRetrySaveFailedOnly={() => {
+                        const scopes = getScopesByReasons(['save-failed'])
+                        if (scopes.length === 0) {
+                            showToast('저장오류 항목이 없어요.')
+                            return
+                        }
+                        retryFailedPersistTasks(scopes, 'save-failed-only')
+                    }}
+                    isRetrying={isRetryingPersist}
+                    retryProgress={retryProgress}
+                    retryResult={lastRetryResult
+                        ? {
+                            attempted: lastRetryResult.attempted,
+                            succeeded: lastRetryResult.succeeded,
+                            failed: lastRetryResult.failed,
+                            mode: lastRetryResult.mode,
+                            finishedAt: lastRetryResult.finishedAt,
+                            failedScopeSummary: lastRetryResult.failedByScope
+                                .map((entry) => `${scopeLabel(entry.scope)} ${entry.count}건`)
+                                .join(', '),
+                        }
+                        : null}
+                    onClose={() => setShowSyncRecoveryGuideModal(false)}
+                />
             )}
 
             {showAutoApplyModal && autoApplyPending.length > 0 && (
