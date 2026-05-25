@@ -407,7 +407,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                   <YAxis hide />
                   <Tooltip
                     contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 10, fontSize: 11, color: '#F1F3F6' }}
-                    formatter={(v: number) => [fmtShort(v) + '원', '순자산']}
+                    formatter={(v) => [fmtShort(Number(v ?? 0)) + '원', '순자산']}
                     labelStyle={{ color: '#8B95A1' }}
                   />
                   <Line type="monotone" dataKey="value" stroke="#3D8EF8" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#3D8EF8' }} />

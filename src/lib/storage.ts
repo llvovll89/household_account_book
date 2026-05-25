@@ -438,6 +438,7 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
     stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,
+    transactionTemplates: (local.transactionTemplates?.length ?? 0) > 0 ? local.transactionTemplates : (remote.transactionTemplates ?? []),
   }
 }
 
