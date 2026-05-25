@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from '../types'
+import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'
@@ -28,6 +28,7 @@ interface HandlersInput {
   setCustomExpenseCategories: Dispatch<React.SetStateAction<string[]>>
   setCustomIncomeCategories: Dispatch<React.SetStateAction<string[]>>
   setUserPaymentMethods: Dispatch<React.SetStateAction<UserPaymentMethod[]>>
+  setTransactionTemplates: Dispatch<React.SetStateAction<TransactionTemplate[]>>
   dispatchUI: Dispatch<UIAction>
 }
 
@@ -48,6 +49,7 @@ export function useAppHandlers({
   setCustomExpenseCategories,
   setCustomIncomeCategories,
   setUserPaymentMethods,
+  setTransactionTemplates,
   dispatchUI,
 }: HandlersInput) {
   const handleSaveTransaction = useCallback(
@@ -179,6 +181,18 @@ export function useAppHandlers({
     )
   }, [persist, setUserPaymentMethods])
 
+  const handleSaveTemplates = useCallback((templates: TransactionTemplate[]) => {
+    setTransactionTemplates(templates)
+    persist(
+      async () => {
+        const current = await loadSettings()
+        await saveSettings({ ...current, transactionTemplates: templates })
+      },
+      '템플릿 저장에 실패했습니다.',
+      'settings'
+    )
+  }, [persist, setTransactionTemplates])
+
   const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
@@ -272,6 +286,7 @@ export function useAppHandlers({
     handleGoalsChange,
     handleApplyRecurring,
     handleSavePaymentMethods,
+    handleSaveTemplates,
     handleSaveCategories,
     handleAddWatchTicker,
     handleRemoveWatchTicker,

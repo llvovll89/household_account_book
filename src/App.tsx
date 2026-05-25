@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod } from './types'
+import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
 import type { RemoteVersionKey } from './lib/storage'
@@ -195,6 +195,7 @@ export default function App() {
     const [customExpenseCategories, setCustomExpenseCategories] = useState<string[]>([])
     const [customIncomeCategories, setCustomIncomeCategories] = useState<string[]>([])
     const [userPaymentMethods, setUserPaymentMethods] = useState<UserPaymentMethod[]>([])
+    const [transactionTemplates, setTransactionTemplates] = useState<TransactionTemplate[]>([])
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [goals, setGoals] = useState<SavingsGoal[]>([])
 
@@ -274,6 +275,7 @@ export default function App() {
             void loadSettings().then((settings) => {
                 setCardBillingDay(settings.cardBillingDay ?? null)
                 setUserPaymentMethods(settings.userPaymentMethods)
+                setTransactionTemplates(settings.transactionTemplates ?? [])
             })
             setSettingsSyncTick((prev) => prev + 1)
         }
@@ -311,6 +313,7 @@ export default function App() {
         setUserPaymentMethods(snapshot.settings.userPaymentMethods ?? [])
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
+        setTransactionTemplates(snapshot.settings.transactionTemplates ?? [])
     }, [])
 
     const {
@@ -615,6 +618,7 @@ export default function App() {
         handleGoalsChange,
         handleApplyRecurring,
         handleSavePaymentMethods,
+        handleSaveTemplates,
         handleSaveCategories,
         handleAddWatchTicker,
         handleRemoveWatchTicker,
@@ -639,6 +643,7 @@ export default function App() {
         setCustomExpenseCategories,
         setCustomIncomeCategories,
         setUserPaymentMethods,
+        setTransactionTemplates,
         dispatchUI,
     })
 
@@ -771,13 +776,22 @@ export default function App() {
                                             </div>
                                             <div className="p-1">
                                                 {activeMode === 'ledger' && (
-                                                    <button
-                                                        onClick={() => { dispatchUI({ type: 'SET_IMPORT', value: true }); setShowUserMenu(false) }}
-                                                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
-                                                    >
-                                                        <FileDown size={14} className="text-[#8B95A1]" />
-                                                        가져오기
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            onClick={() => { dispatchUI({ type: 'SET_IMPORT', value: true }); setShowUserMenu(false) }}
+                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                        >
+                                                            <FileDown size={14} className="text-[#8B95A1]" />
+                                                            가져오기
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true }); setShowUserMenu(false) }}
+                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                        >
+                                                            <CreditCard size={14} className="text-[#8B95A1]" />
+                                                            결제수단 관리
+                                                        </button>
+                                                    </>
                                                 )}
                                                 <button
                                                     onClick={() => { handleLogout(); setShowUserMenu(false) }}
@@ -1064,6 +1078,9 @@ export default function App() {
                     customExpenseCategories={customExpenseCategories}
                     customIncomeCategories={customIncomeCategories}
                     userPaymentMethods={userPaymentMethods}
+                    transactionTemplates={transactionTemplates}
+                    onSaveTemplates={handleSaveTemplates}
+                    onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
                 />
             )}
             {showCategoryModal && (

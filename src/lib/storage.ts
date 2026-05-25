@@ -36,6 +36,7 @@ export interface AppSettings {
   customExpenseCategories: string[]
   customIncomeCategories: string[]
   stockWatchlist: string[]
+  transactionTemplates: import('../types').TransactionTemplate[]
 }
 
 interface RemoteState {
@@ -156,6 +157,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   customExpenseCategories: [],
   customIncomeCategories: [],
   stockWatchlist: [],
+  transactionTemplates: [],
 }
 
 function migrateSettings(settings: AppSettings): AppSettings {

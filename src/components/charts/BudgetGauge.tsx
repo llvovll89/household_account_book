@@ -12,7 +12,8 @@ interface Props {
 export default function BudgetGauge({ category, emoji, spent, limit, color }: Props) {
   const pct = Math.min((spent / limit) * 100, 100)
   const isOver = spent > limit
-  const displayColor = isOver ? '#F25260' : color
+  const isWarning = !isOver && pct >= 80
+  const displayColor = isOver ? '#F25260' : isWarning ? '#F5BE3A' : color
 
   const data = [
     { value: pct, fill: displayColor },

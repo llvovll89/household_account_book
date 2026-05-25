@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Pencil, Trash2, Search, X, CalendarDays, List as ListIcon, FileDown, Hash, ChevronDown, ChevronUp } from 'lucide-react'
 import type { Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
@@ -53,6 +53,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [showTagSummary, setShowTagSummary] = useState(false)
   const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null)
+  const [swipedId, setSwipedId] = useState<string | null>(null)
+  const touchStartX = useRef(0)
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
   const [billingDayInput, setBillingDayInput] = useState('25')
@@ -657,12 +659,34 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   {list.map((t, idx) => {
                     const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                     const tags = t.tags ?? []
+                    const isSwiped = swipedId === t.id
                     return (
+                      <div key={t.id} className={`relative overflow-hidden ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`}>
+                        {/* 스와이프 액션 패널 */}
+                        <div className={`absolute right-0 top-0 bottom-0 flex items-center gap-1 px-3 transition-all duration-200 ${isSwiped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(t); setSwipedId(null) }}
+                            className="w-10 h-10 rounded-xl bg-[#3D8EF8]/20 flex items-center justify-center text-[#3D8EF8]"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(t.id); setSwipedId(null) }}
+                            className="w-10 h-10 rounded-xl bg-[#F25260]/20 flex items-center justify-center text-[#F25260]"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       <div
-                        key={t.id}
-                        onClick={() => setDetailTransaction(t)}
-                        className={`flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''
-                          }`}
+                        style={{ transform: isSwiped ? 'translateX(-88px)' : 'translateX(0)', transition: 'transform 0.2s ease' }}
+                        onClick={() => { if (isSwiped) { setSwipedId(null); return }; setDetailTransaction(t) }}
+                        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+                        onTouchEnd={(e) => {
+                          const delta = e.changedTouches[0].clientX - touchStartX.current
+                          if (delta < -50) setSwipedId(t.id)
+                          else if (delta > 20) setSwipedId(null)
+                        }}
+                        className="flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
                       >
                         <div
                           className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0"
@@ -771,6 +795,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                             </button>
                           </div>
                         </div>
+                      </div>
                       </div>
                     )
                   })}

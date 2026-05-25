@@ -68,6 +68,18 @@ export interface RecurringTransaction {
   createdAt: number
 }
 
+export interface TransactionTemplate {
+  id: string
+  label: string
+  type: TransactionType
+  amount: number
+  category: string
+  description: string
+  paymentMethod?: PaymentMethod
+  paymentMethodId?: string
+  createdAt: number
+}
+
 export const INCOME_CATEGORIES = ['급여', '부업', '용돈', '투자수익', '기타수입']
 
 export const EXPENSE_CATEGORIES = [

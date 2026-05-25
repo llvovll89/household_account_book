@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart } from 'lucide-react'
-import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod } from '../types'
+import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -23,6 +24,7 @@ interface Props {
   yearMonth: string
   customExpenseCategories: string[]
   userPaymentMethods: UserPaymentMethod[]
+  subscriptions: Subscription[]
   onBudgetsChange: (b: Budget[]) => void
   onRecurringSave: (items: RecurringTransaction[]) => void
   onApplyRecurring: (items: RecurringTransaction[]) => void
@@ -34,7 +36,7 @@ function calcNet(items: Transaction[]) {
   return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
 }
 
-export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal }: Props) {
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
@@ -240,16 +242,22 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     return map
   }, [budgets, transactions, yearMonth])
 
-  // 예산 초과 카테고리 (이월 포함 유효 한도 기준)
-  const overBudget = useMemo(() => {
+  // 예산 초과/경고 카테고리 (이월 포함 유효 한도 기준)
+  const { overBudget, nearBudget } = useMemo(() => {
     const map: Record<string, number> = {}
     monthly.filter((t) => t.type === 'expense').forEach((t) => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
-    return budgets.filter((b) => {
+    const over = budgets.filter((b) => {
       const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
       return (map[b.category] || 0) > effectiveLimit
     })
+    const near = budgets.filter((b) => {
+      const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
+      const pct = ((map[b.category] || 0) / effectiveLimit) * 100
+      return pct >= 80 && pct <= 100
+    })
+    return { overBudget: over, nearBudget: near }
   }, [monthly, budgets, carryoverAmounts])
 
   // 예산 초과 감지 및 알림
@@ -311,6 +319,38 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     }
   }, [transactions, stockTrades, goals])
 
+  // 월별 순자산 추이 (전체 거래 기준 누적)
+  const netWorthTrend = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const offset = i - 5
+      const d = new Date(new Date().getFullYear(), new Date().getMonth() + offset + 1, 0)
+      const endDate = d.toISOString().slice(0, 10)
+      const total = transactions.reduce((sum, t) => {
+        if (t.date > endDate) return sum
+        return sum + (t.type === 'income' ? t.amount : -t.amount)
+      }, 0)
+      return { label: `${d.getMonth() + 1}월`, value: total }
+    })
+  }, [transactions])
+
+  // 구독 다음 청구 예고 (7일 이내)
+  const upcomingSubscriptions = useMemo(() => {
+    if (!subscriptions.length) return []
+    const today = new Date()
+    const todayDay = today.getDate()
+    return subscriptions
+      .map((s) => {
+        let daysLeft = s.billingDay - todayDay
+        if (daysLeft < 0) {
+          const lastDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate()
+          daysLeft = Math.min(s.billingDay, lastDayOfNextMonth) + (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - todayDay)
+        }
+        return { ...s, daysLeft }
+      })
+      .filter((s) => s.daysLeft <= 7 && s.daysLeft >= 0)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+  }, [subscriptions])
+
   // 예산 게이지용 카테고리별 지출
   const spentByCategory = useMemo(() => {
     const map: Record<string, number> = {}
@@ -358,17 +398,73 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               )}
             </div>
           </div>
+          {netWorthTrend.some(d => d.value !== 0) && (
+            <div className="mt-3">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">6개월 추이</p>
+              <ResponsiveContainer width="100%" height={56}>
+                <LineChart data={netWorthTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#4E5968' }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 10, fontSize: 11, color: '#F1F3F6' }}
+                    formatter={(v: number) => [fmtShort(v) + '원', '순자산']}
+                    labelStyle={{ color: '#8B95A1' }}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#3D8EF8" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#3D8EF8' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
           <p className="text-[10px] text-[#2C2C2E] mt-2.5 text-right">주식은 매입 원가 기준 · 시세 반영 안됨</p>
         </div>
       )}
 
       {/* 예산 초과 알림 */}
       {overBudget.length > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/20">
+          <AlertTriangle size={16} className="text-[#F25260] shrink-0" />
+          <p className="text-sm text-[#F25260] font-semibold">
+            {overBudget.map(b => b.category).join(', ')} 예산을 초과했어요
+          </p>
+        </div>
+      )}
+
+      {/* 예산 80% 경고 */}
+      {nearBudget.length > 0 && overBudget.length === 0 && (
         <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F5BE3A]/10 rounded-2xl border border-[#F5BE3A]/20">
           <AlertTriangle size={16} className="text-[#F5BE3A] shrink-0" />
           <p className="text-sm text-[#F5BE3A] font-semibold">
-            {overBudget.map(b => b.category).join(', ')} 예산을 초과했어요
+            {nearBudget.map(b => b.category).join(', ')} 예산이 80% 이상 사용됐어요
           </p>
+        </div>
+      )}
+
+      {/* 구독 다음 청구 예고 */}
+      {upcomingSubscriptions.length > 0 && (
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-sm">🔔</span>
+            <span className="text-sm font-bold text-white">이번 주 구독 청구</span>
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-[#F5BE3A]/15 text-[#F5BE3A]">
+              {upcomingSubscriptions.length}건
+            </span>
+          </div>
+          <div className="space-y-2">
+            {upcomingSubscriptions.map((s) => (
+              <div key={s.id} className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 bg-[#2C2C2E]">
+                  {CATEGORY_EMOJI[s.category] ?? '💳'}
+                </div>
+                <span className="text-sm text-[#F1F3F6] flex-1">{s.name}</span>
+                <span className="text-xs text-[#4E5968]">
+                  {s.daysLeft === 0 ? '오늘' : `${s.daysLeft}일 후`}
+                </span>
+                <span className="text-sm font-bold num text-[#F25260]">
+                  -{s.currency === 'USD' ? `$${s.amount}` : `${s.amount.toLocaleString()}원`}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

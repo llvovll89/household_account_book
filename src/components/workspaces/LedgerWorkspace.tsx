@@ -83,6 +83,7 @@ export default function LedgerWorkspace({
           yearMonth={yearMonth}
           customExpenseCategories={customExpenseCategories}
           userPaymentMethods={userPaymentMethods}
+          subscriptions={subscriptions}
           onBudgetsChange={onBudgetsChange}
           onRecurringSave={onRecurringSave}
           onApplyRecurring={onApplyRecurring}

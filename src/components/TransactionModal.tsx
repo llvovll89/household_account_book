@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { X, ChevronDown, Plus, CalendarRange } from 'lucide-react'
-import type { Transaction, TransactionType, PaymentMethod, UserPaymentMethod } from '../types'
+import { X, ChevronDown, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
+import type { Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
@@ -8,6 +8,7 @@ import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
+import { generateId } from '../lib/format'
 
 interface Props {
   transaction?: Transaction | null
@@ -16,6 +17,9 @@ interface Props {
   customExpenseCategories?: string[]
   customIncomeCategories?: string[]
   userPaymentMethods?: UserPaymentMethod[]
+  transactionTemplates?: TransactionTemplate[]
+  onSaveTemplates?: (templates: TransactionTemplate[]) => void
+  onOpenPaymentMethodsModal?: () => void
 }
 
 type QueueItem = Omit<Transaction, 'id' | 'createdAt'>
@@ -31,9 +35,10 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [] }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const paymentMethodInitialized = useRef(false)
   const [type, setType] = useState<TransactionType>('expense')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
@@ -50,6 +55,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [receiptImageUrl, setReceiptImageUrl] = useState<string>('')
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [creditBillingDayInput, setCreditBillingDayInput] = useState('25')
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const isEditMode = !!transaction
   const tags = parseHashtags(description)
@@ -59,7 +65,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
 
   useEffect(() => {
-    if (!transaction && userPaymentMethods.length > 0) {
+    if (!transaction && !paymentMethodInitialized.current && userPaymentMethods.length > 0) {
+      paymentMethodInitialized.current = true
       const first = userPaymentMethods[0]
       setPaymentMethod(first.type as PaymentMethod)
       setSelectedMethodId(first.id)
@@ -67,7 +74,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         setCreditBillingDayInput(String(first.billingDay))
       }
     }
-  }, []) // 신규 내역 첫 렌더 시 기본값 설정
+  }, [userPaymentMethods, transaction])
 
   useEffect(() => {
     if (transaction) {
@@ -217,6 +224,39 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     setDescription(newDesc)
   }
 
+  function handleSaveAsTemplate() {
+    const parsed = parseInt(amount.replace(/,/g, ''), 10)
+    if (!parsed || !category) { showToast('금액과 카테고리를 입력하세요'); return }
+    const label = description || category
+    const tmpl: TransactionTemplate = {
+      id: generateId(),
+      label,
+      type,
+      amount: parsed,
+      category,
+      description,
+      paymentMethod,
+      paymentMethodId: selectedMethodId ?? undefined,
+      createdAt: Date.now(),
+    }
+    onSaveTemplates?.([...transactionTemplates, tmpl])
+    showToast('템플릿으로 저장됐어요')
+  }
+
+  function applyTemplate(tmpl: TransactionTemplate) {
+    setType(tmpl.type)
+    setAmount(tmpl.amount.toLocaleString())
+    setCategory(tmpl.category)
+    setDescription(tmpl.description)
+    if (tmpl.paymentMethod) setPaymentMethod(tmpl.paymentMethod)
+    if (tmpl.paymentMethodId) setSelectedMethodId(tmpl.paymentMethodId)
+    setShowTemplates(false)
+  }
+
+  function deleteTemplate(id: string) {
+    onSaveTemplates?.(transactionTemplates.filter(t => t.id !== id))
+  }
+
   function toggleDateEnd() {
     if (showDateEnd) {
       setShowDateEnd(false)
@@ -262,10 +302,46 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">대기 중 {queue.length}건</p>
             )}
           </div>
-          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
-            <X size={16} className="text-[#8B95A1]" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!transaction && (
+              <button
+                type="button"
+                onClick={() => setShowTemplates((v) => !v)}
+                aria-label="템플릿"
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${showTemplates ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
+              >
+                <Bookmark size={15} />
+              </button>
+            )}
+            <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+              <X size={16} className="text-[#8B95A1]" />
+            </button>
+          </div>
         </div>
+
+        {/* 템플릿 목록 */}
+        {showTemplates && (
+          <div className="mx-6 mb-3">
+            {transactionTemplates.length === 0 ? (
+              <p className="text-[12px] text-[#4E5968] text-center py-3">저장된 템플릿이 없어요</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {transactionTemplates.map((tmpl) => (
+                  <div key={tmpl.id} className="flex items-center gap-1 bg-[#2C2C2E] rounded-2xl pl-3 pr-1.5 py-1.5">
+                    <button type="button" onClick={() => applyTemplate(tmpl)} className="flex items-center gap-1.5">
+                      <span className="text-sm">{CATEGORY_EMOJI[tmpl.category] ?? '📦'}</span>
+                      <span className="text-[12px] font-semibold text-white">{tmpl.label}</span>
+                      <span className="text-[11px] text-[#4E5968] num">{tmpl.amount.toLocaleString()}원</span>
+                    </button>
+                    <button type="button" onClick={() => deleteTemplate(tmpl.id)} className="w-4 h-4 rounded-full bg-[#F25260]/15 flex items-center justify-center ml-1">
+                      <X size={8} className="text-[#F25260]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="overflow-y-auto flex-1">
           {/* 대기열 */}
@@ -357,24 +433,34 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 })}
               </div>
             ) : (
-              <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
-                {PAYMENT_METHODS.map((method) => (
-                  <button
-                    key={method.value}
-                    type="button"
-                    onClick={() => { setPaymentMethod(method.value); setSelectedMethodId(null) }}
-                    aria-pressed={paymentMethod === method.value}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${paymentMethod === method.value
-                      ? method.value === 'cash'
-                        ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
-                        : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
-                      : 'text-[#4E5968] border-transparent'
-                    }`}
-                  >
-                    {method.emoji} {method.label}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="flex items-center justify-between px-0.5 mb-1">
+                  <span className="text-[11px] text-[#4E5968]">결제수단 미설정</span>
+                  {onOpenPaymentMethodsModal && (
+                    <button type="button" onClick={onOpenPaymentMethodsModal} className="text-[11px] font-semibold text-[#3D8EF8]">
+                      설정하기 →
+                    </button>
+                  )}
+                </div>
+                <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
+                  {PAYMENT_METHODS.map((method) => (
+                    <button
+                      key={method.value}
+                      type="button"
+                      onClick={() => { setPaymentMethod(method.value); setSelectedMethodId(null) }}
+                      aria-pressed={paymentMethod === method.value}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all border ${paymentMethod === method.value
+                        ? method.value === 'cash'
+                          ? 'bg-[#2ACF6A]/18 text-[#2ACF6A] border-[#2ACF6A]/35'
+                          : 'bg-[#3D8EF8]/18 text-[#79B2FF] border-[#3D8EF8]/35'
+                        : 'text-[#4E5968] border-transparent'
+                      }`}
+                    >
+                      {method.emoji} {method.label}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
 
             {billingPreview && (
@@ -417,6 +503,30 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   className="flex-1 min-w-0 bg-transparent text-[34px] font-extrabold text-white focus:outline-none num text-right placeholder-[#1E2A3A]"
                 />
                 <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
+              </div>
+              <div className="flex gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
+                {[10000, 50000, 100000, 500000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      const current = parseInt(amount.replace(/,/g, ''), 10) || 0
+                      handleAmountChange(String(current + v))
+                    }}
+                    className="flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] active:bg-[#3D8EF8]/20 active:text-[#79B2FF] transition-colors"
+                  >
+                    +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
+                  </button>
+                ))}
+                {amount && (
+                  <button
+                    type="button"
+                    onClick={() => handleAmountChange('')}
+                    className="px-3 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#4E5968] active:text-[#F25260] transition-colors"
+                  >
+                    C
+                  </button>
+                )}
               </div>
             </div>
 
@@ -583,21 +693,33 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 수정 완료
               </button>
             ) : (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleAddToQueue}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Plus size={15} />
-                  항목 추가
-                </button>
-                <button type="submit"
-                  className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] transition-all ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'
-                    }`}>
-                  {queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
-                </button>
-              </div>
+              <>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={handleAddToQueue}
+                    className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Plus size={15} />
+                    항목 추가
+                  </button>
+                  <button type="submit"
+                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] transition-all ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'
+                      }`}>
+                    {queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
+                  </button>
+                </div>
+                {onSaveTemplates && (
+                  <button
+                    type="button"
+                    onClick={handleSaveAsTemplate}
+                    className="w-full py-2.5 rounded-2xl font-semibold text-[13px] bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <BookmarkPlus size={13} />
+                    템플릿으로 저장
+                  </button>
+                )}
+              </>
             )}
           </form>
         </div>
