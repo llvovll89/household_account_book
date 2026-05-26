@@ -3,11 +3,32 @@ import { Plus, Pencil, Trash2, X, Check, Minus } from 'lucide-react'
 import type { SavingsGoal } from '../types'
 import { fmt } from '../lib/format'
 import { generateId } from '../lib/format'
+import { showToast } from '../lib/toast'
 
 interface Props {
   goals: SavingsGoal[]
   addTrigger?: number
   onChange: (items: SavingsGoal[]) => void
+}
+
+function RingProgress({ pct, color, size = 60 }: { pct: number; color: string; size?: number }) {
+  const [displayed, setDisplayed] = useState(0)
+  const sw = 5
+  const r = (size - sw * 2) / 2
+  const circ = 2 * Math.PI * r
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setDisplayed(pct))
+    return () => cancelAnimationFrame(id)
+  }, [pct])
+  const dash = Math.min(displayed / 100, 1) * circ
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2C2C2E" strokeWidth={sw} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw}
+        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.32, 0.72, 0, 1)' }} />
+    </svg>
+  )
 }
 
 const PRESET_EMOJIS = ['🏖️', '🏠', '🚗', '✈️', '💍', '🎓', '💻', '📱', '🏋️', '🌏', '💰', '🎯']
@@ -34,6 +55,8 @@ const EMPTY = {
 }
 
 export default function GoalsView({ goals, addTrigger, onChange }: Props) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { const id = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(id) }, [])
   const [showSheet, setShowSheet] = useState(false)
   const [editing, setEditing] = useState<SavingsGoal | null>(null)
   const [form, setForm] = useState({ ...EMPTY })
@@ -119,20 +142,34 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
     if (!depositGoal || !depositStr) return
     const amount = Number(depositStr)
     if (!amount || amount <= 0) return
+    const wasNotDone = depositGoal.currentAmount < depositGoal.targetAmount
     onChange(goals.map(g => {
       if (g.id !== depositGoal.id) return g
       const next = depositMode === 'add'
         ? Math.min(g.currentAmount + amount, g.targetAmount)
         : Math.max(g.currentAmount - amount, 0)
+      if (depositMode === 'add' && wasNotDone && next >= g.targetAmount) {
+        showToast(`🎉 "${g.name}" 목표 달성! 축하해요!`, 3000, 'success')
+      }
       return { ...g, currentAmount: next }
     }))
     setDepositGoal(null)
     setDepositStr('')
   }
 
+  const [sortByPct, setSortByPct] = useState(false)
+
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0)
   const totalCurrent = goals.reduce((s, g) => s + g.currentAmount, 0)
   const doneCount = goals.filter(g => g.currentAmount >= g.targetAmount).length
+
+  const sortedGoals = sortByPct
+    ? [...goals].sort((a, b) => {
+        const pa = a.targetAmount > 0 ? a.currentAmount / a.targetAmount : 0
+        const pb = b.targetAmount > 0 ? b.currentAmount / b.targetAmount : 0
+        return pb - pa
+      })
+    : goals
 
   return (
     <div className="space-y-3 tab-content">
@@ -158,9 +195,9 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
             {/* 전체 진행률 바 */}
             <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-700"
                 style={{
-                  width: `${totalTarget > 0 ? Math.min((totalCurrent / totalTarget) * 100, 100) : 0}%`,
+                  width: mounted ? `${totalTarget > 0 ? Math.min((totalCurrent / totalTarget) * 100, 100) : 0}%` : '0%',
                   background: 'linear-gradient(90deg, #3D8EF8, #2ACF6A)',
                 }}
               />
@@ -181,20 +218,28 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
-          {goals.map(g => {
+          {goals.length > 1 && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => setSortByPct(v => !v)}
+                className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors ${sortByPct ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968]'}`}
+              >
+                {sortByPct ? '달성률 순' : '등록 순'}
+              </button>
+            </div>
+          )}
+          {sortedGoals.map((g, gIdx) => {
             const pct = g.targetAmount > 0 ? Math.min((g.currentAmount / g.targetAmount) * 100, 100) : 0
             const done = pct >= 100
             const days = g.deadline ? daysUntil(g.deadline) : null
 
             return (
-              <div key={g.id} className="bg-[#1C1C1E] rounded-2xl p-4">
+              <div key={g.id} className={`rounded-2xl p-4 list-item-enter ${done ? 'goal-done-shimmer bg-[#1C1C1E] border border-[#2ACF6A]/20' : 'bg-[#1C1C1E]'}`} style={{ animationDelay: `${gIdx * 60}ms` }}>
                 {/* 헤더 */}
                 <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
-                    style={{ backgroundColor: `${g.color}20` }}
-                  >
-                    {g.emoji}
+                  <div className="relative w-15 h-15 shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
+                    <RingProgress pct={pct} color={done ? '#2ACF6A' : g.color} size={60} />
+                    <div className="absolute inset-0 flex items-center justify-center text-xl">{g.emoji}</div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -220,12 +265,30 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                   </div>
                 </div>
 
-                {/* 진행률 바 */}
-                <div className="h-2.5 bg-[#2C2C2E] rounded-full overflow-hidden mb-2">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, backgroundColor: done ? '#2ACF6A' : g.color }}
-                  />
+                {/* 마일스톤 체크포인트 */}
+                <div className="relative mb-3">
+                  <div className="h-1 bg-[#2C2C2E] rounded-full">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: mounted ? `${pct}%` : '0%', backgroundColor: done ? '#2ACF6A' : g.color }} />
+                  </div>
+                  {[25, 50, 75, 100].map(ms => {
+                    const reached = pct >= ms
+                    return (
+                      <div
+                        key={ms}
+                        className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border-2 transition-all duration-500"
+                        style={{
+                          left: `calc(${ms}% - 4px)`,
+                          backgroundColor: reached ? (done ? '#2ACF6A' : g.color) : '#1C1C1E',
+                          borderColor: reached ? (done ? '#2ACF6A' : g.color) : '#3A3A3C',
+                        }}
+                      />
+                    )
+                  })}
+                  <div className="flex justify-between mt-1.5 px-[2px]">
+                    {[25, 50, 75, 100].map(ms => (
+                      <span key={ms} className={`text-[8px] font-bold transition-colors ${pct >= ms ? 'text-[#8B95A1]' : 'text-[#3A3A3C]'}`}>{ms}%</span>
+                    ))}
+                  </div>
                 </div>
 
                 {/* 금액 + 저금 버튼 */}
@@ -234,6 +297,11 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                     <span className="text-sm font-bold num" style={{ color: done ? '#2ACF6A' : g.color }}>{fmt(g.currentAmount)}</span>
                     <span className="text-[11px] text-[#4E5968]"> / {fmt(g.targetAmount)}원</span>
                     <span className="text-[11px] text-[#8B95A1] ml-2">({Math.round(pct)}%)</span>
+                    {!done && days !== null && days > 0 && (() => {
+                      const remaining = g.targetAmount - g.currentAmount
+                      const perDay = Math.ceil(remaining / days)
+                      return <span className="text-[10px] text-[#4E5968] ml-2">· 하루 {fmt(perDay)}원</span>
+                    })()}
                   </div>
                   {!done && (
                     <div className="flex gap-1.5">
@@ -253,6 +321,21 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                     </div>
                   )}
                 </div>
+                {!done && g.currentAmount > 0 && (() => {
+                  const daysSince = Math.max(1, (Date.now() - g.createdAt) / 86400000)
+                  const dailyRate = g.currentAmount / daysSince
+                  const remaining = g.targetAmount - g.currentAmount
+                  if (dailyRate <= 0 || remaining <= 0) return null
+                  const daysLeft = Math.ceil(remaining / dailyRate)
+                  const est = new Date()
+                  est.setDate(est.getDate() + daysLeft)
+                  return (
+                    <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[10px] text-[#4E5968]">완료 예상</span>
+                      <span className="text-[10px] font-semibold text-[#8B95A1]">{est.getFullYear()}년 {est.getMonth() + 1}월 ({daysLeft}일 후)</span>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}
@@ -262,10 +345,10 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
       {/* 저금/인출 시트 */}
       {depositGoal && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setDepositGoal(null)}
         >
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg">
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg modal-panel">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{depositGoal.emoji} {depositGoal.name}</p>
               <button onClick={() => setDepositGoal(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]">
@@ -311,10 +394,10 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setShowSheet(false)}
         >
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg">
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg modal-panel">
             <div className="flex items-center justify-between">
               <p className="text-base font-bold text-white">{editing ? '목표 수정' : '목표 추가'}</p>
               <button onClick={() => setShowSheet(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]">

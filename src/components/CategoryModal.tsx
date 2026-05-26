@@ -45,10 +45,10 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
+      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06]">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06] modal-panel">
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>

@@ -148,7 +148,7 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
           </div>
 
           <div className="space-y-2">
-            {sortedHoldings.map((h) => {
+            {sortedHoldings.map((h, hIdx) => {
               const weight = totalHoldingCost > 0 ? (h.totalCost / totalHoldingCost) * 100 : 0
               const quote = prices[h.ticker]
               const currency = quote?.currency ?? tickerCurrency[h.ticker] ?? 'KRW'
@@ -168,7 +168,8 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
                 <button
                   key={h.ticker}
                   onClick={() => setSelectedTicker(h.ticker)}
-                  className="w-full text-left rounded-xl bg-[#2C2C2E] px-3 py-2.5 active:opacity-80 transition-opacity"
+                  className="w-full text-left rounded-xl bg-[#2C2C2E] px-3 py-2.5 active:opacity-80 transition-opacity list-item-enter"
+                  style={{ animationDelay: `${hIdx * 50}ms` }}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-[#3D8EF8]/15 flex items-center justify-center shrink-0">

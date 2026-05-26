@@ -152,9 +152,9 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
+      <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
         onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06]">
+        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06] modal-panel">
 
           {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">

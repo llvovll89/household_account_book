@@ -110,30 +110,40 @@ export default function StocksWorkspace({
 
       {/* 서브 탭 컨텐츠 */}
       {stockSubTab === 'portfolio' && (
-        <StockPortfolio
-          trades={stockTrades}
-          prices={prices}
-          onEdit={onTradeEdit}
-          onDelete={onTradeDelete}
-        />
+        <div key="portfolio" className="tab-content">
+          <StockPortfolio
+            trades={stockTrades}
+            prices={prices}
+            onEdit={onTradeEdit}
+            onDelete={onTradeDelete}
+          />
+        </div>
       )}
       {stockSubTab === 'watchlist' && (
-        <StockWatchlist
-          trades={stockTrades}
-          watchlist={stockWatchlist}
-          prices={prices}
-          onAdd={onWatchAdd}
-          onRemove={onWatchRemove}
-        />
+        <div key="watchlist" className="tab-content">
+          <StockWatchlist
+            trades={stockTrades}
+            watchlist={stockWatchlist}
+            prices={prices}
+            onAdd={onWatchAdd}
+            onRemove={onWatchRemove}
+          />
+        </div>
       )}
       {stockSubTab === 'trades' && (
-        <StockTradeList
-          trades={stockTrades}
-          onEdit={onTradeEdit}
-          onDelete={onTradeDelete}
-        />
+        <div key="trades" className="tab-content">
+          <StockTradeList
+            trades={stockTrades}
+            onEdit={onTradeEdit}
+            onDelete={onTradeDelete}
+          />
+        </div>
       )}
-      {stockSubTab === 'performance' && <StockPerformance trades={stockTrades} />}
+      {stockSubTab === 'performance' && (
+        <div key="performance" className="tab-content">
+          <StockPerformance trades={stockTrades} />
+        </div>
+      )}
     </>
   )
 }

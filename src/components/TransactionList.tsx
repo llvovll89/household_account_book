@@ -31,6 +31,21 @@ const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
 
+function HighlightText({ text, query, className }: { text: string; query: string; className?: string }) {
+  if (!query.trim()) return <span className={className}>{text}</span>
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
+  return (
+    <span className={className}>
+      {parts.map((p, i) =>
+        p.toLowerCase() === query.toLowerCase()
+          ? <mark key={i} className="bg-[#F5BE3A]/30 text-[#F5BE3A] rounded-sm not-italic">{p}</mark>
+          : p
+      )}
+    </span>
+  )
+}
+
 export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onArchiveDone }: Props) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [methodFilter, setMethodFilter] = useState<MethodFilterType>(() => {
@@ -54,6 +69,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null)
   const [swipedId, setSwipedId] = useState<string | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const touchStartX = useRef(0)
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
@@ -227,6 +243,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     filteredIncome: monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
     filteredExpense: monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
   }), [monthly])
+
+  const maxExpenseAmount = useMemo(() => {
+    const amounts = monthly.filter(t => t.type === 'expense').map(t => t.amount)
+    return amounts.length ? Math.max(...amounts) : 0
+  }, [monthly])
 
   const isFiltered = filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || !!statementMonthFilter || !!activeTag || !!search
 
@@ -692,6 +713,35 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </div>
         )}
 
+        {monthly.length >= 3 && (() => {
+          const expenses = monthly.filter(t => t.type === 'expense')
+          if (!expenses.length) return null
+          const catMap: Record<string, number> = {}
+          expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount })
+          const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0]
+          const avgAmt = Math.round(monthly.reduce((s, t) => s + t.amount, 0) / monthly.length)
+          const maxTx = expenses.reduce((a, b) => b.amount > a.amount ? b : a, expenses[0])
+          return (
+            <div className="flex gap-2 mb-1">
+              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
+                <p className="text-[9px] text-[#4E5968] mb-1">최다 지출</p>
+                <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[topCat[0]] ?? '📦'} {topCat[0]}</p>
+                <p className="text-[9px] num text-[#F25260]">{fmt(topCat[1])}원</p>
+              </div>
+              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
+                <p className="text-[9px] text-[#4E5968] mb-1">평균 거래</p>
+                <p className="text-[12px] font-bold num text-white">{fmt(avgAmt)}</p>
+                <p className="text-[9px] text-[#4E5968]">원/건</p>
+              </div>
+              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
+                <p className="text-[9px] text-[#4E5968] mb-1">최대 단건</p>
+                <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[maxTx.category] ?? '📦'} {maxTx.category}</p>
+                <p className="text-[9px] num text-[#F25260]">{fmt(maxTx.amount)}원</p>
+              </div>
+            </div>
+          )
+        })()}
+
         {grouped.length === 0 ? (
           <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
             <p className="text-5xl mb-4">{search || activeTag ? '🔍' : '📋'}</p>
@@ -720,20 +770,37 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             return (
               <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                 {/* 날짜 헤더 */}
-                <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                <button
+                  className="w-full flex items-center justify-between px-5 pt-4 pb-3 text-left"
+                  onClick={() => setCollapsedGroups(prev => {
+                    const next = new Set(prev)
+                    if (next.has(date)) next.delete(date)
+                    else next.add(date)
+                    return next
+                  })}
+                >
                   <span className="text-sm font-bold text-white">{formatDate(date)}</span>
-                  <span className={`text-sm font-bold num ${dayBalance >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
-                    {dayBalance >= 0 ? '+' : ''}{fmt(dayBalance)}원
-                  </span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    {list.some(t => t.type === 'income') && (
+                      <span className="text-[11px] font-bold num text-[#2ACF6A]">+{fmt(list.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0))}</span>
+                    )}
+                    {list.some(t => t.type === 'expense') && (
+                      <span className="text-[11px] font-bold num text-[#F25260]">-{fmt(list.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0))}</span>
+                    )}
+                    <span className={`text-[11px] font-bold num pl-1 border-l border-white/10 ${dayBalance >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
+                      {dayBalance >= 0 ? '+' : ''}{fmt(dayBalance)}
+                    </span>
+                    <ChevronDown size={13} className={`text-[#4E5968] transition-transform duration-200 shrink-0 ${collapsedGroups.has(date) ? '-rotate-90' : ''}`} />
+                  </div>
+                </button>
 
-                <div>
+                {!collapsedGroups.has(date) && <div>
                   {list.map((t, idx) => {
                     const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                     const tags = t.tags ?? []
                     const isSwiped = swipedId === t.id
                     return (
-                      <div key={t.id} className={`relative overflow-hidden ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`}>
+                      <div key={t.id} className={`relative overflow-hidden list-item-enter ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`} style={{ animationDelay: `${Math.min(idx, 9) * 30}ms`, borderLeft: t.type === 'expense' && maxExpenseAmount > 0 ? `3px solid rgba(242,82,96,${(0.25 + (t.amount / maxExpenseAmount) * 0.75).toFixed(2)})` : undefined }}>
                         {/* 스와이프 액션 패널 */}
                         <div className={`absolute right-0 top-0 bottom-0 flex items-center gap-1 px-3 transition-all duration-200 ${isSwiped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                           <button
@@ -768,9 +835,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-semibold text-white leading-tight">{t.category}</p>
+                          <HighlightText text={t.category} query={search} className="text-[14px] font-semibold text-white leading-tight" />
                           {t.description && (
-                            <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
+                            <HighlightText text={t.description} query={search} className="text-xs text-[#4E5968] truncate mt-0.5 block" />
                           )}
                           {(() => {
                             const resolved = resolvePaymentMethod(t, userPaymentMethods)
@@ -824,7 +891,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                                     : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
                                     }`}
                                 >
-                                  #{tag}
+                                  #<HighlightText text={tag} query={search} />
                                 </button>
                               ))}
                             </div>
@@ -871,7 +938,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                       </div>
                     )
                   })}
-                </div>
+                </div>}
               </div>
             )
           })

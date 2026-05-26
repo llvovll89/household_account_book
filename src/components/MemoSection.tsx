@@ -291,8 +291,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             const bg = CARD_COLORS[idx % CARD_COLORS.length]
             const catColor = memo.category ? (CATEGORY_COLOR[memo.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }) : null
             return (
-              <div key={memo.id} className="rounded-2xl p-4 flex flex-col gap-2 relative group border border-white/4"
-                style={{ backgroundColor: bg }}>
+              <div key={memo.id} className="rounded-2xl p-4 flex flex-col gap-2 relative group border border-white/4 list-item-enter"
+                style={{ backgroundColor: bg, animationDelay: `${idx * 40}ms` }}>
                 {memo.pinned && (
                   <div className="absolute top-3.5 right-3.5">
                     <Pin size={11} className="text-[#F5BE3A]" fill="#F5BE3A" />
@@ -416,7 +416,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
       {selectedDate && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSelectedDate(null)}>
-          <div className="w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-panel w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between shrink-0">
               <p className="text-sm font-bold text-white">{formatSelectedDateLabel(selectedDate)} 일정</p>
               <div className="flex items-center gap-2">
@@ -481,8 +481,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
-          <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6">
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop" onClick={(e) => e.target === e.currentTarget && handleCancel()}>
+          <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel">
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-9 h-1 bg-white/10 rounded-full" />
             </div>

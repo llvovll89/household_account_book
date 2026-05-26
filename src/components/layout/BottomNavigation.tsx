@@ -36,22 +36,36 @@ export default function BottomNavigation({
   onLedgerTabChange,
   onStockSubTabChange,
 }: Props) {
+  const ledgerActiveIdx = ledgerTabs.findIndex((t) => t.id === activeTab)
+  const stockActiveIdx = STOCKS_SUB_TABS.findIndex((t) => t.id === stockSubTab)
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40">
       <div className="max-w-lg mx-auto bg-[#111111]/90 backdrop-blur-xl border-t border-[rgba(255,255,255,0.06)]">
-        <div className="flex pb-safe">
+        <div className="relative flex pb-safe">
+          {/* 슬라이딩 인디케이터 */}
+          {activeMode === 'ledger' && ledgerActiveIdx >= 0 && (
+            <div
+              className="absolute top-0 h-0.5 w-8 bg-[#3D8EF8] rounded-full transition-all duration-200 ease-out"
+              style={{ left: `calc(${(ledgerActiveIdx / ledgerTabs.length) * 100}% + ${100 / ledgerTabs.length / 2}% - 16px)` }}
+            />
+          )}
+          {activeMode === 'stocks' && stockActiveIdx >= 0 && (
+            <div
+              className="absolute top-0 h-0.5 w-8 bg-[#F5BE3A] rounded-full transition-transform duration-200 ease-out"
+              style={{ left: `calc(${(stockActiveIdx / STOCKS_SUB_TABS.length) * 100}% + ${100 / STOCKS_SUB_TABS.length / 2}% - 16px)` }}
+            />
+          )}
           {activeMode === 'ledger' && ledgerTabs.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => onLedgerTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors relative">
-              {activeTab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#3D8EF8] rounded-full" />}
-              <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'} />
-              <span className={`text-[10px] font-bold ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`}>{label}</span>
+            <button key={id} onClick={() => onLedgerTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors">
+              <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`} />
+              <span className={`text-[10px] font-bold transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>
           ))}
           {activeMode === 'stocks' && STOCKS_SUB_TABS.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => onStockSubTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors relative">
-              {stockSubTab === id && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#F5BE3A] rounded-full" />}
-              <Icon size={20} strokeWidth={stockSubTab === id ? 2.5 : 1.8} className={stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'} />
-              <span className={`text-[10px] font-bold ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`}>{label}</span>
+            <button key={id} onClick={() => onStockSubTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors">
+              <Icon size={20} strokeWidth={stockSubTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`} />
+              <span className={`text-[10px] font-bold transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>
           ))}
         </div>

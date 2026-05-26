@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { useModalClose } from '../hooks/useModalClose'
 import { X, ChevronDown, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
 import type { Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
@@ -58,6 +59,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [showTemplates, setShowTemplates] = useState(false)
 
   const isEditMode = !!transaction
+  const { closing, handleClose } = useModalClose(onClose)
   const tags = parseHashtags(description)
 
   const categories = type === 'income'
@@ -283,10 +285,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col">
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -313,7 +315,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <Bookmark size={15} />
               </button>
             )}
-            <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+            <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
               <X size={16} className="text-[#8B95A1]" />
             </button>
           </div>

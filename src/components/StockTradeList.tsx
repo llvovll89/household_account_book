@@ -96,11 +96,12 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
             <p className="text-sm font-bold text-white mb-3">보유 종목</p>
             <div className="space-y-2.5">
-              {holdings.map((h) => (
+              {holdings.map((h, hIdx) => (
                 <button
                   key={h.ticker}
                   onClick={() => setSelectedTicker(h.ticker)}
-                  className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity"
+                  className="w-full flex items-center gap-3 text-left active:opacity-70 transition-opacity list-item-enter"
+                  style={{ animationDelay: `${hIdx * 40}ms` }}
                 >
                   <div className="w-8 h-8 rounded-xl bg-[#3D8EF8]/15 flex items-center justify-center shrink-0">
                     <TrendingUp size={14} className="text-[#3D8EF8]" />
@@ -153,8 +154,8 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           </div>
         ) : (
           <div className="space-y-2">
-            {grouped.map(([date, dayTrades]) => (
-              <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+            {grouped.map(([date, dayTrades], gIdx) => (
+              <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden list-item-enter" style={{ animationDelay: `${gIdx * 40}ms` }}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04]">
                   <span className="text-xs font-semibold text-[#4E5968]">{formatDate(date)}</span>
                   <span className="text-xs font-semibold text-[#4E5968]">

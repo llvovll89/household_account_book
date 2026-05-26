@@ -37,6 +37,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
   const [showMonthlyDetail, setShowMonthlyDetail] = useState(false)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [cardBillingDay, setCardBillingDay] = useState<number>(25)
+  const [progressMounted, setProgressMounted] = useState(false)
 
   useEffect(() => {
     if (userPaymentMethods.length > 0) {
@@ -53,6 +54,11 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     })
     return () => { cancelled = true }
   }, [settingsVersion, userPaymentMethods])
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setProgressMounted(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   // ── 월간 데이터 (공유 훅) ────────────────────────────────
   const monthlyData = useMonthlyData(transactions)
@@ -90,6 +96,79 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       .sort((a, b) => b[1] - a[1])
       .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
   }, [currentMonthly])
+
+  // ── 수입 소스 분석 ────────────────────────────────────
+  const incomeByCategory = useMemo(() => {
+    const map: Record<string, number> = {}
+    currentMonthly.filter(t => t.type === 'income').forEach(t => {
+      map[t.category] = (map[t.category] || 0) + t.amount
+    })
+    const total = Object.values(map).reduce((s, v) => s + v, 0)
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
+  }, [currentMonthly])
+
+  // ── 전월 대비 카테고리 지출 비교 ────────────────────────
+  const categoryMomComparison = useMemo(() => {
+    const [y, m] = yearMonth.split('-').map(Number)
+    const prevYM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+    const prevMonthly = transactions.filter((t) => t.date.startsWith(prevYM) && t.type === 'expense')
+    const prevMap: Record<string, number> = {}
+    prevMonthly.forEach((t) => { prevMap[t.category] = (prevMap[t.category] || 0) + t.amount })
+
+    const currMap: Record<string, number> = {}
+    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+      currMap[t.category] = (currMap[t.category] || 0) + t.amount
+    })
+
+    const cats = Array.from(new Set([...Object.keys(currMap), ...Object.keys(prevMap)]))
+    return cats
+      .map((cat) => ({ cat, curr: currMap[cat] ?? 0, prev: prevMap[cat] ?? 0 }))
+      .filter((d) => d.curr > 0 || d.prev > 0)
+      .sort((a, b) => b.curr - a.curr)
+      .slice(0, 6)
+  }, [transactions, yearMonth, currentMonthly])
+
+  // ── 소비 이상 감지 (전 3개월 평균 대비 1.5배 초과) ──────
+  const anomalyCategories = useMemo(() => {
+    const past3 = monthlyData.slice(2, 5)
+    const avgMap: Record<string, number> = {}
+    for (const m of past3) {
+      transactions.filter(t => t.type === 'expense' && t.date.startsWith(m.ym)).forEach(t => {
+        avgMap[t.category] = (avgMap[t.category] || 0) + t.amount
+      })
+    }
+    Object.keys(avgMap).forEach(k => { avgMap[k] = avgMap[k] / 3 })
+    return expenseByCategory
+      .filter(({ cat, amt }) => {
+        const avg = avgMap[cat]
+        return avg && avg > 0 && amt > avg * 1.5 && amt > 10000
+      })
+      .map(({ cat, amt }) => ({ cat, amt, avg: Math.round(avgMap[cat]), ratio: Math.round((amt / avgMap[cat]) * 100) }))
+  }, [expenseByCategory, monthlyData, transactions])
+
+  // ── 일별 지출 히트맵 ──────────────────────────────────
+  const dayHeatmapData = useMemo(() => {
+    const [y, m] = yearMonth.split('-').map(Number)
+    const daysInMonth = new Date(y, m, 0).getDate()
+    const startDow = new Date(y, m - 1, 1).getDay()
+    const dailyExpense: Record<number, number> = {}
+    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+      const day = parseInt(t.date.slice(8, 10))
+      dailyExpense[day] = (dailyExpense[day] || 0) + t.amount
+    })
+    const maxAmt = Math.max(...Object.values(dailyExpense), 1)
+    const today = new Date()
+    const todayDate = (today.getFullYear() === y && today.getMonth() + 1 === m) ? today.getDate() : null
+    const cells: { day: number | null; amt: number; intensity: number; isToday: boolean }[] = []
+    for (let i = 0; i < startDow; i++) cells.push({ day: null, amt: 0, intensity: 0, isToday: false })
+    for (let d = 1; d <= daysInMonth; d++) {
+      const amt = dailyExpense[d] || 0
+      cells.push({ day: d, amt, intensity: amt > 0 ? Math.min(1, amt / maxAmt) : 0, isToday: d === todayDate })
+    }
+    return cells
+  }, [currentMonthly, yearMonth])
 
   // ── 요일별 소비 패턴 (이번 달) ────────────────────────
   const weekdayData = useMemo(() => {
@@ -217,8 +296,38 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       if (saveRate >= 30) list.push({ icon: '🏆', text: `저축률 ${saveRate}%! 훌륭한 한 달이에요`, color: '#F5BE3A' })
     }
 
-    return list.slice(0, 4)
-  }, [expenseDiff, incomeDiff, expenseByCategory, current, topWeekday])
+    const topUp = categoryMomComparison.filter(d => d.prev > 0 && d.curr > d.prev * 1.3)
+      .sort((a, b) => (b.curr - b.prev) / b.prev - (a.curr - a.prev) / a.prev)[0]
+    if (topUp) {
+      const pct = Math.round(((topUp.curr - topUp.prev) / topUp.prev) * 100)
+      list.push({ icon: '⚠️', text: `${topUp.cat} 지출이 전월보다 ${pct}% 증가했어요`, color: '#F5BE3A' })
+    }
+
+    const topDown = categoryMomComparison.filter(d => d.prev > 0 && d.curr < d.prev * 0.7)
+      .sort((a, b) => (b.prev - b.curr) / b.prev - (a.prev - a.curr) / a.prev)[0]
+    if (topDown) {
+      const pct = Math.round(((topDown.prev - topDown.curr) / topDown.prev) * 100)
+      list.push({ icon: '👍', text: `${topDown.cat}을(를) 전월보다 ${pct}% 절약했어요`, color: '#2ACF6A' })
+    }
+
+    if (current.expense > current.income && current.income > 0) {
+      list.push({ icon: '🚨', text: `이번 달 지출이 수입을 초과했어요`, color: '#F25260' })
+    }
+
+    // 주말 vs 평일 지출 비교
+    const expTx = currentMonthly.filter(t => t.type === 'expense')
+    if (expTx.length >= 4) {
+      const weekend = expTx.filter(t => { const d = new Date(t.date).getDay(); return d === 0 || d === 6 }).reduce((s, t) => s + t.amount, 0)
+      const weekday = expTx.filter(t => { const d = new Date(t.date).getDay(); return d >= 1 && d <= 5 }).reduce((s, t) => s + t.amount, 0)
+      if (weekend > 0 && weekday > 0) {
+        const weekendAvg = weekend / 2
+        const weekdayAvg = weekday / 5
+        if (weekendAvg > weekdayAvg * 1.5) list.push({ icon: '🛍️', text: `주말 하루 평균 지출이 평일보다 ${Math.round((weekendAvg / weekdayAvg - 1) * 100)}% 높아요`, color: '#F5BE3A' })
+      }
+    }
+
+    return list.slice(0, 5)
+  }, [expenseDiff, incomeDiff, expenseByCategory, current, topWeekday, categoryMomComparison, currentMonthly])
 
   // ── 태그 탭 데이터 ────────────────────────────────────────────
   const tagData = useMemo(() => {
@@ -304,7 +413,11 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             ) : (
               <div className="space-y-2.5">
                 {insights.map((ins, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3 list-item-enter border-l-[3px] overflow-hidden"
+                    style={{ borderColor: ins.color, animationDelay: `${i * 55}ms` }}
+                  >
                     <span className="text-xl shrink-0">{ins.icon}</span>
                     <p className="text-sm font-medium" style={{ color: ins.color }}>{ins.text}</p>
                   </div>
@@ -312,6 +425,33 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               </div>
             )}
           </div>
+
+          {/* 이달 소비 요약 통계 */}
+          {current.expense > 0 && (() => {
+            const expTx = currentMonthly.filter(t => t.type === 'expense')
+            const txCount = expTx.length
+            const uniqueDays = new Set(expTx.map(t => t.date)).size
+            const [y, m] = yearMonth.split('-').map(Number)
+            const today = new Date()
+            const elapsed = (today.getFullYear() === y && today.getMonth() + 1 === m) ? today.getDate() : new Date(y, m, 0).getDate()
+            const dailyAvg = elapsed > 0 ? Math.round(current.expense / elapsed) : 0
+            const maxTx = expTx.reduce((a, b) => b.amount > a.amount ? b : a, expTx[0])
+            return (
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: '거래 건수', value: `${txCount}건`, color: '#F1F3F6' },
+                  { label: '지출 일수', value: `${uniqueDays}일`, color: '#F25260' },
+                  { label: '일평균', value: `${fmt(dailyAvg)}`, color: '#F5BE3A' },
+                  { label: '최대 단건', value: `${fmt(maxTx.amount)}`, color: '#9B7EFF' },
+                ].map(s => (
+                  <div key={s.label} className="bg-[#1C1C1E] rounded-2xl px-2.5 py-3 text-center">
+                    <p className="text-[9px] text-[#4E5968] mb-1 leading-tight">{s.label}</p>
+                    <p className="text-[13px] font-bold num leading-none" style={{ color: s.color }}>{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {/* 전월 대비 */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
@@ -321,6 +461,72 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <CompareCard label="지출" current={current.expense} prev={prev.expense} diff={expenseDiff} isIncome={false} />
             </div>
           </div>
+
+          {/* 수입 소스 분석 */}
+          {incomeByCategory.length > 0 && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-3">수입 소스</p>
+              <div className="space-y-2.5">
+                {incomeByCategory.map(({ cat, amt, pct }) => (
+                  <div key={cat} className="flex items-center gap-3">
+                    <span className="text-base shrink-0">{CATEGORY_EMOJI[cat] ?? '💰'}</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-[12px] font-semibold text-white">{cat}</span>
+                        <span className="text-[12px] font-bold num text-[#2ACF6A]">{fmt(amt)}원</span>
+                      </div>
+                      <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-[#2ACF6A] transition-all duration-500" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 6개월 저축률 트렌드 */}
+          {monthlyData.some(m => m.income > 0) && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-4">저축률 추이</p>
+              <div className="flex items-end gap-1.5 h-20">
+                {monthlyData.map((m) => {
+                  const rate = m.income > 0 ? Math.max(0, Math.round(((m.income - m.expense) / m.income) * 100)) : null
+                  const isCurrent = m.ym === yearMonth
+                  return (
+                    <div key={m.ym} className="flex-1 flex flex-col items-center gap-1">
+                      {rate !== null ? (
+                        <div className="w-full flex flex-col justify-end" style={{ height: 64 }}>
+                          <div
+                            className="w-full rounded-t-md transition-all duration-700"
+                            style={{
+                              height: `${Math.max(4, rate)}%`,
+                              backgroundColor: isCurrent ? '#3D8EF8' : rate >= 20 ? '#2ACF6A' : rate >= 10 ? '#F5BE3A' : '#F25260',
+                              opacity: isCurrent ? 1 : 0.55,
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div style={{ height: 64 }} className="w-full flex items-end">
+                          <div className="w-full h-1 rounded-t-md bg-[#2C2C2E]" />
+                        </div>
+                      )}
+                      <span className={`text-[9px] font-bold ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>{m.label}</span>
+                      <span className={`text-[9px] num ${rate !== null ? (isCurrent ? 'text-white' : 'text-[#8B95A1]') : 'text-[#2C2C2E]'}`}>
+                        {rate !== null ? `${rate}%` : '-'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#2ACF6A]" /><span className="text-[10px] text-[#4E5968]">20%+</span></div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#F5BE3A]" /><span className="text-[10px] text-[#4E5968]">10-20%</span></div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-sm bg-[#F25260]" /><span className="text-[10px] text-[#4E5968]">10% 미만</span></div>
+              </div>
+            </div>
+          )}
 
           {/* 6개월 트렌드 차트 */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
@@ -392,6 +598,64 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               </>
             )}
           </div>
+
+          {/* 일별 지출 히트맵 */}
+          {dayHeatmapData.some(c => c.amt > 0) && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-1">일별 지출 히트맵</p>
+              <p className="text-xs text-[#4E5968] mb-3">색이 진할수록 지출 많음</p>
+              <div className="grid grid-cols-7 gap-1 mb-1.5">
+                {['일','월','화','수','목','금','토'].map(d => (
+                  <div key={d} className="text-center text-[9px] text-[#4E5968] font-semibold">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {dayHeatmapData.map((cell, i) => (
+                  cell.day === null ? <div key={i} /> : (
+                    <div
+                      key={i}
+                      className="aspect-square rounded-md flex items-center justify-center"
+                      style={{
+                        backgroundColor: cell.amt > 0
+                          ? `rgba(242,82,96,${(0.18 + cell.intensity * 0.72).toFixed(2)})`
+                          : '#2C2C2E',
+                        outline: cell.isToday ? '1px solid #3D8EF8' : 'none',
+                      }}
+                    >
+                      <span className={`text-[9px] font-bold leading-none ${cell.isToday ? 'text-[#3D8EF8]' : cell.amt > 0 ? 'text-white' : 'text-[#4E5968]'}`}>{cell.day}</span>
+                    </div>
+                  )
+                ))}
+              </div>
+              {(() => {
+                const todayDay = dayHeatmapData.find(c => c.isToday)?.day ?? null
+                const validCells = dayHeatmapData.filter(c => c.day !== null && (todayDay === null || c.day! <= todayDay))
+                if (!validCells.length) return null
+                const maxCell = validCells.reduce((a, b) => b.amt > a.amt ? b : a, validCells[0])
+                const totalAmt = validCells.reduce((s, c) => s + c.amt, 0)
+                const noSpendCount = validCells.filter(c => c.amt === 0).length
+                return (
+                  <div className="flex gap-2 mt-3">
+                    {maxCell.amt > 0 && (
+                      <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
+                        <p className="text-[9px] text-[#4E5968] mb-0.5">최다 지출일</p>
+                        <p className="text-[12px] font-bold text-white num">{maxCell.day}일</p>
+                        <p className="text-[9px] text-[#F25260] num">-{fmtFull(maxCell.amt)}원</p>
+                      </div>
+                    )}
+                    <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
+                      <p className="text-[9px] text-[#4E5968] mb-0.5">일평균 지출</p>
+                      <p className="text-[12px] font-bold text-white num">{fmtFull(Math.round(totalAmt / validCells.length))}원</p>
+                    </div>
+                    <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
+                      <p className="text-[9px] text-[#4E5968] mb-0.5">무지출 일수</p>
+                      <p className="text-[12px] font-bold text-[#2ACF6A] num">{noSpendCount}일</p>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
 
           {/* 결제수단 분석 */}
           {(paymentMethodStats.cash.income > 0
@@ -529,6 +793,82 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <DonutChart data={expenseByCategory} />
             </div>
           )}
+
+          {/* 소비 이상 감지 */}
+          {anomalyCategories.length > 0 && (
+            <div className="bg-[#F5BE3A]/8 border border-[#F5BE3A]/25 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-base">⚠️</span>
+                <p className="text-[15px] font-bold text-[#F5BE3A]">소비 이상 감지</p>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F5BE3A]/20 text-[#F5BE3A]">{anomalyCategories.length}개</span>
+              </div>
+              <p className="text-[11px] text-[#8B95A1] mb-3">최근 3개월 평균 대비 1.5배 초과</p>
+              <div className="space-y-2.5">
+                {anomalyCategories.map(({ cat, amt, avg, ratio }) => (
+                  <div key={cat} className="flex items-center gap-3">
+                    <span className="text-sm shrink-0">{CATEGORY_EMOJI[cat] ?? '📦'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[12px] font-semibold text-white">{cat}</span>
+                        <span className="text-[11px] font-bold text-[#F5BE3A] num">{ratio}%</span>
+                      </div>
+                      <p className="text-[9px] text-[#8B95A1]">
+                        이번달 {fmtFull(amt)}원 vs 3개월 평균 {fmtFull(avg)}원
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 전월 대비 카테고리 비교 */}
+          {categoryMomComparison.length > 0 && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-4">카테고리 전월 비교</p>
+              <div className="space-y-3">
+                {categoryMomComparison.map(({ cat, curr, prev }) => {
+                  const max = Math.max(curr, prev, 1)
+                  const diff = curr - prev
+                  const diffPct = prev > 0 ? Math.round((diff / prev) * 100) : null
+                  const diffColor = diff > 0 ? '#F25260' : diff < 0 ? '#2ACF6A' : '#8B95A1'
+                  return (
+                    <div key={cat}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] text-[#8B95A1]">{CATEGORY_EMOJI[cat] ?? ''} {cat}</span>
+                        {diffPct !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] num" style={{ color: diffColor }}>
+                              {diff > 0 ? '+' : ''}{fmtFull(Math.abs(diff))}원
+                            </span>
+                            <span className="text-[10px] font-bold" style={{ color: diffColor }}>
+                              ({diff > 0 ? '+' : ''}{diffPct}%)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-[#8B95A1] w-5 shrink-0">이번</span>
+                          <div className="flex-1 h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#F25260] transition-all duration-500" style={{ width: `${(curr / max) * 100}%` }} />
+                          </div>
+                          <span className="text-[10px] text-[#F1F3F6] num w-14 text-right shrink-0">{fmt(curr)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-[#4E5968] w-5 shrink-0">전월</span>
+                          <div className="flex-1 h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-[#4E5968] transition-all duration-500" style={{ width: `${(prev / max) * 100}%` }} />
+                          </div>
+                          <span className="text-[10px] text-[#8B95A1] num w-14 text-right shrink-0">{fmt(prev)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -587,7 +927,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
-                      width: `${Math.min(100, Math.max(0, ((yearTotalIncome - yearTotalExpense) / yearTotalIncome) * 100))}%`,
+                      width: progressMounted ? `${Math.min(100, Math.max(0, ((yearTotalIncome - yearTotalExpense) / yearTotalIncome) * 100))}%` : '0%',
                       backgroundColor: yearTotalIncome > yearTotalExpense ? '#3D8EF8' : '#F25260',
                     }}
                   />
@@ -613,32 +953,53 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           </div>
 
           {/* 월별 내역 테이블 */}
-          <div className="bg-[#1C1C1E] rounded-2xl p-5">
-            <p className="text-[15px] font-bold text-white mb-4">월별 상세</p>
-            <div className="space-y-2">
-              {yearlyData.filter((m) => m.income > 0 || m.expense > 0).map((m) => {
-                const isCurrent = m.ym === yearMonth
-                return (
-                  <div key={m.ym}
-                    className={`flex items-center py-2.5 px-3 rounded-xl ${isCurrent ? 'bg-[#3D8EF8]/10' : ''}`}>
-                    <span className={`text-sm font-bold w-10 shrink-0 ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>
-                      {m.label}
-                    </span>
-                    <div className="flex-1 flex justify-end gap-4">
-                      <span className="text-xs text-[#3D8EF8] num">+{fmt(m.income)}</span>
-                      <span className="text-xs text-[#F25260] num">-{fmt(m.expense)}</span>
-                      <span className={`text-xs font-bold num w-16 text-right ${m.balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-                        {m.balance >= 0 ? '+' : ''}{fmt(m.balance)}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-              {yearlyData.every((m) => m.income === 0 && m.expense === 0) && (
+          {(() => {
+            const withData = yearlyData.filter(m => m.income > 0 || m.expense > 0)
+            if (withData.length === 0) return (
+              <div className="bg-[#1C1C1E] rounded-2xl p-5">
                 <p className="text-sm text-[#4E5968] text-center py-6">{selectedYear}년 내역이 없어요</p>
-              )}
-            </div>
-          </div>
+              </div>
+            )
+            const bestMonth = withData.reduce((a, b) => b.balance > a.balance ? b : a)
+            const worstMonth = withData.reduce((a, b) => b.balance < a.balance ? b : a)
+            return (
+              <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[15px] font-bold text-white">월별 상세</p>
+                  {withData.length >= 2 && (
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <span className="px-1.5 py-0.5 rounded-md bg-[#2ACF6A]/15 text-[#2ACF6A] font-bold">최고 {bestMonth.label}</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-[#F25260]/15 text-[#F25260] font-bold">최저 {worstMonth.label}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {withData.map((m) => {
+                    const isCurrent = m.ym === yearMonth
+                    const isBest = withData.length >= 2 && m.ym === bestMonth.ym && m.balance > 0
+                    const isWorst = withData.length >= 2 && m.ym === worstMonth.ym && m.balance < 0
+                    return (
+                      <div key={m.ym}
+                        className={`flex items-center py-2.5 px-3 rounded-xl ${isCurrent ? 'bg-[#3D8EF8]/10' : isBest ? 'bg-[#2ACF6A]/8' : isWorst ? 'bg-[#F25260]/8' : ''}`}>
+                        <span className={`text-sm font-bold w-10 shrink-0 ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>
+                          {m.label}
+                        </span>
+                        <div className="flex-1 flex justify-end gap-4 items-center">
+                          <span className="text-xs text-[#3D8EF8] num">+{fmt(m.income)}</span>
+                          <span className="text-xs text-[#F25260] num">-{fmt(m.expense)}</span>
+                          <span className={`text-xs font-bold num w-16 text-right ${m.balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+                            {m.balance >= 0 ? '+' : ''}{fmt(m.balance)}
+                          </span>
+                          {isBest && <span className="text-[9px] text-[#2ACF6A]">🏆</span>}
+                          {isWorst && <span className="text-[9px] text-[#F25260]">⚠️</span>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </>
       )}
 
@@ -687,7 +1048,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                           <div
                             className="h-full rounded-full transition-all duration-500"
                             style={{
-                              width: `${barPct}%`,
+                              width: progressMounted ? `${barPct}%` : '0%',
                               backgroundColor: topTagColors[idx] ?? '#4E5968',
                             }}
                           />
@@ -836,28 +1197,47 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           </div>
 
           {/* 월별 순이익 */}
-          <div className="bg-[#1C1C1E] rounded-2xl p-5">
-            <p className="text-[15px] font-bold text-white mb-4">월별 순이익</p>
-            <div className="space-y-2">
-              {monthlyData.map((m) => {
-                const isCurrent = m.ym === yearMonth
-                const isPositive = m.balance >= 0
-                return (
-                  <div key={m.ym}
-                    className={`flex items-center justify-between py-2.5 px-3 rounded-xl ${isCurrent ? 'bg-[#3D8EF8]/10' : ''}`}>
-                    <span className={`text-sm font-bold ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>{m.label}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-[#4E5968] num">{fmt(m.income)} → {fmt(m.expense)}</span>
-                      <span className={`text-sm font-extrabold num ${isPositive ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
-                        {isPositive ? '+' : ''}{fmt(m.balance)}
-                      </span>
-                      <span className="text-base">{isPositive ? '📈' : '📉'}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
+          {(() => {
+            const maxAbs = Math.max(...monthlyData.map(m => Math.abs(m.balance)), 1)
+            return (
+              <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                <p className="text-[15px] font-bold text-white mb-4">월별 순이익</p>
+                <div className="space-y-2">
+                  {monthlyData.map((m) => {
+                    const isCurrent = m.ym === yearMonth
+                    const isPositive = m.balance >= 0
+                    const barPct = Math.round((Math.abs(m.balance) / maxAbs) * 100)
+                    return (
+                      <div key={m.ym}
+                        className={`py-2.5 px-3 rounded-xl ${isCurrent ? 'bg-[#3D8EF8]/10' : ''}`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={`text-sm font-bold ${isCurrent ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>{m.label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-[#4E5968] num">{fmt(m.income)} / {fmt(m.expense)}</span>
+                            <span className={`text-sm font-extrabold num ${isPositive ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                              {isPositive ? '+' : ''}{fmt(m.balance)}원
+                            </span>
+                          </div>
+                        </div>
+                        {m.income > 0 || m.expense > 0 ? (
+                          <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${barPct}%`,
+                                backgroundColor: isPositive ? '#2ACF6A' : '#F25260',
+                                opacity: isCurrent ? 1 : 0.5,
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Best / Worst 월 */}
           {cashflowStats && (

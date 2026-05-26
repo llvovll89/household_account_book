@@ -121,6 +121,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   const totalUsd = subscriptions
     .filter(s => s.currency === 'USD')
     .reduce((sum, s) => sum + s.amount, 0)
+  const annualKrw = totalKrw * 12
 
   return (
     <div className="space-y-3 tab-content">
@@ -130,15 +131,52 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         {subscriptions.length === 0 ? (
           <p className="text-[#8B95A1] text-sm">구독 서비스를 추가해보세요</p>
         ) : (
-          <div className="flex items-end gap-3 flex-wrap">
-            {totalKrw > 0 && (
-              <p className="text-2xl font-bold text-white num">{fmt(totalKrw)}<span className="text-sm ml-1 text-[#8B95A1]">원</span></p>
+          <>
+            <div className="flex items-end gap-3 flex-wrap mb-3">
+              {totalKrw > 0 && (
+                <p className="text-2xl font-bold text-white num">{fmt(totalKrw)}<span className="text-sm ml-1 text-[#8B95A1]">원</span></p>
+              )}
+              {totalUsd > 0 && (
+                <p className="text-2xl font-bold text-white num">${totalUsd.toFixed(2)}</p>
+              )}
+              <p className="text-[11px] text-[#4E5968] mb-1">{subscriptions.length}개 서비스</p>
+            </div>
+            {annualKrw > 0 && (
+              <div className="flex items-center justify-between pt-3 border-t border-[rgba(255,255,255,0.06)]">
+                <span className="text-[11px] text-[#4E5968]">연간 합계</span>
+                <span className="text-sm font-bold text-[#F5BE3A] num">{fmt(annualKrw)}원</span>
+              </div>
             )}
-            {totalUsd > 0 && (
-              <p className="text-2xl font-bold text-white num">${totalUsd.toFixed(2)}</p>
-            )}
-            <p className="text-[11px] text-[#4E5968] mb-1">{subscriptions.length}개 서비스</p>
-          </div>
+            {subscriptions.filter(s => s.currency === 'KRW').length > 1 && (() => {
+              const catMap: Record<string, number> = {}
+              subscriptions.filter(s => s.currency === 'KRW').forEach(s => {
+                catMap[s.category] = (catMap[s.category] || 0) + s.amount
+              })
+              const total = Object.values(catMap).reduce((a, b) => a + b, 0)
+              if (!total) return null
+              const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1])
+              const BAR_COLORS = ['#3D8EF8', '#F25260', '#2ACF6A', '#F5BE3A', '#9B7EFF', '#F06EC4']
+              return (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <p className="text-[10px] text-[#4E5968] mb-2">카테고리 분포</p>
+                  <div className="h-2 rounded-full overflow-hidden flex gap-px">
+                    {entries.map(([cat], i) => (
+                      <div key={cat} className="h-full transition-all duration-700 first:rounded-l-full last:rounded-r-full" style={{ width: `${Math.round((catMap[cat] / total) * 100)}%`, backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }} />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {entries.map(([cat], i) => (
+                      <div key={cat} className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: BAR_COLORS[i % BAR_COLORS.length] }} />
+                        <span className="text-[9px] text-[#8B95A1]">{cat}</span>
+                        <span className="text-[9px] font-bold num text-[#4E5968]">{Math.round((catMap[cat] / total) * 100)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </>
         )}
       </div>
 
@@ -157,12 +195,12 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         </div>
       ) : (
         <div className="space-y-2">
-          {sorted.map(sub => {
+          {sorted.map((sub, subIdx) => {
             const color = (sub as any).color ?? SERVICE_COLORS[0]
             const days = daysUntilBilling(sub.billingDay)
             const catColor = CATEGORY_COLOR[sub.category]
             return (
-              <div key={sub.id} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
+              <div key={sub.id} className="bg-[#1C1C1E] rounded-2xl px-4 py-3 list-item-enter" style={{ animationDelay: `${subIdx * 40}ms` }}>
                 <div className="flex items-center gap-3">
                   {/* 이니셜 아이콘 */}
                   <div
@@ -187,8 +225,10 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                     <p className="text-[11px] text-[#4E5968] mt-0.5">
                       매월 {sub.billingDay}일
                       {days === 0
-                        ? <span className="text-[#F25260] ml-1">· 오늘 결제</span>
-                        : <span className="text-[#8B95A1] ml-1">· {days}일 후</span>
+                        ? <span className="text-[#F25260] ml-1 font-bold">· 오늘 결제</span>
+                        : days <= 3
+                          ? <span className="text-[#F5BE3A] ml-1 font-semibold">· D-{days}</span>
+                          : <span className="text-[#8B95A1] ml-1">· {days}일 후</span>
                       }
                     </p>
                   </div>
@@ -223,13 +263,46 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         </div>
       )}
 
+      {/* 절감 시뮬레이터 */}
+      {subscriptions.filter(s => s.currency === 'KRW').length > 0 && (
+        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+          <p className="text-[15px] font-bold text-white mb-1">절감 시뮬레이터</p>
+          <p className="text-[11px] text-[#4E5968] mb-3">구독 취소 시 연간 절약액</p>
+          <div className="space-y-2">
+            {[...subscriptions]
+              .filter(s => s.currency === 'KRW')
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 3)
+              .map(sub => {
+                const color = (sub as any).color ?? SERVICE_COLORS[0]
+                const annual = sub.amount * 12
+                return (
+                  <div key={sub.id} className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: `${color}26` }}>
+                      <span style={{ color }}>{getInitial(sub.name)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-semibold text-white truncate">{sub.name}</p>
+                      <p className="text-[10px] text-[#4E5968]">월 {fmt(sub.amount)}원</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[12px] font-bold text-[#2ACF6A] num">+{fmt(annual)}원</p>
+                      <p className="text-[9px] text-[#4E5968]">연간 절약</p>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+        </div>
+      )}
+
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
           onClick={(e) => e.target === e.currentTarget && setShowSheet(false)}
         >
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto w-full max-w-lg">
+          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto w-full max-w-lg modal-panel">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-1">
               <p className="text-base font-bold text-white">{editing ? '구독 수정' : '구독 추가'}</p>

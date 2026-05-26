@@ -73,58 +73,72 @@ export default function LedgerWorkspace({
   return (
     <>
       {activeTab === 'home' && (
-        <Dashboard
-          transactions={transactions}
-          budgets={budgets}
-          recurring={recurring}
-          stockTrades={stockTrades}
-          goals={goals}
-          settingsVersion={settingsVersion}
-          yearMonth={yearMonth}
-          customExpenseCategories={customExpenseCategories}
-          userPaymentMethods={userPaymentMethods}
-          subscriptions={subscriptions}
-          onBudgetsChange={onBudgetsChange}
-          onRecurringSave={onRecurringSave}
-          onApplyRecurring={onApplyRecurring}
-          onOpenCategoryModal={onOpenCategoryModal}
-          onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
-        />
+        <div key="home" className="tab-content">
+          <Dashboard
+            transactions={transactions}
+            budgets={budgets}
+            recurring={recurring}
+            stockTrades={stockTrades}
+            goals={goals}
+            settingsVersion={settingsVersion}
+            yearMonth={yearMonth}
+            customExpenseCategories={customExpenseCategories}
+            userPaymentMethods={userPaymentMethods}
+            subscriptions={subscriptions}
+            onBudgetsChange={onBudgetsChange}
+            onRecurringSave={onRecurringSave}
+            onApplyRecurring={onApplyRecurring}
+            onOpenCategoryModal={onOpenCategoryModal}
+            onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
+          />
+        </div>
       )}
       {activeTab === 'transactions' && (
-        <TransactionList
-          transactions={transactions}
-          yearMonth={yearMonth}
-          userPaymentMethods={userPaymentMethods}
-          onEdit={onTransactionEdit}
-          onDelete={onTransactionDelete}
-          onArchiveDone={onTransactionArchive}
-        />
+        <div key="transactions" className="tab-content">
+          <TransactionList
+            transactions={transactions}
+            yearMonth={yearMonth}
+            userPaymentMethods={userPaymentMethods}
+            onEdit={onTransactionEdit}
+            onDelete={onTransactionDelete}
+            onArchiveDone={onTransactionArchive}
+          />
+        </div>
       )}
-      {activeTab === 'analytics' && <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />}
+      {activeTab === 'analytics' && (
+        <div key="analytics" className="tab-content">
+          <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />
+        </div>
+      )}
       {activeTab === 'memos' && (
-        <MemoSection
-          memos={memos}
-          onAdd={onMemoAdd}
-          onUpdate={onMemoUpdate}
-          onDelete={onMemoDelete}
-          onTogglePin={onMemoTogglePin}
-          externalAddTrigger={memoAddTrigger}
-        />
+        <div key="memos" className="tab-content">
+          <MemoSection
+            memos={memos}
+            onAdd={onMemoAdd}
+            onUpdate={onMemoUpdate}
+            onDelete={onMemoDelete}
+            onTogglePin={onMemoTogglePin}
+            externalAddTrigger={memoAddTrigger}
+          />
+        </div>
       )}
       {activeTab === 'subscriptions' && (
-        <SubscriptionView
-          subscriptions={subscriptions}
-          addTrigger={subscriptionAddTrigger}
-          onChange={onSubscriptionsChange}
-        />
+        <div key="subscriptions" className="tab-content">
+          <SubscriptionView
+            subscriptions={subscriptions}
+            addTrigger={subscriptionAddTrigger}
+            onChange={onSubscriptionsChange}
+          />
+        </div>
       )}
       {activeTab === 'goals' && (
-        <GoalsView
-          goals={goals}
-          addTrigger={goalAddTrigger}
-          onChange={onGoalsChange}
-        />
+        <div key="goals" className="tab-content">
+          <GoalsView
+            goals={goals}
+            addTrigger={goalAddTrigger}
+            onChange={onGoalsChange}
+          />
+        </div>
       )}
     </>
   )
