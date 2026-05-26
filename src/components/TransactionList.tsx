@@ -223,6 +223,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     return Array.from(map.entries()).sort((a, b) => (b[1].income + b[1].expense) - (a[1].income + a[1].expense))
   }, [monthly])
 
+  const { filteredIncome, filteredExpense } = useMemo(() => ({
+    filteredIncome: monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+    filteredExpense: monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+  }), [monthly])
+
+  const isFiltered = filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || !!statementMonthFilter || !!activeTag || !!search
+
   const methodSummary = useMemo(() => {
     const map: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
       cash: { income: 0, expense: 0 },
@@ -620,6 +627,71 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </div>
         )}
 
+        {/* 활성 필터 뱃지 */}
+        {isFiltered && (
+          <div className="flex flex-wrap gap-1.5">
+            {filter !== 'all' && (
+              <button
+                onClick={() => setFilter('all')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+              >
+                {filter === 'income' ? '수입' : '지출'} <X size={10} />
+              </button>
+            )}
+            {methodFilter !== 'all' && (
+              <button
+                onClick={() => setMethodFilter('all')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+              >
+                {userPaymentMethods.find(m => m.id === methodFilter)?.label ?? PAYMENT_METHOD_LABEL[methodFilter as 'cash' | 'check' | 'credit'] ?? methodFilter} <X size={10} />
+              </button>
+            )}
+            {billingFilter !== 'all' && (
+              <button
+                onClick={() => setBillingFilter('all')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F5BE3A]/20 text-[#F5BE3A] text-[11px] font-bold"
+              >
+                {billingFilter === 'current' ? '이번 청구' : billingFilter === 'next' ? '다음 청구' : '이후 청구'} <X size={10} />
+              </button>
+            )}
+            {statementMonthFilter && (
+              <button
+                onClick={() => setStatementMonthFilter(null)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9CC7FF]/20 text-[#9CC7FF] text-[11px] font-bold"
+              >
+                청구월 {statementMonthFilter} <X size={10} />
+              </button>
+            )}
+            {activeTag && (
+              <button
+                onClick={() => setActiveTag(null)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+              >
+                #{activeTag} <X size={10} />
+              </button>
+            )}
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#2C2C2E] text-[#8B95A1] text-[11px] font-bold"
+              >
+                "{search}" <X size={10} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 필터 결과 합계 */}
+        {isFiltered && monthly.length > 0 && (
+          <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 flex items-center justify-between">
+            <span className="text-xs text-[#8B95A1] font-semibold">{monthly.length}건</span>
+            <div className="flex gap-3">
+              {filteredIncome > 0 && <span className="text-xs font-bold text-[#2ACF6A] num">+{fmt(filteredIncome)}</span>}
+              {filteredExpense > 0 && <span className="text-xs font-bold text-[#F25260] num">-{fmt(filteredExpense)}</span>}
+            </div>
+          </div>
+        )}
+
         {grouped.length === 0 ? (
           <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
             <p className="text-5xl mb-4">{search || activeTag ? '🔍' : '📋'}</p>
@@ -782,16 +854,16 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                             <button
                               onClick={(e) => { e.stopPropagation(); onEdit(t) }}
                               aria-label={`${t.category} 내역 수정`}
-                              className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
+                              className="p-2.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
                             >
-                              <Pencil size={12} />
+                              <Pencil size={15} />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); onDelete(t.id) }}
                               aria-label={`${t.category} 내역 삭제`}
-                              className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
+                              className="p-2.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </div>

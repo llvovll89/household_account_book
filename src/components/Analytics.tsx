@@ -33,6 +33,8 @@ type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce'
 
 export default function Analytics({ transactions, yearMonth, budgets, settingsVersion, userPaymentMethods = [] }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
+  const [pmTab, setPmTab] = useState<'balance' | 'compare' | 'trend' | 'billing'>('balance')
+  const [showMonthlyDetail, setShowMonthlyDetail] = useState(false)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [cardBillingDay, setCardBillingDay] = useState<number>(25)
 
@@ -274,12 +276,12 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
-      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
+      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto scrollbar-none gap-0.5">
         {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
-            className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all ${
+            className={`flex-shrink-0 flex-1 min-w-[52px] py-2.5 rounded-xl text-[13px] font-bold transition-all ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
           >
@@ -350,6 +352,15 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             </div>
           </div>
 
+          {/* 상세 분석 토글 */}
+          <button
+            onClick={() => setShowMonthlyDetail(v => !v)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+          >
+            {showMonthlyDetail ? '요약 보기 ↑' : '상세 분석 보기 ↓'}
+          </button>
+
+          {showMonthlyDetail && <>
           {/* 이번 달 누적 잔액 흐름 */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">이번 달 잔액 흐름</p>
@@ -382,7 +393,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             )}
           </div>
 
-          {/* 카테고리 비율 - 도넛 차트 */}
+          {/* 결제수단 분석 */}
           {(paymentMethodStats.cash.income > 0
             || paymentMethodStats.cash.expense > 0
             || paymentMethodStats.check.income > 0
@@ -390,56 +401,54 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             || paymentMethodStats.credit.income > 0
             || paymentMethodStats.credit.expense > 0) && (
             <div className="bg-[#1C1C1E] rounded-2xl p-5">
-              <p className="text-[15px] font-bold text-white mb-1">결제수단 분석</p>
-              <p className="text-xs text-[#4E5968] mb-4">현금/체크/신용 지출 흐름 비교</p>
+              <p className="text-[15px] font-bold text-white mb-3">결제수단 분석</p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
-                  <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 순잔액</p>
-                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
-                    {paymentMethodStats.cash.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.cash.net)}원
-                  </p>
-                  <p className="text-[10px] text-[#8B95A1] mt-1">
-                    지출 -{fmt(paymentMethodStats.cash.expense)}
-                  </p>
-                </div>
-                <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/12 to-[#2C2C2E]">
-                  <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 순잔액</p>
-                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.check.net >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
-                    {paymentMethodStats.check.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.check.net)}원
-                  </p>
-                  <p className="text-[10px] text-[#8B95A1] mt-1">
-                    지출 -{fmt(paymentMethodStats.check.expense)}
-                  </p>
-                </div>
-                <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/12 to-[#2C2C2E]">
-                  <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 순잔액</p>
-                  <p className={`text-[13px] font-extrabold num ${paymentMethodStats.credit.net >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
-                    {paymentMethodStats.credit.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.credit.net)}원
-                  </p>
-                  <p className="text-[10px] text-[#8B95A1] mt-1">
-                    결제예정 {fmt(paymentMethodStats.cardDue)}원
-                  </p>
-                  <p className="text-[10px] text-[#6F7D90] mt-0.5">
-                    {paymentMethodStats.cardBillingRangeLabel}
-                  </p>
-                </div>
+              {/* 서브탭 */}
+              <div className="bg-[#2C2C2E] rounded-xl p-0.5 flex gap-0.5 mb-4">
+                {([
+                  { key: 'balance', label: '잔액' },
+                  { key: 'compare', label: '수입/지출' },
+                  { key: 'trend', label: '월별 추이' },
+                  { key: 'billing', label: '청구 예정' },
+                ] as { key: typeof pmTab; label: string }[]).map(t => (
+                  <button
+                    key={t.key}
+                    onClick={() => setPmTab(t.key)}
+                    className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${pmTab === t.key ? 'bg-[#1C1C1E] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#F5BE3A]/20">
-                  <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구 예정</p>
-                  <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.cardDue)}원</p>
-                  <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.cardBillingRangeLabel}</p>
+              {pmTab === 'balance' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
+                    <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 순잔액</p>
+                    <p className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
+                      {paymentMethodStats.cash.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.cash.net)}원
+                    </p>
+                    <p className="text-[10px] text-[#8B95A1] mt-1">지출 -{fmt(paymentMethodStats.cash.expense)}</p>
+                  </div>
+                  <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/12 to-[#2C2C2E]">
+                    <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 순잔액</p>
+                    <p className={`text-[13px] font-extrabold num ${paymentMethodStats.check.net >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
+                      {paymentMethodStats.check.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.check.net)}원
+                    </p>
+                    <p className="text-[10px] text-[#8B95A1] mt-1">지출 -{fmt(paymentMethodStats.check.expense)}</p>
+                  </div>
+                  <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/12 to-[#2C2C2E]">
+                    <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 순잔액</p>
+                    <p className={`text-[13px] font-extrabold num ${paymentMethodStats.credit.net >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+                      {paymentMethodStats.credit.net >= 0 ? '+' : ''}{fmt(paymentMethodStats.credit.net)}원
+                    </p>
+                    <p className="text-[10px] text-[#8B95A1] mt-1">결제예정 {fmt(paymentMethodStats.cardDue)}원</p>
+                    <p className="text-[10px] text-[#6F7D90] mt-0.5">{paymentMethodStats.cardBillingRangeLabel}</p>
+                  </div>
                 </div>
-                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#3D8EF8]/20">
-                  <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구 예정</p>
-                  <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.nextCardDue)}원</p>
-                  <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.nextCardBillingRangeLabel}</p>
-                </div>
-              </div>
+              )}
 
-              <div style={{ width: '100%', height: 210 }}>
+              {pmTab === 'compare' && (
                 <ResponsiveContainer width="100%" height={210}>
                   <BarChart data={paymentMethodStats.methodCompareData} barCategoryGap={20}>
                     <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -453,11 +462,10 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                     <Bar dataKey="expense" radius={[6, 6, 0, 0]} fill="#3D8EF8" />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              )}
 
-              <div className="mt-4 pt-4 border-t border-white/6">
-                <p className="text-xs text-[#8B95A1] mb-3">최근 6개월 결제수단별 지출 추이</p>
-                <div style={{ width: '100%', height: 180 }}>
+              {pmTab === 'trend' && (
+                <>
                   <ResponsiveContainer width="100%" height={180}>
                     <LineChart data={paymentMethodTrend}>
                       <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -466,7 +474,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                         contentStyle={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12 }}
                         formatter={(value, name) => [
                           `${fmtFull(Number(value ?? 0))}원`,
-                          name === 'cashExpense' ? '현금 지출' : name === 'checkExpense' ? '체크 지출' : '신용 지출',
+                          name === 'cashExpense' ? '현금' : name === 'checkExpense' ? '체크' : '신용',
                         ]}
                       />
                       <Line type="monotone" dataKey="cashExpense" stroke="#2ACF6A" strokeWidth={2.2} dot={{ r: 2 }} />
@@ -474,23 +482,29 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                       <Line type="monotone" dataKey="creditExpense" stroke="#3D8EF8" strokeWidth={2.2} dot={{ r: 2 }} />
                     </LineChart>
                   </ResponsiveContainer>
-                </div>
-                <div className="mt-2 flex items-center gap-4 text-[11px]">
-                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                    <span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />현금 지출
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                    <span className="w-2 h-2 rounded-full bg-[#6AD3C0]" />체크 지출
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                    <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />신용 지출
-                  </span>
-                </div>
-              </div>
+                  <div className="mt-2 flex items-center gap-4 text-[11px]">
+                    <span className="inline-flex items-center gap-1.5 text-[#8B95A1]"><span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />현금</span>
+                    <span className="inline-flex items-center gap-1.5 text-[#8B95A1]"><span className="w-2 h-2 rounded-full bg-[#6AD3C0]" />체크</span>
+                    <span className="inline-flex items-center gap-1.5 text-[#8B95A1]"><span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />신용</span>
+                  </div>
+                </>
+              )}
 
-              <div className="mt-4 pt-4 border-t border-white/6">
-                <p className="text-xs text-[#8B95A1] mb-3">청구월별 카드 결제예정 (최근 6개월)</p>
-                <div style={{ width: '100%', height: 190 }}>
+              {pmTab === 'billing' && (
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#F5BE3A]/20">
+                      <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구 예정</p>
+                      <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.cardDue)}원</p>
+                      <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.cardBillingRangeLabel}</p>
+                    </div>
+                    <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#3D8EF8]/20">
+                      <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구 예정</p>
+                      <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">{fmt(paymentMethodStats.nextCardDue)}원</p>
+                      <p className="text-[10px] text-[#8B95A1] mt-1">{paymentMethodStats.nextCardBillingRangeLabel}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#8B95A1] mb-3">청구월별 카드 결제예정 (최근 6개월)</p>
                   <ResponsiveContainer width="100%" height={190}>
                     <BarChart data={cardStatementDueHistory} barCategoryGap={22}>
                       <XAxis dataKey="label" tick={{ fill: '#8B95A1', fontSize: 11 }} axisLine={false} tickLine={false} />
@@ -502,10 +516,12 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                       <Bar dataKey="due" radius={[6, 6, 0, 0]} fill="#79B2FF" />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
+
+          </>}
 
           {expenseByCategory.length > 0 && (
             <div className="bg-[#1C1C1E] rounded-2xl p-5">

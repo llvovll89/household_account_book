@@ -16,7 +16,12 @@ interface Props {
 export default function DonutChart({ data }: Props) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
-  if (data.length === 0) return null
+  if (data.length === 0) return (
+    <div className="py-8 text-center">
+      <p className="text-3xl mb-2">📊</p>
+      <p className="text-sm text-[#4E5968]">지출 내역을 추가하면 분석이 표시돼요</p>
+    </div>
+  )
 
   const active = activeIndex !== null ? data[activeIndex] : data[0]
   const activeColor = CATEGORY_COLOR[active.cat]?.text ?? '#8B95A1'

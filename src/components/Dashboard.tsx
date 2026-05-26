@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart } from 'lucide-react'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp } from 'lucide-react'
 import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
@@ -45,6 +45,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
   const [paydayInput, setPaydayInput] = useState('')
   const [paydayError, setPaydayError] = useState('')
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
+  const [showSpendingTop, setShowSpendingTop] = useState(false)
   const lastNotifiedMonthRef = useRef<string>('')
 
   useEffect(() => {
@@ -274,8 +275,9 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
           .reduce((sum, t) => sum + t.amount, 0)
 
         showToast(
-          `⚠️ ${budget.category} 예산을 초과했습니다\n지출: ${fmt(spent)} / 예산: ${fmt(budget.limit)}`,
-          3000
+          `${budget.category} 예산을 초과했습니다\n지출: ${fmt(spent)} / 예산: ${fmt(budget.limit)}`,
+          3000,
+          'warning'
         )
       })
     }
@@ -362,63 +364,6 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
   return (
     <div className="space-y-3 tab-content">
-      {/* 순자산 카드 */}
-      {(transactions.length > 0 || stockTrades.length > 0) && (
-        <div className="bg-[#1C1C1E] rounded-3xl px-5 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <PieChart size={14} className="text-[#3D8EF8]" />
-            <span className="text-[13px] font-bold text-[#8B95A1]">순자산 현황</span>
-          </div>
-          <p className={`text-[26px] font-extrabold num tracking-tight mb-3 ${netWorth.total >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-            {netWorth.total >= 0 ? '' : '-'}{fmt(Math.abs(netWorth.total))}<span className="text-sm font-medium text-[#4E5968] ml-1">원</span>
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 잔액</p>
-              <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
-                {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
-              </p>
-            </div>
-            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">주식 원가</p>
-              <p className="text-[13px] font-extrabold text-[#F5BE3A] num">
-                {netWorth.stockBookValue > 0 ? fmtShort(netWorth.stockBookValue) : '-'}
-              </p>
-              {netWorth.holdingCount > 0 && (
-                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.holdingCount}종목</p>
-              )}
-            </div>
-            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">저축 목표</p>
-              <p className="text-[13px] font-extrabold text-[#3D8EF8] num">
-                {netWorth.goalsSaved > 0 ? fmtShort(netWorth.goalsSaved) : '-'}
-              </p>
-              {netWorth.goalCount > 0 && (
-                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.goalCount}개 목표</p>
-              )}
-            </div>
-          </div>
-          {netWorthTrend.some(d => d.value !== 0) && (
-            <div className="mt-3">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">6개월 추이</p>
-              <ResponsiveContainer width="100%" height={56}>
-                <LineChart data={netWorthTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                  <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#4E5968' }} axisLine={false} tickLine={false} />
-                  <YAxis hide />
-                  <Tooltip
-                    contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 10, fontSize: 11, color: '#F1F3F6' }}
-                    formatter={(v) => [fmtShort(Number(v ?? 0)) + '원', '순자산']}
-                    labelStyle={{ color: '#8B95A1' }}
-                  />
-                  <Line type="monotone" dataKey="value" stroke="#3D8EF8" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#3D8EF8' }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-          <p className="text-[10px] text-[#2C2C2E] mt-2.5 text-right">주식은 매입 원가 기준 · 시세 반영 안됨</p>
-        </div>
-      )}
-
       {/* 예산 초과 알림 */}
       {overBudget.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/20">
@@ -779,7 +724,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
                 title={budgetView === 'list' ? '게이지 보기' : '목록 보기'}
               >
-                {budgetView === 'list' ? <Gauge size={12} /> : <LayoutList size={12} />}
+                {budgetView === 'list' ? <><Gauge size={12} /><span>게이지</span></> : <><LayoutList size={12} /><span>목록</span></>}
               </button>
             )}
             <button
@@ -888,38 +833,103 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       </div>
 
       {/* 카테고리별 지출 */}
-      {expenseByCategory.length > 0 && (
-        <div className="bg-[#1C1C1E] rounded-2xl p-5">
-          <p className="text-[15px] font-bold text-white mb-4">이번 달 지출 TOP</p>
-          <div className="space-y-3">
-            {expenseByCategory.map(([cat, amt]) => {
-              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
-              const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
-              return (
-                <div key={cat} className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
-                    style={{ backgroundColor: color.bg }}
-                  >
-                    {CATEGORY_EMOJI[cat] ?? '📦'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <span className="text-sm font-semibold text-white">{cat}</span>
-                      <span className="text-sm font-bold text-white num">{fmt(amt)}원</span>
+      {expenseByCategory.length > 0 && budgets.length === 0 && (
+        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setShowSpendingTop(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-4"
+          >
+            <p className="text-[15px] font-bold text-white">이번 달 지출 TOP</p>
+            {showSpendingTop ? <ChevronUp size={16} className="text-[#4E5968]" /> : <ChevronDown size={16} className="text-[#4E5968]" />}
+          </button>
+          {showSpendingTop && (
+            <div className="px-5 pb-5 space-y-3">
+              {expenseByCategory.map(([cat, amt]) => {
+                const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
+                return (
+                  <div key={cat} className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
+                      style={{ backgroundColor: color.bg }}
+                    >
+                      {CATEGORY_EMOJI[cat] ?? '📦'}
                     </div>
-                    <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${pct}%`, backgroundColor: color.text }}
-                      />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <span className="text-sm font-semibold text-white">{cat}</span>
+                        <span className="text-sm font-bold text-white num">{fmt(amt)}원</span>
+                      </div>
+                      <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%`, backgroundColor: color.text }}
+                        />
+                      </div>
                     </div>
+                    <span className="text-xs text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
                   </div>
-                  <span className="text-xs text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 순자산 카드 */}
+      {(transactions.length > 0 || stockTrades.length > 0) && (
+        <div className="bg-[#1C1C1E] rounded-3xl px-5 py-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <PieChart size={14} className="text-[#3D8EF8]" />
+            <span className="text-[13px] font-bold text-[#8B95A1]">순자산 현황</span>
           </div>
+          <p className={`text-[22px] font-extrabold num tracking-tight mb-2.5 ${netWorth.total >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+            {netWorth.total >= 0 ? '' : '-'}{fmt(Math.abs(netWorth.total))}<span className="text-sm font-medium text-[#4E5968] ml-1">원</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 잔액</p>
+              <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
+              </p>
+            </div>
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">주식 원가</p>
+              <p className="text-[13px] font-extrabold text-[#F5BE3A] num">
+                {netWorth.stockBookValue > 0 ? fmtShort(netWorth.stockBookValue) : '-'}
+              </p>
+              {netWorth.holdingCount > 0 && (
+                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.holdingCount}종목</p>
+              )}
+            </div>
+            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">저축 목표</p>
+              <p className="text-[13px] font-extrabold text-[#3D8EF8] num">
+                {netWorth.goalsSaved > 0 ? fmtShort(netWorth.goalsSaved) : '-'}
+              </p>
+              {netWorth.goalCount > 0 && (
+                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.goalCount}개 목표</p>
+              )}
+            </div>
+          </div>
+          {netWorthTrend.some(d => d.value !== 0) && (
+            <div className="mt-3">
+              <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">6개월 추이</p>
+              <ResponsiveContainer width="100%" height={56}>
+                <LineChart data={netWorthTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#4E5968' }} axisLine={false} tickLine={false} />
+                  <YAxis hide />
+                  <Tooltip
+                    contentStyle={{ background: '#2C2C2E', border: 'none', borderRadius: 10, fontSize: 11, color: '#F1F3F6' }}
+                    formatter={(v) => [fmtShort(Number(v ?? 0)) + '원', '순자산']}
+                    labelStyle={{ color: '#8B95A1' }}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#3D8EF8" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#3D8EF8' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <p className="text-[10px] text-[#4E5968] mt-2.5 text-right">주식은 매입 원가 기준 · 시세 반영 안됨</p>
         </div>
       )}
 

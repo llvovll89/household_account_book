@@ -35,7 +35,11 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
     })
   }, [transactions, yearMonth])
 
-  if (chartData.length === 0) return null
+  if (chartData.length === 0) return (
+    <div className="py-6 text-center">
+      <p className="text-sm text-[#4E5968]">이번 달 내역이 없어요</p>
+    </div>
+  )
 
   const isPositive = chartData[chartData.length - 1].balance >= 0
   const lineColor = isPositive ? CHART_COLORS.green : CHART_COLORS.expense

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, AlertTriangle, Info, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
@@ -11,7 +11,7 @@ import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
 import { useAppHandlers } from './hooks/useAppHandlers'
 import type { UIAction } from './hooks/useAppHandlers.types'
-import { registerToastHandler, showToast } from './lib/toast'
+import { registerToastHandler, showToast, type ToastVariant } from './lib/toast'
 import TransactionModal from './components/TransactionModal'
 import ImportModal from './components/ImportModal'
 import HelpModal from './components/HelpModal'
@@ -228,6 +228,7 @@ export default function App() {
     const [rememberConflictPolicy, setRememberConflictPolicy] = useState<boolean>(() => parseConflictPolicyRemember())
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
+    const [toastVariant, setToastVariant] = useState<ToastVariant>('success')
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
@@ -249,8 +250,9 @@ export default function App() {
     }, [showUserMenu])
 
     useEffect(() => {
-        return registerToastHandler((msg, duration = 2500) => {
+        return registerToastHandler((msg, duration = 2500, variant = 'success') => {
             setToastMsg(msg)
+            setToastVariant(variant)
             if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
             toastTimerRef.current = setTimeout(() => setToastMsg(null), duration)
         })
@@ -1049,8 +1051,11 @@ export default function App() {
             {toastMsg && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm pointer-events-none">
                     <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">
-                        <CheckCircle2 size={16} className="text-[#2ACF6A] shrink-0" />
-                        <p className="text-sm font-semibold text-white">{toastMsg}</p>
+                        {toastVariant === 'success' && <CheckCircle2 size={16} className="text-[#2ACF6A] shrink-0" />}
+                        {toastVariant === 'warning' && <AlertTriangle size={16} className="text-[#F5BE3A] shrink-0" />}
+                        {toastVariant === 'error' && <AlertTriangle size={16} className="text-[#F25260] shrink-0" />}
+                        {toastVariant === 'info' && <Info size={16} className="text-[#3D8EF8] shrink-0" />}
+                        <p className="text-sm font-semibold text-white whitespace-pre-line">{toastMsg}</p>
                     </div>
                 </div>
             )}
