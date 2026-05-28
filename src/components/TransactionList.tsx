@@ -30,6 +30,7 @@ type PeriodMode = 'day' | 'week' | 'month'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
+const FILTER_PANEL_OPEN_KEY = 'hb_tx_filter_panel_open'
 const BALANCE_SECTION_OPEN_KEY = 'hb_tx_balance_section_open'
 const ACTIVE_FILTERS_SECTION_OPEN_KEY = 'hb_tx_active_filters_section_open'
 const INSIGHTS_SECTION_OPEN_KEY = 'hb_tx_insights_section_open'
@@ -85,6 +86,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
   const [billingDayInput, setBillingDayInput] = useState('25')
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(() => getInitialSectionOpen(FILTER_PANEL_OPEN_KEY))
   const [isBalanceSectionOpen, setIsBalanceSectionOpen] = useState(() => getInitialSectionOpen(BALANCE_SECTION_OPEN_KEY))
   const [isActiveFiltersSectionOpen, setIsActiveFiltersSectionOpen] = useState(() => getInitialSectionOpen(ACTIVE_FILTERS_SECTION_OPEN_KEY))
   const [isInsightsSectionOpen, setIsInsightsSectionOpen] = useState(() => getInitialSectionOpen(INSIGHTS_SECTION_OPEN_KEY))
@@ -101,6 +103,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   useEffect(() => {
     localStorage.setItem(BILLING_FILTER_KEY, billingFilter)
   }, [billingFilter])
+
+  useEffect(() => {
+    localStorage.setItem(FILTER_PANEL_OPEN_KEY, String(isFilterPanelOpen))
+  }, [isFilterPanelOpen])
 
   useEffect(() => {
     localStorage.setItem(BALANCE_SECTION_OPEN_KEY, String(isBalanceSectionOpen))
@@ -301,6 +307,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     return map
   }, [monthly, userPaymentMethods])
 
+  const methodsNetTotal = useMemo(() => {
+    return (['cash', 'check', 'credit'] as const).reduce(
+      (sum, method) => sum + methodSummary[method].income - methodSummary[method].expense,
+      0,
+    )
+  }, [methodSummary])
+
   const insightSummary = useMemo(() => {
     if (monthly.length < 3) return null
     const expenses = monthly.filter((t) => t.type === 'expense')
@@ -317,6 +330,14 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
     return { topCat, avgAmt, maxTx }
   }, [monthly])
+
+  const insightHeaderText = useMemo(() => {
+    if (isFiltered && monthly.length > 0) return `${monthly.length}건`
+    if (insightSummary) return `최다 ${insightSummary.topCat[0]}`
+    return '요약 없음'
+  }, [isFiltered, monthly.length, insightSummary])
+
+  const periodLabel = periodMode === 'day' ? '일' : periodMode === 'week' ? '주' : '월'
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr)
@@ -338,6 +359,15 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     const start = new Date(startDate)
     const end = new Date(endDate)
     return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`
+  }
+
+  function resetAllFilters() {
+    setFilter('all')
+    setMethodFilter('all')
+    setBillingFilter('all')
+    setStatementMonthFilter(null)
+    setActiveTag(null)
+    setSearch('')
   }
 
   function handleTagClick(tag: string) {
@@ -384,219 +414,250 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
       {/* 목록 뷰 */}
       {viewMode === 'list' && <>
-
-        <div className="bg-[#1C1C1E] rounded-2xl p-2 space-y-2">
-          <div className="flex gap-1">
-            {([
-              { key: 'day', label: '일' },
-              { key: 'week', label: '주' },
-              { key: 'month', label: '월' },
-            ] as { key: PeriodMode; label: string }[]).map((mode) => (
-              <button
-                key={mode.key}
-                onClick={() => {
-                  setPeriodMode(mode.key)
-                  setBaseDate(latestMonthDate)
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${periodMode === mode.key
-                  ? 'bg-[#3D8EF8] text-white'
-                  : 'text-[#4E5968] hover:text-[#8B95A1]'
-                  }`}
-              >
-                {mode.label} 단위
-              </button>
-            ))}
-          </div>
-
-          {periodMode !== 'month' && (
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="w-48 shrink-0">
-                <FancyDatePicker
-                  value={normalizedBaseDate}
-                  onChange={setBaseDate}
-                  min={`${yearMonth}-01`}
-                  max={monthLastDate}
-                  size="sm"
-                />
+        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden sticky top-2 z-20 shadow-[0_6px_18px_rgba(0,0,0,0.22)] sm:static sm:shadow-none">
+          <div className="flex items-center gap-2 px-3 py-3">
+            <button
+              onClick={() => setIsFilterPanelOpen((v) => !v)}
+              className="flex-1 min-w-0 flex items-center justify-between px-2 py-0 text-left"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-bold text-white">필터 컨트롤</span>
+                <span className="text-xs text-[#8B95A1] font-semibold truncate">{periodLabel} 단위 · 활성 {activeFilterCount}개</span>
               </div>
-              {periodMode === 'day' ? (
-                <span className="text-xs text-[#8B95A1] font-semibold">선택한 하루만 표시</span>
-              ) : (
-                <span className="text-xs text-[#8B95A1] font-semibold">{formatWeekRangeLabel(weekRange.start, weekRange.end)}</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 검색 */}
-        <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="카테고리, 설명, #태그로 검색"
-            className="w-full bg-[#1C1C1E] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} aria-label="검색어 지우기" className="absolute right-4 top-1/2 -translate-y-1/2">
-              <X size={14} className="text-[#4E5968]" />
+              {isFilterPanelOpen ? <ChevronUp size={14} className="text-[#4E5968] shrink-0" /> : <ChevronDown size={14} className="text-[#4E5968] shrink-0" />}
             </button>
-          )}
-        </div>
-
-        {/* 필터 탭 */}
-        <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
-          {(['all', 'income', 'expense'] as FilterType[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${filter === f
-                ? 'bg-[#3D8EF8] text-white'
-                : 'text-[#4E5968] hover:text-[#8B95A1]'
-                }`}
-            >
-              {f === 'all' ? '전체' : f === 'income' ? '수입' : '지출'}
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-[#1C1C1E] rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-[#8B95A1] font-semibold">카드 결제일</span>
-            <span className="text-xs text-[#9CC7FF] font-bold">매월 {cardBillingDay}일</span>
-          </div>
-          {!editingBillingDay ? (
-            <button
-              onClick={() => {
-                setBillingDayInput(String(cardBillingDay))
-                setEditingBillingDay(true)
-              }}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#3D8EF8]/20 text-[#79B2FF] font-bold hover:bg-[#3D8EF8]/30 transition-colors"
-            >
-              변경
-            </button>
-          ) : (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={billingDayInput}
-                onChange={(e) => setBillingDayInput(e.target.value)}
-                className="w-12 bg-[#2C2C2E] text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
-              />
-              <button onClick={() => { void handleSaveBillingDay() }} className="text-[11px] px-2 py-1 rounded-lg bg-[#3D8EF8] text-white font-bold">저장</button>
-              <button onClick={() => setEditingBillingDay(false)} className="text-[11px] px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold">취소</button>
-            </div>
-          )}
-        </div>
-
-        {statementMonthFilter && (
-          <div className="bg-[#1C1C1E] rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
-            <span className="text-xs text-[#9CC7FF] font-bold">청구월 필터: {statementMonthFilter}</span>
-            <button
-              onClick={() => setStatementMonthFilter(null)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
-            >
-              해제
-            </button>
-          </div>
-        )}
-
-        {userPaymentMethods.length > 0 ? (
-          <div className={`bg-[#1C1C1E] rounded-2xl p-1 ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex'}`}>
-            <button
-              onClick={() => setMethodFilter('all')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === 'all' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'}`}
-            >
-              전체
-            </button>
-            {userPaymentMethods.map((m) => {
-              const isSelected = methodFilter === m.id
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setMethodFilter(m.id)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all truncate px-1 ${isSelected
-                    ? m.type === 'cash'
-                      ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
-                      : m.type === 'check'
-                        ? 'bg-[#6AD3C0]/22 text-[#6AD3C0]'
-                        : 'bg-[#3D8EF8]/22 text-[#79B2FF]'
-                    : 'text-[#4E5968] hover:text-[#8B95A1]'
-                  }`}
-                >
-                  {m.label}
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
-            {([
-              { key: 'all', label: '결제수단 전체' },
-              { key: 'cash', label: '현금' },
-              { key: 'check', label: '체크카드' },
-              { key: 'credit', label: '신용카드' },
-            ] as { key: MethodFilterType; label: string }[]).map((f) => (
+            {isFiltered && (
               <button
-                key={f.key}
-                onClick={() => setMethodFilter(f.key)}
-                className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${methodFilter === f.key
-                  ? f.key === 'cash'
-                    ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
-                    : f.key === 'check'
-                      ? 'bg-[#6AD3C0]/22 text-[#6AD3C0]'
-                      : f.key === 'credit'
-                      ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
-                      : 'bg-[#3D8EF8] text-white'
-                  : 'text-[#4E5968] hover:text-[#8B95A1]'
-                }`}
+                onClick={resetAllFilters}
+                className="shrink-0 text-[11px] px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
               >
-                {f.label}
+                초기화
               </button>
-            ))}
+            )}
           </div>
-        )}
 
-        <div className="bg-[#1C1C1E] rounded-2xl p-1 flex">
-          {([
-            { key: 'all', label: '청구 전체' },
-            { key: 'current', label: '이번 청구' },
-            { key: 'next', label: '다음 청구' },
-            { key: 'later', label: '이후 청구' },
-          ] as { key: BillingFilterType; label: string }[]).map((f) => (
-            <button
-              key={f.key}
-              onClick={() => {
-                setBillingFilter(f.key)
-                setStatementMonthFilter(null)
-              }}
-              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${billingFilter === f.key
-                ? f.key === 'current'
-                  ? 'bg-[#F5BE3A]/22 text-[#F5BE3A]'
-                  : f.key === 'next'
-                    ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
-                    : f.key === 'later'
-                      ? 'bg-[#8B95A1]/22 text-[#B9C0C8]'
-                      : 'bg-[#3D8EF8] text-white'
-                : 'text-[#4E5968] hover:text-[#8B95A1]'
-                }`}
-            >
-              {f.label}
-            </button>
-          ))}
+          {isFilterPanelOpen && (
+            <div className="space-y-3 px-3 pb-3">
+              <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
+                <div className="flex gap-1">
+                  {([
+                    { key: 'day', label: '일' },
+                    { key: 'week', label: '주' },
+                    { key: 'month', label: '월' },
+                  ] as { key: PeriodMode; label: string }[]).map((mode) => (
+                    <button
+                      key={mode.key}
+                      onClick={() => {
+                        setPeriodMode(mode.key)
+                        setBaseDate(latestMonthDate)
+                      }}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${periodMode === mode.key
+                        ? 'bg-[#3D8EF8] text-white'
+                        : 'text-[#4E5968] hover:text-[#8B95A1]'
+                        }`}
+                    >
+                      {mode.label} 단위
+                    </button>
+                  ))}
+                </div>
+
+                {periodMode !== 'month' && (
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <div className="w-48 shrink-0">
+                      <FancyDatePicker
+                        value={normalizedBaseDate}
+                        onChange={setBaseDate}
+                        min={`${yearMonth}-01`}
+                        max={monthLastDate}
+                        size="sm"
+                      />
+                    </div>
+                    {periodMode === 'day' ? (
+                      <span className="text-xs text-[#8B95A1] font-semibold">선택한 하루만 표시</span>
+                    ) : (
+                      <span className="text-xs text-[#8B95A1] font-semibold">{formatWeekRangeLabel(weekRange.start, weekRange.end)}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 검색 */}
+              <div className="relative">
+                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="카테고리, 설명, #태그로 검색"
+                  className="w-full bg-[#2C2C2E] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} aria-label="검색어 지우기" className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <X size={14} className="text-[#4E5968]" />
+                  </button>
+                )}
+              </div>
+
+              {/* 필터 탭 */}
+              <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
+                {(['all', 'income', 'expense'] as FilterType[]).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${filter === f
+                      ? 'bg-[#3D8EF8] text-white'
+                      : 'text-[#4E5968] hover:text-[#8B95A1]'
+                      }`}
+                  >
+                    {f === 'all' ? '전체' : f === 'income' ? '수입' : '지출'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-[#8B95A1] font-semibold">카드 결제일</span>
+                  <span className="text-xs text-[#9CC7FF] font-bold">매월 {cardBillingDay}일</span>
+                </div>
+                {!editingBillingDay ? (
+                  <button
+                    onClick={() => {
+                      setBillingDayInput(String(cardBillingDay))
+                      setEditingBillingDay(true)
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#3D8EF8]/20 text-[#79B2FF] font-bold hover:bg-[#3D8EF8]/30 transition-colors"
+                  >
+                    변경
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={billingDayInput}
+                      onChange={(e) => setBillingDayInput(e.target.value)}
+                      className="w-12 bg-[#1C1C1E] text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                    />
+                    <button onClick={() => { void handleSaveBillingDay() }} className="text-[11px] px-2 py-1 rounded-lg bg-[#3D8EF8] text-white font-bold">저장</button>
+                    <button onClick={() => setEditingBillingDay(false)} className="text-[11px] px-2 py-1 rounded-lg bg-[#1C1C1E] text-[#8B95A1] font-bold">취소</button>
+                  </div>
+                )}
+              </div>
+
+              {statementMonthFilter && (
+                <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
+                  <span className="text-xs text-[#9CC7FF] font-bold">청구월 필터: {statementMonthFilter}</span>
+                  <button
+                    onClick={() => setStatementMonthFilter(null)}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#1C1C1E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                  >
+                    해제
+                  </button>
+                </div>
+              )}
+
+              {userPaymentMethods.length > 0 ? (
+                <div className={`bg-[#2C2C2E] rounded-2xl p-1 ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex'}`}>
+                  <button
+                    onClick={() => setMethodFilter('all')}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === 'all' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'}`}
+                  >
+                    전체
+                  </button>
+                  {userPaymentMethods.map((m) => {
+                    const isSelected = methodFilter === m.id
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => setMethodFilter(m.id)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all truncate px-1 ${isSelected
+                          ? m.type === 'cash'
+                            ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
+                            : m.type === 'check'
+                              ? 'bg-[#6AD3C0]/22 text-[#6AD3C0]'
+                              : 'bg-[#3D8EF8]/22 text-[#79B2FF]'
+                          : 'text-[#4E5968] hover:text-[#8B95A1]'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
+                  {([
+                    { key: 'all', label: '결제수단 전체' },
+                    { key: 'cash', label: '현금' },
+                    { key: 'check', label: '체크카드' },
+                    { key: 'credit', label: '신용카드' },
+                  ] as { key: MethodFilterType; label: string }[]).map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setMethodFilter(f.key)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${methodFilter === f.key
+                        ? f.key === 'cash'
+                          ? 'bg-[#2ACF6A]/22 text-[#2ACF6A]'
+                          : f.key === 'check'
+                            ? 'bg-[#6AD3C0]/22 text-[#6AD3C0]'
+                            : f.key === 'credit'
+                            ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
+                            : 'bg-[#3D8EF8] text-white'
+                        : 'text-[#4E5968] hover:text-[#8B95A1]'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
+                {([
+                  { key: 'all', label: '청구 전체' },
+                  { key: 'current', label: '이번 청구' },
+                  { key: 'next', label: '다음 청구' },
+                  { key: 'later', label: '이후 청구' },
+                ] as { key: BillingFilterType; label: string }[]).map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => {
+                      setBillingFilter(f.key)
+                      setStatementMonthFilter(null)
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${billingFilter === f.key
+                      ? f.key === 'current'
+                        ? 'bg-[#F5BE3A]/22 text-[#F5BE3A]'
+                        : f.key === 'next'
+                          ? 'bg-[#3D8EF8]/22 text-[#79B2FF]'
+                          : f.key === 'later'
+                            ? 'bg-[#8B95A1]/22 text-[#B9C0C8]'
+                            : 'bg-[#3D8EF8] text-white'
+                      : 'text-[#4E5968] hover:text-[#8B95A1]'
+                      }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 결제수단별 잔액 */}
         <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
           <button
             onClick={() => setIsBalanceSectionOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+            className="w-full flex items-center justify-between px-5 py-3 text-left"
           >
-            <span className="text-sm font-bold text-white">결제수단별 잔액</span>
-            {isBalanceSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-white">결제수단별 잔액</span>
+              <span className={`text-xs font-bold num ${methodsNetTotal > 0 ? 'text-[#9CC7FF]' : methodsNetTotal < 0 ? 'text-[#FF8D98]' : 'text-[#8B95A1]'}`}>
+                {methodsNetTotal >= 0 ? '+' : ''}{fmt(methodsNetTotal)}원
+              </span>
+            </div>
+            {isBalanceSectionOpen ? <ChevronUp size={14} className="text-[#4E5968] shrink-0" /> : <ChevronDown size={14} className="text-[#4E5968] shrink-0" />}
           </button>
 
           {isBalanceSectionOpen && (
@@ -716,10 +777,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setIsActiveFiltersSectionOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+              className="w-full flex items-center justify-between px-5 py-3 text-left"
             >
-              <span className="text-sm font-bold text-white">활성 필터 {activeFilterCount}개</span>
-              {isActiveFiltersSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-bold text-white">활성 필터 {activeFilterCount}개</span>
+                <span className="text-xs text-[#8B95A1] font-semibold num">{fmt(monthly.length)}건</span>
+              </div>
+              {isActiveFiltersSectionOpen ? <ChevronUp size={14} className="text-[#4E5968] shrink-0" /> : <ChevronDown size={14} className="text-[#4E5968] shrink-0" />}
             </button>
 
             {isActiveFiltersSectionOpen && (
@@ -781,10 +845,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setIsInsightsSectionOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+              className="w-full flex items-center justify-between px-5 py-3 text-left"
             >
-              <span className="text-sm font-bold text-white">요약 인사이트</span>
-              {isInsightsSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-bold text-white">요약 인사이트</span>
+                <span className="text-xs text-[#8B95A1] font-semibold truncate">{insightHeaderText}</span>
+              </div>
+              {isInsightsSectionOpen ? <ChevronUp size={14} className="text-[#4E5968] shrink-0" /> : <ChevronDown size={14} className="text-[#4E5968] shrink-0" />}
             </button>
 
             {isInsightsSectionOpen && (
@@ -832,14 +899,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             </p>
             {(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) && (
               <button
-                onClick={() => {
-                  setFilter('all')
-                  setMethodFilter('all')
-                  setBillingFilter('all')
-                  setStatementMonthFilter(null)
-                  setActiveTag(null)
-                  setSearch('')
-                }}
+                onClick={resetAllFilters}
                 className="mt-4 text-xs font-bold px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
               >
                 필터 전체 초기화
