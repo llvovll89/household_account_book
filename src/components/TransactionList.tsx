@@ -30,6 +30,17 @@ type PeriodMode = 'day' | 'week' | 'month'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
+const BALANCE_SECTION_OPEN_KEY = 'hb_tx_balance_section_open'
+const ACTIVE_FILTERS_SECTION_OPEN_KEY = 'hb_tx_active_filters_section_open'
+const INSIGHTS_SECTION_OPEN_KEY = 'hb_tx_insights_section_open'
+
+function getInitialSectionOpen(storageKey: string) {
+  const saved = localStorage.getItem(storageKey)
+  if (saved === 'true') return true
+  if (saved === 'false') return false
+  if (typeof window === 'undefined') return true
+  return window.innerWidth > 640
+}
 
 function HighlightText({ text, query, className }: { text: string; query: string; className?: string }) {
   if (!query.trim()) return <span className={className}>{text}</span>
@@ -74,6 +85,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
   const [billingDayInput, setBillingDayInput] = useState('25')
+  const [isBalanceSectionOpen, setIsBalanceSectionOpen] = useState(() => getInitialSectionOpen(BALANCE_SECTION_OPEN_KEY))
+  const [isActiveFiltersSectionOpen, setIsActiveFiltersSectionOpen] = useState(() => getInitialSectionOpen(ACTIVE_FILTERS_SECTION_OPEN_KEY))
+  const [isInsightsSectionOpen, setIsInsightsSectionOpen] = useState(() => getInitialSectionOpen(INSIGHTS_SECTION_OPEN_KEY))
   const [statementMonthFilter, setStatementMonthFilter] = useState<string | null>(() => {
     const saved = localStorage.getItem(STATEMENT_MONTH_FILTER_KEY)
     if (!saved) return null
@@ -87,6 +101,18 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   useEffect(() => {
     localStorage.setItem(BILLING_FILTER_KEY, billingFilter)
   }, [billingFilter])
+
+  useEffect(() => {
+    localStorage.setItem(BALANCE_SECTION_OPEN_KEY, String(isBalanceSectionOpen))
+  }, [isBalanceSectionOpen])
+
+  useEffect(() => {
+    localStorage.setItem(ACTIVE_FILTERS_SECTION_OPEN_KEY, String(isActiveFiltersSectionOpen))
+  }, [isActiveFiltersSectionOpen])
+
+  useEffect(() => {
+    localStorage.setItem(INSIGHTS_SECTION_OPEN_KEY, String(isInsightsSectionOpen))
+  }, [isInsightsSectionOpen])
 
   useEffect(() => {
     if (!statementMonthFilter) {
@@ -251,6 +277,14 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
   const isFiltered = filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || !!statementMonthFilter || !!activeTag || !!search
 
+  const activeFilterCount =
+    (filter !== 'all' ? 1 : 0) +
+    (methodFilter !== 'all' ? 1 : 0) +
+    (billingFilter !== 'all' ? 1 : 0) +
+    (statementMonthFilter ? 1 : 0) +
+    (activeTag ? 1 : 0) +
+    (search ? 1 : 0)
+
   const methodSummary = useMemo(() => {
     const map: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
       cash: { income: 0, expense: 0 },
@@ -266,6 +300,23 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
     return map
   }, [monthly, userPaymentMethods])
+
+  const insightSummary = useMemo(() => {
+    if (monthly.length < 3) return null
+    const expenses = monthly.filter((t) => t.type === 'expense')
+    if (!expenses.length) return null
+
+    const catMap: Record<string, number> = {}
+    expenses.forEach((t) => {
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount
+    })
+
+    const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0]
+    const avgAmt = Math.round(monthly.reduce((s, t) => s + t.amount, 0) / monthly.length)
+    const maxTx = expenses.reduce((a, b) => (b.amount > a.amount ? b : a), expenses[0])
+
+    return { topCat, avgAmt, maxTx }
+  }, [monthly])
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr)
@@ -539,45 +590,57 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         </div>
 
         {/* 결제수단별 잔액 */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {userPaymentMethods.length > 0 ? (
-            (['cash', 'check', 'credit'] as const)
-              .filter((t) => userPaymentMethods.some((m) => m.type === t))
-              .map((methodType) => {
-                const label = userPaymentMethods.find((m) => m.type === methodType)?.label
-                  ?? PAYMENT_METHOD_LABEL[methodType]
-                const income = methodSummary[methodType].income
-                const expense = methodSummary[methodType].expense
-                const net = income - expense
-                return (
-                  <div key={methodType} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
-                    <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">{label} 잔액</p>
-                    <p className={`text-[15px] font-extrabold num ${net >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
-                      {net >= 0 ? '+' : ''}{fmt(net)}원
-                    </p>
-                    <p className="text-[10px] text-[#4E5968] mt-1">
-                      수입 +{fmt(income)} / 지출 -{fmt(expense)}
-                    </p>
-                  </div>
-                )
-              })
-          ) : (
-            (['cash', 'check', 'credit'] as const).map((method) => {
-              const income = methodSummary[method].income
-              const expense = methodSummary[method].expense
-              const net = income - expense
-              return (
-                <div key={method} className="bg-[#1C1C1E] rounded-2xl px-4 py-3">
-                  <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">{PAYMENT_METHOD_LABEL[method]} 잔액</p>
-                  <p className={`text-[15px] font-extrabold num ${net >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
-                    {net >= 0 ? '+' : ''}{fmt(net)}원
-                  </p>
-                  <p className="text-[10px] text-[#4E5968] mt-1">
-                    수입 +{fmt(income)} / 지출 -{fmt(expense)}
-                  </p>
-                </div>
-              )
-            })
+        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setIsBalanceSectionOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+          >
+            <span className="text-sm font-bold text-white">결제수단별 잔액</span>
+            {isBalanceSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+          </button>
+
+          {isBalanceSectionOpen && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 pb-3">
+              {userPaymentMethods.length > 0 ? (
+                (['cash', 'check', 'credit'] as const)
+                  .filter((t) => userPaymentMethods.some((m) => m.type === t))
+                  .map((methodType) => {
+                    const label = userPaymentMethods.find((m) => m.type === methodType)?.label
+                      ?? PAYMENT_METHOD_LABEL[methodType]
+                    const income = methodSummary[methodType].income
+                    const expense = methodSummary[methodType].expense
+                    const net = income - expense
+                    return (
+                      <div key={methodType} className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
+                        <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">{label} 잔액</p>
+                        <p className={`text-[15px] font-extrabold num ${net >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
+                          {net >= 0 ? '+' : ''}{fmt(net)}원
+                        </p>
+                        <p className="text-[10px] text-[#4E5968] mt-1">
+                          수입 +{fmt(income)} / 지출 -{fmt(expense)}
+                        </p>
+                      </div>
+                    )
+                  })
+              ) : (
+                (['cash', 'check', 'credit'] as const).map((method) => {
+                  const income = methodSummary[method].income
+                  const expense = methodSummary[method].expense
+                  const net = income - expense
+                  return (
+                    <div key={method} className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
+                      <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">{PAYMENT_METHOD_LABEL[method]} 잔액</p>
+                      <p className={`text-[15px] font-extrabold num ${net >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
+                        {net >= 0 ? '+' : ''}{fmt(net)}원
+                      </p>
+                      <p className="text-[10px] text-[#4E5968] mt-1">
+                        수입 +{fmt(income)} / 지출 -{fmt(expense)}
+                      </p>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           )}
         </div>
 
@@ -650,97 +713,116 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
         {/* 활성 필터 뱃지 */}
         {isFiltered && (
-          <div className="flex flex-wrap gap-1.5">
-            {filter !== 'all' && (
-              <button
-                onClick={() => setFilter('all')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
-              >
-                {filter === 'income' ? '수입' : '지출'} <X size={10} />
-              </button>
-            )}
-            {methodFilter !== 'all' && (
-              <button
-                onClick={() => setMethodFilter('all')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
-              >
-                {userPaymentMethods.find(m => m.id === methodFilter)?.label ?? PAYMENT_METHOD_LABEL[methodFilter as 'cash' | 'check' | 'credit'] ?? methodFilter} <X size={10} />
-              </button>
-            )}
-            {billingFilter !== 'all' && (
-              <button
-                onClick={() => setBillingFilter('all')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F5BE3A]/20 text-[#F5BE3A] text-[11px] font-bold"
-              >
-                {billingFilter === 'current' ? '이번 청구' : billingFilter === 'next' ? '다음 청구' : '이후 청구'} <X size={10} />
-              </button>
-            )}
-            {statementMonthFilter && (
-              <button
-                onClick={() => setStatementMonthFilter(null)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9CC7FF]/20 text-[#9CC7FF] text-[11px] font-bold"
-              >
-                청구월 {statementMonthFilter} <X size={10} />
-              </button>
-            )}
-            {activeTag && (
-              <button
-                onClick={() => setActiveTag(null)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
-              >
-                #{activeTag} <X size={10} />
-              </button>
-            )}
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#2C2C2E] text-[#8B95A1] text-[11px] font-bold"
-              >
-                "{search}" <X size={10} />
-              </button>
+          <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setIsActiveFiltersSectionOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+            >
+              <span className="text-sm font-bold text-white">활성 필터 {activeFilterCount}개</span>
+              {isActiveFiltersSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+            </button>
+
+            {isActiveFiltersSectionOpen && (
+              <div className="flex flex-wrap gap-1.5 px-4 pb-4">
+                {filter !== 'all' && (
+                  <button
+                    onClick={() => setFilter('all')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                  >
+                    {filter === 'income' ? '수입' : '지출'} <X size={10} />
+                  </button>
+                )}
+                {methodFilter !== 'all' && (
+                  <button
+                    onClick={() => setMethodFilter('all')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                  >
+                    {userPaymentMethods.find(m => m.id === methodFilter)?.label ?? PAYMENT_METHOD_LABEL[methodFilter as 'cash' | 'check' | 'credit'] ?? methodFilter} <X size={10} />
+                  </button>
+                )}
+                {billingFilter !== 'all' && (
+                  <button
+                    onClick={() => setBillingFilter('all')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F5BE3A]/20 text-[#F5BE3A] text-[11px] font-bold"
+                  >
+                    {billingFilter === 'current' ? '이번 청구' : billingFilter === 'next' ? '다음 청구' : '이후 청구'} <X size={10} />
+                  </button>
+                )}
+                {statementMonthFilter && (
+                  <button
+                    onClick={() => setStatementMonthFilter(null)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9CC7FF]/20 text-[#9CC7FF] text-[11px] font-bold"
+                  >
+                    청구월 {statementMonthFilter} <X size={10} />
+                  </button>
+                )}
+                {activeTag && (
+                  <button
+                    onClick={() => setActiveTag(null)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                  >
+                    #{activeTag} <X size={10} />
+                  </button>
+                )}
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#2C2C2E] text-[#8B95A1] text-[11px] font-bold"
+                  >
+                    "{search}" <X size={10} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
 
-        {/* 필터 결과 합계 */}
-        {isFiltered && monthly.length > 0 && (
-          <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 flex items-center justify-between">
-            <span className="text-xs text-[#8B95A1] font-semibold">{monthly.length}건</span>
-            <div className="flex gap-3">
-              {filteredIncome > 0 && <span className="text-xs font-bold text-[#2ACF6A] num">+{fmt(filteredIncome)}</span>}
-              {filteredExpense > 0 && <span className="text-xs font-bold text-[#F25260] num">-{fmt(filteredExpense)}</span>}
-            </div>
-          </div>
-        )}
+        {(isFiltered && monthly.length > 0) || insightSummary ? (
+          <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+            <button
+              onClick={() => setIsInsightsSectionOpen((v) => !v)}
+              className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+            >
+              <span className="text-sm font-bold text-white">요약 인사이트</span>
+              {isInsightsSectionOpen ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+            </button>
 
-        {monthly.length >= 3 && (() => {
-          const expenses = monthly.filter(t => t.type === 'expense')
-          if (!expenses.length) return null
-          const catMap: Record<string, number> = {}
-          expenses.forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount })
-          const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0]
-          const avgAmt = Math.round(monthly.reduce((s, t) => s + t.amount, 0) / monthly.length)
-          const maxTx = expenses.reduce((a, b) => b.amount > a.amount ? b : a, expenses[0])
-          return (
-            <div className="flex gap-2 mb-1">
-              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
-                <p className="text-[9px] text-[#4E5968] mb-1">최다 지출</p>
-                <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[topCat[0]] ?? '📦'} {topCat[0]}</p>
-                <p className="text-[9px] num text-[#F25260]">{fmt(topCat[1])}원</p>
+            {isInsightsSectionOpen && (
+              <div className="space-y-2 px-3 pb-3">
+                {/* 필터 결과 합계 */}
+                {isFiltered && monthly.length > 0 && (
+                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-[#8B95A1] font-semibold">{monthly.length}건</span>
+                    <div className="flex gap-3">
+                      {filteredIncome > 0 && <span className="text-xs font-bold text-[#2ACF6A] num">+{fmt(filteredIncome)}</span>}
+                      {filteredExpense > 0 && <span className="text-xs font-bold text-[#F25260] num">-{fmt(filteredExpense)}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {insightSummary && (
+                  <div className="flex gap-2 mb-1">
+                    <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+                      <p className="text-[9px] text-[#4E5968] mb-1">최다 지출</p>
+                      <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[insightSummary.topCat[0]] ?? '📦'} {insightSummary.topCat[0]}</p>
+                      <p className="text-[9px] num text-[#F25260]">{fmt(insightSummary.topCat[1])}원</p>
+                    </div>
+                    <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+                      <p className="text-[9px] text-[#4E5968] mb-1">평균 거래</p>
+                      <p className="text-[12px] font-bold num text-white">{fmt(insightSummary.avgAmt)}</p>
+                      <p className="text-[9px] text-[#4E5968]">원/건</p>
+                    </div>
+                    <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
+                      <p className="text-[9px] text-[#4E5968] mb-1">최대 단건</p>
+                      <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[insightSummary.maxTx.category] ?? '📦'} {insightSummary.maxTx.category}</p>
+                      <p className="text-[9px] num text-[#F25260]">{fmt(insightSummary.maxTx.amount)}원</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
-                <p className="text-[9px] text-[#4E5968] mb-1">평균 거래</p>
-                <p className="text-[12px] font-bold num text-white">{fmt(avgAmt)}</p>
-                <p className="text-[9px] text-[#4E5968]">원/건</p>
-              </div>
-              <div className="flex-1 bg-[#1C1C1E] rounded-2xl px-3 py-2.5">
-                <p className="text-[9px] text-[#4E5968] mb-1">최대 단건</p>
-                <p className="text-[11px] font-bold text-white truncate">{CATEGORY_EMOJI[maxTx.category] ?? '📦'} {maxTx.category}</p>
-                <p className="text-[9px] num text-[#F25260]">{fmt(maxTx.amount)}원</p>
-              </div>
-            </div>
-          )
-        })()}
+            )}
+          </div>
+        ) : null}
 
         {grouped.length === 0 ? (
           <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
