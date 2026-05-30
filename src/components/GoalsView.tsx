@@ -134,8 +134,12 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
   }
 
   function handleDelete(id: string) {
-    if (!confirm('이 목표를 삭제할까요?')) return
+    setConfirmingId(id)
+  }
+
+  function confirmDelete(id: string) {
     onChange(goals.filter(g => g.id !== id))
+    setConfirmingId(null)
   }
 
   function handleDeposit() {
@@ -157,6 +161,7 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
     setDepositStr('')
   }
 
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [sortByPct, setSortByPct] = useState(false)
 
   const totalTarget = goals.reduce((s, g) => s + g.targetAmount, 0)
@@ -256,12 +261,21 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                     {g.memo && <p className="text-[10px] text-[#4E5968] mt-0.5 truncate">{g.memo}</p>}
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <button onClick={() => openEdit(g)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
-                      <Pencil size={11} />
-                    </button>
-                    <button onClick={() => handleDelete(g.id)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
-                      <Trash2 size={11} />
-                    </button>
+                    {confirmingId === g.id ? (
+                      <>
+                        <button onClick={() => setConfirmingId(null)} className="px-2 h-7 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-[10px] font-bold">취소</button>
+                        <button onClick={() => confirmDelete(g.id)} className="px-2 h-7 rounded-lg bg-[#F25260]/20 text-[#F25260] text-[10px] font-bold">삭제</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => openEdit(g)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
+                          <Pencil size={11} />
+                        </button>
+                        <button onClick={() => handleDelete(g.id)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
+                          <Trash2 size={11} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

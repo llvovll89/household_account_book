@@ -1,11 +1,15 @@
 import type { StockTrade, StockHolding } from '../types'
 
-export function calcHoldings(trades: StockTrade[]): StockHolding[] {
+interface FifoResult {
+  queues: Record<string, { qty: number; unitCost: number }[]>
+  realizedPnL: Record<string, number>
+  totalFees: Record<string, number>
+}
+
+function runFifo(trades: StockTrade[]): FifoResult {
   const sorted = [...trades].sort((a, b) =>
     a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt
   )
-
-  // 종목별 FIFO 큐: { qty, unitCost } 매수 lot 목록
   const queues: Record<string, { qty: number; unitCost: number }[]> = {}
   const realizedPnL: Record<string, number> = {}
   const totalFees: Record<string, number> = {}
@@ -19,11 +23,8 @@ export function calcHoldings(trades: StockTrade[]): StockHolding[] {
     totalFees[ticker] += fee
 
     if (tradeType === 'buy') {
-      // 수수료를 단가에 흡수
-      const unitCost = price + (quantity > 0 ? fee / quantity : 0)
-      queues[ticker].push({ qty: quantity, unitCost })
+      queues[ticker].push({ qty: quantity, unitCost: price + (quantity > 0 ? fee / quantity : 0) })
     } else {
-      // 매도: FIFO로 큐에서 차감하며 실현 손익 계산
       let remaining = quantity
       while (remaining > 0 && queues[ticker].length > 0) {
         const lot = queues[ticker][0]
@@ -35,6 +36,12 @@ export function calcHoldings(trades: StockTrade[]): StockHolding[] {
       }
     }
   }
+
+  return { queues, realizedPnL, totalFees }
+}
+
+export function calcHoldings(trades: StockTrade[]): StockHolding[] {
+  const { queues, realizedPnL, totalFees } = runFifo(trades)
 
   const holdings: StockHolding[] = []
   for (const ticker of Object.keys(queues)) {
@@ -57,31 +64,8 @@ export function calcHoldings(trades: StockTrade[]): StockHolding[] {
 }
 
 export function calcTotalRealizedPnL(trades: StockTrade[]): number {
-  const sorted = [...trades].sort((a, b) =>
-    a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt
-  )
-  const queues: Record<string, { qty: number; unitCost: number }[]> = {}
-  let total = 0
-
-  for (const trade of sorted) {
-    const { ticker, tradeType, quantity, price, fee } = trade
-    if (!queues[ticker]) queues[ticker] = []
-
-    if (tradeType === 'buy') {
-      queues[ticker].push({ qty: quantity, unitCost: price + (quantity > 0 ? fee / quantity : 0) })
-    } else {
-      let remaining = quantity
-      while (remaining > 0 && queues[ticker].length > 0) {
-        const lot = queues[ticker][0]
-        const used = Math.min(lot.qty, remaining)
-        total += (price - lot.unitCost) * used - fee * (used / quantity)
-        lot.qty -= used
-        remaining -= used
-        if (lot.qty <= 0.00001) queues[ticker].shift()
-      }
-    }
-  }
-  return total
+  const { realizedPnL } = runFifo(trades)
+  return Object.values(realizedPnL).reduce((s, v) => s + v, 0)
 }
 
 export function calcTotalFee(trades: StockTrade[]): number {
@@ -89,32 +73,5 @@ export function calcTotalFee(trades: StockTrade[]): number {
 }
 
 export function calcRealizedPnLByTicker(trades: StockTrade[]): Record<string, number> {
-  const sorted = [...trades].sort((a, b) =>
-    a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt
-  )
-
-  const queues: Record<string, { qty: number; unitCost: number }[]> = {}
-  const realized: Record<string, number> = {}
-
-  for (const trade of sorted) {
-    const { ticker, tradeType, quantity, price, fee } = trade
-    if (!queues[ticker]) queues[ticker] = []
-    if (!realized[ticker]) realized[ticker] = 0
-
-    if (tradeType === 'buy') {
-      queues[ticker].push({ qty: quantity, unitCost: price + (quantity > 0 ? fee / quantity : 0) })
-    } else {
-      let remaining = quantity
-      while (remaining > 0 && queues[ticker].length > 0) {
-        const lot = queues[ticker][0]
-        const used = Math.min(lot.qty, remaining)
-        realized[ticker] += (price - lot.unitCost) * used - fee * (used / quantity)
-        lot.qty -= used
-        remaining -= used
-        if (lot.qty <= 0.00001) queues[ticker].shift()
-      }
-    }
-  }
-
-  return realized
+  return runFifo(trades).realizedPnL
 }

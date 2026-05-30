@@ -72,23 +72,46 @@ export function useAppHandlers({
   )
 
   const handleDeleteTransaction = useCallback((id: string) => {
-    if (!confirm('이 내역을 삭제할까요?')) return
-    setTransactions((prev) => {
-      const transaction = prev.find((t) => t.id === id)
-      if (transaction?.receiptImageUrl && auth.currentUser) {
-        void deleteReceiptImage(auth.currentUser.uid, id).catch((e) => {
-          console.error('Failed to delete receipt image:', e)
+    dispatchUI({
+      type: 'OPEN_CONFIRM',
+      message: '이 내역을 삭제할까요?',
+      onConfirm: () => {
+        setTransactions((prev) => {
+          const transaction = prev.find((t) => t.id === id)
+          if (transaction?.receiptImageUrl && auth.currentUser) {
+            void deleteReceiptImage(auth.currentUser.uid, id).catch((e) => {
+              console.error('Failed to delete receipt image:', e)
+            })
+          }
+          const next = prev.filter((t) => t.id !== id)
+          persist(() => saveTransactions(next), '거래 삭제 저장에 실패했습니다.', 'transactions')
+          return next
         })
-      }
-      const next = prev.filter((t) => t.id !== id)
-      persist(() => saveTransactions(next), '거래 삭제 저장에 실패했습니다.', 'transactions')
-      return next
+      },
     })
-  }, [persist, setTransactions])
+  }, [persist, setTransactions, dispatchUI])
 
   const handleTransactionArchive = useCallback((cutoff: string) => {
     setTransactions((prev) => prev.filter(t => t.date >= cutoff))
   }, [setTransactions])
+
+  const handleBulkDeleteTransactions = useCallback((ids: string[]) => {
+    dispatchUI({
+      type: 'OPEN_CONFIRM',
+      message: `선택한 ${ids.length}개 내역을 삭제할까요?`,
+      onConfirm: () => {
+        const idSet = new Set(ids)
+        setTransactions((prev) => {
+          prev.filter((t) => idSet.has(t.id) && t.receiptImageUrl && auth.currentUser).forEach((t) => {
+            void deleteReceiptImage(auth.currentUser!.uid, t.id).catch((e) => console.error('Failed to delete receipt image:', e))
+          })
+          const next = prev.filter((t) => !idSet.has(t.id))
+          persist(() => saveTransactions(next), '일괄 삭제 저장에 실패했습니다.', 'transactions')
+          return next
+        })
+      },
+    })
+  }, [persist, setTransactions, dispatchUI])
 
   const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
     setTransactions((prev) => {
@@ -110,13 +133,18 @@ export function useAppHandlers({
   }, [editingTrade, persist, setStockTrades, dispatchUI])
 
   const handleDeleteStockTrade = useCallback((id: string) => {
-    if (!confirm('이 거래를 삭제할까요?')) return
-    setStockTrades((prev) => {
-      const next = prev.filter((t) => t.id !== id)
-      persist(() => saveStockTrades(next), '주식 거래 삭제에 실패했습니다.', 'stockTrades')
-      return next
+    dispatchUI({
+      type: 'OPEN_CONFIRM',
+      message: '이 거래를 삭제할까요?',
+      onConfirm: () => {
+        setStockTrades((prev) => {
+          const next = prev.filter((t) => t.id !== id)
+          persist(() => saveStockTrades(next), '주식 거래 삭제에 실패했습니다.', 'stockTrades')
+          return next
+        })
+      },
     })
-  }, [persist, setStockTrades])
+  }, [persist, setStockTrades, dispatchUI])
 
   const handleBudgetsChange = useCallback((b: Budget[]) => {
     setBudgets(b)
@@ -257,13 +285,18 @@ export function useAppHandlers({
   }, [persist, setMemos])
 
   const handleDeleteMemo = useCallback((id: string) => {
-    if (!confirm('이 메모를 삭제할까요?')) return
-    setMemos((prev) => {
-      const next = prev.filter((m) => m.id !== id)
-      persist(() => saveMemos(next), '메모 삭제 저장에 실패했습니다.', 'memos')
-      return next
+    dispatchUI({
+      type: 'OPEN_CONFIRM',
+      message: '이 메모를 삭제할까요?',
+      onConfirm: () => {
+        setMemos((prev) => {
+          const next = prev.filter((m) => m.id !== id)
+          persist(() => saveMemos(next), '메모 삭제 저장에 실패했습니다.', 'memos')
+          return next
+        })
+      },
     })
-  }, [persist, setMemos])
+  }, [persist, setMemos, dispatchUI])
 
   const handleTogglePin = useCallback((id: string) => {
     setMemos((prev) => {
@@ -276,6 +309,7 @@ export function useAppHandlers({
   return {
     handleSaveTransaction,
     handleDeleteTransaction,
+    handleBulkDeleteTransactions,
     handleTransactionArchive,
     handleBulkImport,
     handleSaveStockTrade,

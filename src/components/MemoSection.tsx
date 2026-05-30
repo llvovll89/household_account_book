@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, CalendarRange, Plus } from 'lucide-react'
+import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, CalendarRange, Plus, Search } from 'lucide-react'
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, MEMO_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
@@ -74,16 +74,26 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const [dateEnd, setDateEnd] = useState('')
   const [showDateEnd, setShowDateEnd] = useState(false)
   const [queue, setQueue] = useState<MemoQueueItem[]>([])
+  const [search, setSearch] = useState('')
   const prevExternalAddTriggerRef = useRef(externalAddTrigger)
 
   const categories = amountStr
     ? (txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)
     : MEMO_CATEGORIES
 
-  const sorted = [...memos].sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-    return b.updatedAt - a.updatedAt
-  })
+  const sorted = useMemo(() => {
+    const base = [...memos].sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return b.updatedAt - a.updatedAt
+    })
+    if (!search.trim()) return base
+    const q = search.toLowerCase()
+    return base.filter((m) =>
+      m.title.toLowerCase().includes(q) ||
+      m.content.toLowerCase().includes(q) ||
+      (m.category ?? '').toLowerCase().includes(q)
+    )
+  }, [memos, search])
 
   const memoByDate = useMemo(() => {
     const map = new Map<string, Memo[]>()
@@ -255,7 +265,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
 
   return (
     <div className="space-y-3 tab-content">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -275,13 +285,35 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             캘린더
           </button>
         </div>
+        {viewMode === 'cards' && memos.length > 0 && (
+          <div className="ml-auto flex items-center gap-1.5 bg-[#1C1C1E] rounded-xl px-2.5 py-1.5 min-w-0 max-w-[140px]">
+            <Search size={11} className="text-[#4E5968] shrink-0" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="검색..."
+              className="bg-transparent text-white text-xs placeholder:text-[#4E5968] outline-none w-full min-w-0"
+            />
+            {search && <button onClick={() => setSearch('')}><X size={10} className="text-[#4E5968]" /></button>}
+          </div>
+        )}
       </div>
 
       {viewMode === 'cards' && sorted.length === 0 && !showForm && (
         <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center tab-content">
-          <p className="text-5xl mb-4">📝</p>
-          <p className="font-bold text-white text-[15px]">메모가 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">예산 목표, 할 일 등을 기록해보세요</p>
+          {search ? (
+            <>
+              <p className="text-4xl mb-3">🔍</p>
+              <p className="font-bold text-white text-[15px]">검색 결과 없음</p>
+              <p className="text-[#4E5968] text-sm mt-1">"{search}"에 해당하는 메모가 없어요</p>
+            </>
+          ) : (
+            <>
+              <p className="text-5xl mb-4">📝</p>
+              <p className="font-bold text-white text-[15px]">메모가 없어요</p>
+              <p className="text-[#4E5968] text-sm mt-1">예산 목표, 할 일 등을 기록해보세요</p>
+            </>
+          )}
         </div>
       )}
 

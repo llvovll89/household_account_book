@@ -108,6 +108,7 @@ interface UIState {
     memoAddTrigger: number
     subscriptionAddTrigger: number
     goalAddTrigger: number
+    confirmModal: { message: string; onConfirm: () => void } | null
 }
 
 interface FailedPersistTask {
@@ -139,6 +140,7 @@ const UI_INIT: UIState = {
     showStockModal: false, editingTrade: null,
     stockSubTab: 'portfolio', showCategoryModal: false, showPaymentMethodsModal: false,
     memoAddTrigger: 0, subscriptionAddTrigger: 0, goalAddTrigger: 0,
+    confirmModal: null,
 }
 
 function uiReducer(state: UIState, action: UIAction): UIState {
@@ -155,6 +157,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         case 'TRIGGER_MEMO': return { ...state, memoAddTrigger: state.memoAddTrigger + 1 }
         case 'TRIGGER_SUB': return { ...state, subscriptionAddTrigger: state.subscriptionAddTrigger + 1 }
         case 'TRIGGER_GOAL': return { ...state, goalAddTrigger: state.goalAddTrigger + 1 }
+        case 'OPEN_CONFIRM': return { ...state, confirmModal: { message: action.message, onConfirm: action.onConfirm } }
+        case 'CLOSE_CONFIRM': return { ...state, confirmModal: null }
     }
 }
 
@@ -204,7 +208,7 @@ export default function App() {
     const {
         showModal, editingTransaction, showImport, showHelp,
         showStockModal, editingTrade, stockSubTab, showCategoryModal, showPaymentMethodsModal,
-        memoAddTrigger, subscriptionAddTrigger, goalAddTrigger,
+        memoAddTrigger, subscriptionAddTrigger, goalAddTrigger, confirmModal,
     } = ui
 
     // 오프라인 / 미동기화 상태
@@ -971,6 +975,7 @@ export default function App() {
                         onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
                         onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                         onTransactionDelete={handleDeleteTransaction}
+                        onBulkDeleteTransactions={handleBulkDeleteTransactions}
                         onTransactionArchive={handleTransactionArchive}
                         onMemoAdd={handleAddMemo}
                         onMemoUpdate={handleUpdateMemo}
@@ -1229,6 +1234,24 @@ export default function App() {
                             <GoogleIcon />
                             구글 로그인
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {confirmModal && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70]" onClick={() => dispatchUI({ type: 'CLOSE_CONFIRM' })}>
+                    <div className="bg-[#1C1C1E] rounded-3xl p-6 mx-4 max-w-xs w-full border border-white/8" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-white font-semibold text-center text-[15px] mb-6">{confirmModal.message}</p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => dispatchUI({ type: 'CLOSE_CONFIRM' })}
+                                className="flex-1 py-3 rounded-2xl bg-[#2C2C2E] text-[#8B95A1] font-bold text-sm"
+                            >취소</button>
+                            <button
+                                onClick={() => { confirmModal.onConfirm(); dispatchUI({ type: 'CLOSE_CONFIRM' }) }}
+                                className="flex-1 py-3 rounded-2xl bg-[#F25260]/20 text-[#F25260] font-bold text-sm"
+                            >삭제</button>
+                        </div>
                     </div>
                 </div>
             )}

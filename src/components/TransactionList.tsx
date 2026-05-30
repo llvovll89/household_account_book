@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { Pencil, Trash2, Search, X, CalendarDays, List as ListIcon, FileDown, Hash, ChevronDown, ChevronUp } from 'lucide-react'
+import { Pencil, Trash2, Search, X, CalendarDays, List as ListIcon, FileDown, Hash, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react'
 import type { Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
 import CalendarView from './CalendarView'
@@ -17,6 +17,7 @@ interface Props {
   userPaymentMethods?: UserPaymentMethod[]
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
+  onBulkDelete?: (ids: string[]) => void
   onArchiveDone?: (cutoff: string) => void
 }
 
@@ -58,7 +59,7 @@ function HighlightText({ text, query, className }: { text: string; query: string
   )
 }
 
-export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onArchiveDone }: Props) {
+export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onArchiveDone }: Props) {
   const [filter, setFilter] = useState<FilterType>('all')
   const [methodFilter, setMethodFilter] = useState<MethodFilterType>(() => {
     const saved = localStorage.getItem(METHOD_FILTER_KEY)
@@ -72,6 +73,12 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     return 'all'
   })
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showExport, setShowExport] = useState(false)
   const [periodMode, setPeriodMode] = useState<PeriodMode>('month')
@@ -81,6 +88,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [receiptModal, setReceiptModal] = useState({ open: false, url: '' })
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null)
   const [swipedId, setSwipedId] = useState<string | null>(null)
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const touchStartX = useRef(0)
   const [cardBillingDay, setCardBillingDay] = useState(25)
@@ -198,7 +207,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
   const monthly = useMemo(
     () => {
-      const normalizedSearch = search.replace(/^#/, '').toLowerCase()
+      const normalizedSearch = debouncedSearch.replace(/^#/, '').toLowerCase()
       return monthTx
         .filter((t) => {
           if (periodMode === 'day') return t.date === normalizedBaseDate
@@ -234,7 +243,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           return stage === billingFilter
         })
         .filter((t) =>
-          !search ||
+          !debouncedSearch ||
           t.category.toLowerCase().includes(normalizedSearch) ||
           t.description.toLowerCase().includes(normalizedSearch) ||
           (t.tags ?? []).some((tag) => tag.toLowerCase().includes(normalizedSearch))
@@ -242,7 +251,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         .filter((t) => !activeTag || (t.tags ?? []).includes(activeTag))
         .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
     },
-    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, search, activeTag, cardBillingDay, yearMonth, userPaymentMethods]
+    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, debouncedSearch, activeTag, cardBillingDay, yearMonth, userPaymentMethods]
   )
 
   const grouped = useMemo(() => {
@@ -394,12 +403,22 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             <CalendarDays size={13} /> 캘린더
           </button>
         </div>
-        <button
-          onClick={() => setShowExport(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
-        >
-          <FileDown size={13} /> 내보내기
-        </button>
+        <div className="ml-auto flex items-center gap-1.5">
+          {onBulkDelete && (
+            <button
+              onClick={() => { setIsSelectionMode((v) => !v); setSelectedIds(new Set()) }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${isSelectionMode ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#1C1C1E] text-[#8B95A1] hover:text-white'}`}
+            >
+              <CheckSquare size={13} /> {isSelectionMode ? '취소' : '선택'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowExport(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+          >
+            <FileDown size={13} /> 내보내기
+          </button>
+        </div>
       </div>
 
       {/* 캘린더 뷰 */}
@@ -482,10 +501,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
               </div>
 
               {/* 검색 */}
-              <div className="relative">
+              <div role="search" className="relative">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]" />
                 <input
                   type="text"
+                  aria-label="내역 검색"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="카테고리, 설명, #태그로 검색"
@@ -960,15 +980,31 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         </div>
                       <div
                         style={{ transform: isSwiped ? 'translateX(-88px)' : 'translateX(0)', transition: 'transform 0.2s ease' }}
-                        onClick={() => { if (isSwiped) { setSwipedId(null); return }; setDetailTransaction(t) }}
-                        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX }}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev)
+                              next.has(t.id) ? next.delete(t.id) : next.add(t.id)
+                              return next
+                            })
+                            return
+                          }
+                          setSwipedId(null); if (!isSwiped) setDetailTransaction(t)
+                        }}
+                        onTouchStart={(e) => { if (!isSelectionMode) touchStartX.current = e.touches[0].clientX }}
                         onTouchEnd={(e) => {
+                          if (isSelectionMode) return
                           const delta = e.changedTouches[0].clientX - touchStartX.current
                           if (delta < -50) setSwipedId(t.id)
                           else if (delta > 20) setSwipedId(null)
                         }}
                         className="flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
                       >
+                        {isSelectionMode && (
+                          <div className="shrink-0 text-[#3D8EF8]">
+                            {selectedIds.has(t.id) ? <CheckSquare size={20} /> : <Square size={20} className="text-[#4E5968]" />}
+                          </div>
+                        )}
                         <div
                           className="w-11 h-11 rounded-full flex items-center justify-center text-xl shrink-0"
                           style={{ backgroundColor: color.bg }}
@@ -977,9 +1013,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <HighlightText text={t.category} query={search} className="text-[14px] font-semibold text-white leading-tight" />
+                          <HighlightText text={t.category} query={debouncedSearch} className="text-[14px] font-semibold text-white leading-tight" />
                           {t.description && (
-                            <HighlightText text={t.description} query={search} className="text-xs text-[#4E5968] truncate mt-0.5 block" />
+                            <HighlightText text={t.description} query={debouncedSearch} className="text-xs text-[#4E5968] truncate mt-0.5 block" />
                           )}
                           {(() => {
                             const resolved = resolvePaymentMethod(t, userPaymentMethods)
@@ -1033,7 +1069,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                                     : 'bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]'
                                     }`}
                                 >
-                                  #<HighlightText text={tag} query={search} />
+                                  #<HighlightText text={tag} query={debouncedSearch} />
                                 </button>
                               ))}
                             </div>
@@ -1087,6 +1123,25 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         )}
 
       </> /* end list view */}
+
+      {/* 일괄 삭제 액션바 */}
+      {isSelectionMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 flex justify-center z-30 px-4">
+          <div className="flex items-center gap-3 bg-[#1C1C1E] border border-white/10 rounded-3xl px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <span className="text-white font-bold text-sm">{selectedIds.size}개 선택됨</span>
+            <button
+              onClick={() => {
+                if (onBulkDelete) onBulkDelete([...selectedIds])
+                setIsSelectionMode(false)
+                setSelectedIds(new Set())
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#F25260]/20 text-[#F25260] font-bold text-sm"
+            >
+              <Trash2 size={14} /> 삭제
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 내역 상세 모달 */}
       {detailTransaction && (

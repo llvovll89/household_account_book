@@ -32,6 +32,7 @@ interface Props {
   onOpenPaymentMethodsModal: () => void
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
+  onBulkDeleteTransactions?: (ids: string[]) => void
   onTransactionArchive: (cutoff: string) => void
   onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
@@ -64,6 +65,7 @@ export default function LedgerWorkspace({
   onOpenPaymentMethodsModal,
   onTransactionEdit,
   onTransactionDelete,
+  onBulkDeleteTransactions,
   onTransactionArchive,
   onMemoAdd,
   onMemoUpdate,
@@ -101,6 +103,7 @@ export default function LedgerWorkspace({
             userPaymentMethods={userPaymentMethods}
             onEdit={onTransactionEdit}
             onDelete={onTransactionDelete}
+            onBulkDelete={onBulkDeleteTransactions}
             onArchiveDone={onTransactionArchive}
           />
         </div>

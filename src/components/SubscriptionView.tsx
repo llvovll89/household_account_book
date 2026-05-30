@@ -110,10 +110,15 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   }
 
   function handleDelete(id: string) {
-    if (!confirm('이 구독을 삭제할까요?')) return
-    onChange(subscriptions.filter(s => s.id !== id))
+    setConfirmingId(id)
   }
 
+  function confirmDelete(id: string) {
+    onChange(subscriptions.filter(s => s.id !== id))
+    setConfirmingId(null)
+  }
+
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const sorted = [...subscriptions].sort((a, b) => a.billingDay - b.billingDay)
   const totalKrw = subscriptions
     .filter(s => s.currency === 'KRW')
@@ -240,18 +245,27 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                   </div>
 
                   <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => openEdit(sub)}
-                      className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
-                    >
-                      <Pencil size={11} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(sub.id)}
-                      className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
-                    >
-                      <Trash2 size={11} />
-                    </button>
+                    {confirmingId === sub.id ? (
+                      <>
+                        <button onClick={() => setConfirmingId(null)} className="px-2 h-7 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-[10px] font-bold">취소</button>
+                        <button onClick={() => confirmDelete(sub.id)} className="px-2 h-7 rounded-lg bg-[#F25260]/20 text-[#F25260] text-[10px] font-bold">삭제</button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => openEdit(sub)}
+                          className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(sub.id)}
+                          className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {sub.memo && (

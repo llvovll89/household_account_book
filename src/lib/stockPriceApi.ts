@@ -182,13 +182,15 @@ async function searchByYahoo(keyword: string): Promise<StockSearchResult[]> {
     if (!res.ok) throw new Error(`Yahoo 검색 오류: HTTP ${res.status}`)
   }
 
-  const data: any = await res.json()
+  interface YahooSearchQuote { symbol?: string; shortName?: string; longname?: string; quoteType?: string }
+  interface YahooSearchResponse { quotes?: YahooSearchQuote[] }
+  const data = await res.json() as YahooSearchResponse
   return (data?.quotes ?? [])
-    .filter((q: any) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
-    .map((q: any) => ({
+    .filter((q) => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+    .map((q) => ({
       symbol: q.symbol ?? '',
-      shortName: q.shortName ?? q.longname ?? q.symbol,
-      quoteType: q.quoteType,
+      shortName: q.shortName ?? q.longname ?? q.symbol ?? '',
+      quoteType: q.quoteType ?? '',
     }))
     .filter((q: StockSearchResult) => isValidYahooSymbol(q.symbol))
 }
@@ -252,8 +254,11 @@ export async function fetchChart(ticker: string, range: ChartRange): Promise<Sto
     `/v8/finance/chart/${encodeURIComponent(symbol)}` +
     `?interval=${interval}&range=${range}&includePrePost=false`
 
+  interface YahooChartMeta { currency?: string; chartPreviousClose?: number; previousClose?: number }
+  interface YahooChartResult { timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[] }[] }; meta?: YahooChartMeta }
+  interface YahooChartResponse { chart?: { result?: YahooChartResult[] } }
   const res = await fetchWithProxyFallback(path)
-  const data: any = await res.json()
+  const data = await res.json() as YahooChartResponse
   const result = data?.chart?.result?.[0]
   if (!result) throw new Error('차트 데이터 없음')
 
@@ -321,12 +326,18 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
     `&lang=ko-KR` +
     `&corsDomain=finance.yahoo.com`
 
-  let results: any[]
+  interface YahooQuoteItem {
+    symbol?: string; regularMarketPrice?: number; regularMarketPreviousClose?: number
+    regularMarketChange?: number; regularMarketChangePercent?: number
+    currency?: string; marketState?: string; shortName?: string
+  }
+  interface YahooQuoteResponse { quoteResponse?: { result?: YahooQuoteItem[] } }
+  let results: YahooQuoteItem[]
   try {
     const res = await fetchWithProxyFallback(path)
     if (!res.ok) throw new Error(`Yahoo Finance API 오류: HTTP ${res.status}`)
-    const data: unknown = await res.json()
-    results = (data as any)?.quoteResponse?.result ?? []
+    const data = await res.json() as YahooQuoteResponse
+    results = data?.quoteResponse?.result ?? []
   } catch (e) {
     // 모든 프록시 실패 → stale 캐시 반환
     const stale = getStaleCache(cacheKey)
