@@ -159,11 +159,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     const item = buildItem()
     if (!item) return
     setQueue((prev) => [...prev, item])
-    // 금액·설명만 리셋, 날짜·타입·카테고리 유지
+    // 금액·설명·영수증만 리셋, 날짜·타입·카테고리 유지
     setAmount('')
     setDescription('')
     setDateEnd('')
     setShowDateEnd(false)
+    setReceiptImageUrl('')
+    setReceiptFile(null)
+    setReceiptPreview(null)
     amountInputRef.current?.focus()
   }
 
@@ -185,15 +188,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       }
 
       const current = buildItem()
-      let all = current ? [...queue, current] : queue
-
-      // receiptImageUrl 설정
-      if (finalReceiptUrl) {
-        all = all.map((item) => ({
-          ...item,
-          receiptImageUrl: finalReceiptUrl
-        }))
-      }
+      // Apply receipt URL only to the current item; queue items keep their own
+      const currentFinal = current ? { ...current, receiptImageUrl: finalReceiptUrl } : null
+      const all = currentFinal ? [...queue, currentFinal] : [...queue]
 
       if (all.length === 0) return
       onSave(all)

@@ -525,6 +525,22 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     return slots.map(s => ({ ...s, pct: Math.round((s.amount / max) * 100) }))
   }, [monthly])
 
+  // 오늘 지출 요약
+  const todaySpending = useMemo(() => {
+    const [y, m] = yearMonth.split('-').map(Number)
+    const now = new Date()
+    if (now.getFullYear() !== y || now.getMonth() + 1 !== m) return null
+    const todayStr = now.toISOString().slice(0, 10)
+    const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10)
+    const todayTx = monthly.filter(t => t.date === todayStr)
+    const yesterdayTx = monthly.filter(t => t.date === yesterdayStr)
+    const todayExpense = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+    const yesterdayExpense = yesterdayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+    const todayIncome = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const recentTx = [...todayTx].filter(t => t.type === 'expense').sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)
+    return { todayExpense, yesterdayExpense, todayIncome, recentTx }
+  }, [monthly, yearMonth])
+
   // 이달 최대 지출 거래 TOP3
   const top3Expenses = useMemo(() =>
     [...monthly].filter(t => t.type === 'expense').sort((a, b) => b.amount - a.amount).slice(0, 3)
@@ -863,6 +879,60 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
           value={`${balance >= 0 ? '' : '-'}${fmtShort(Math.abs(balance))}원`}
         />
       </div>
+
+      {/* 오늘 지출 카드 */}
+      {todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
+        noSpendStreak >= 1 && (
+          <div className="flex items-center gap-3 px-4 py-3.5 bg-[#2ACF6A]/10 rounded-2xl border border-[#2ACF6A]/20">
+            <span className="text-2xl">🎯</span>
+            <div>
+              <p className="text-sm font-bold text-[#2ACF6A]">오늘 무지출!</p>
+              <p className="text-[11px] text-[#4E5968]">
+                {noSpendStreak >= 2 ? `🔥 ${noSpendStreak}일 연속 무지출 스트릭` : '좋은 시작이에요, 계속 유지해보세요'}
+              </p>
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">오늘 지출</p>
+            {todaySpending.yesterdayExpense > 0 && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${todaySpending.todayExpense > todaySpending.yesterdayExpense ? 'bg-[#F25260]/15 text-[#F25260]' : todaySpending.todayExpense < todaySpending.yesterdayExpense ? 'bg-[#2ACF6A]/15 text-[#2ACF6A]' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}>
+                {todaySpending.todayExpense > todaySpending.yesterdayExpense ? '▲' : todaySpending.todayExpense < todaySpending.yesterdayExpense ? '▼' : '='} 어제 대비 {todaySpending.todayExpense !== todaySpending.yesterdayExpense ? `${fmtShort(Math.abs(todaySpending.todayExpense - todaySpending.yesterdayExpense))}원` : '동일'}
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-1.5 mb-3">
+            <p className="text-[26px] font-black num text-[#F25260] leading-none">
+              -{fmtShort(todaySpending.todayExpense)}
+            </p>
+            <span className="text-sm text-[#4E5968] font-semibold">원</span>
+            {todaySpending.todayIncome > 0 && (
+              <span className="text-sm font-bold text-[#2ACF6A] num ml-1">+{fmtShort(todaySpending.todayIncome)}</span>
+            )}
+          </div>
+          {todaySpending.recentTx.length > 0 && (
+            <div className="space-y-2 pt-2.5 border-t border-white/5">
+              {todaySpending.recentTx.map(t => {
+                const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                return (
+                  <div key={t.id} className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: color.bg }}>
+                      {CATEGORY_EMOJI[t.category] ?? '📦'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-semibold text-white leading-none truncate">{t.description || t.category}</p>
+                      {t.description && <p className="text-[10px] text-[#4E5968] mt-0.5">{t.category}</p>}
+                    </div>
+                    <span className="text-[13px] font-bold num text-[#F25260] shrink-0">-{fmt(t.amount)}원</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      ))}
 
       {/* 재정 건강도 */}
       {income > 0 && (

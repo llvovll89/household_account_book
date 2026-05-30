@@ -12,6 +12,7 @@ import DonutChart from './charts/DonutChart'
 import YearlyBarChart from './charts/YearlyBarChart'
 import CumulativeLineChart from './charts/CumulativeLineChart'
 import CashflowChart from './charts/CashflowChart'
+import BudgetCompareChart from './charts/BudgetCompareChart'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 
@@ -29,7 +30,7 @@ function getYM(year: number, month: number) {
 
 const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
-type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce'
+type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce' | 'budget'
 
 export default function Analytics({ transactions, yearMonth, budgets, settingsVersion, userPaymentMethods = [] }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
@@ -38,6 +39,8 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [cardBillingDay, setCardBillingDay] = useState<number>(25)
   const [progressMounted, setProgressMounted] = useState(false)
+  const [showAllTags, setShowAllTags] = useState(false)
+  const [summaryCopied, setSummaryCopied] = useState(false)
 
   useEffect(() => {
     if (userPaymentMethods.length > 0) {
@@ -83,6 +86,18 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
 
   const yearTotalIncome = yearlyData.reduce((s, m) => s + m.income, 0)
   const yearTotalExpense = yearlyData.reduce((s, m) => s + m.expense, 0)
+
+  // ── 연간 카테고리별 지출 TOP5 ─────────────────────────
+  const yearlyCategoryData = useMemo(() => {
+    const map: Record<string, number> = {}
+    transactions.filter(t => t.type === 'expense' && t.date.startsWith(String(selectedYear)))
+      .forEach(t => { map[t.category] = (map[t.category] || 0) + t.amount })
+    const total = Object.values(map).reduce((s, v) => s + v, 0)
+    return Object.entries(map)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
+  }, [transactions, selectedYear])
 
   // ── 이번 달 카테고리별 지출 ────────────────────────────
   const currentMonthly = transactions.filter((t) => t.date.startsWith(yearMonth))
@@ -365,6 +380,34 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
 
   const topTagColors = ['#3D8EF8', '#F5BE3A', '#2ACF6A']
 
+  // ── 전월 동기간(MTD) 비교 ─────────────────────────────
+  const mtdComparison = useMemo(() => {
+    const now = new Date()
+    const [y, m] = yearMonth.split('-').map(Number)
+    const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m
+    const dayOfMonth = isCurrentMonth ? now.getDate() : new Date(y, m, 0).getDate()
+    const todayDayStr = String(dayOfMonth).padStart(2, '0')
+    const cutoffThis = `${yearMonth}-${todayDayStr}`
+
+    const prevY = m === 1 ? y - 1 : y
+    const prevM = m === 1 ? 12 : m - 1
+    const prevYM = `${prevY}-${String(prevM).padStart(2, '0')}`
+    const cutoffPrev = `${prevYM}-${todayDayStr}`
+
+    const thisMTD = transactions.filter(t => t.type === 'expense' && t.date.startsWith(yearMonth) && t.date <= cutoffThis)
+      .reduce((s, t) => s + t.amount, 0)
+    const prevMTD = transactions.filter(t => t.type === 'expense' && t.date.startsWith(prevYM) && t.date <= cutoffPrev)
+      .reduce((s, t) => s + t.amount, 0)
+    const diff = prevMTD > 0 ? Math.round(((thisMTD - prevMTD) / prevMTD) * 100) : null
+
+    const thisMTDIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(yearMonth) && t.date <= cutoffThis)
+      .reduce((s, t) => s + t.amount, 0)
+    const prevMTDIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(prevYM) && t.date <= cutoffPrev)
+      .reduce((s, t) => s + t.amount, 0)
+
+    return { thisMTD, prevMTD, diff, thisMTDIncome, prevMTDIncome, dayOfMonth, isCurrentMonth }
+  }, [transactions, yearMonth])
+
   // ── 캐시플로 탭 best/worst 월 ────────────────────────
   const cashflowStats = useMemo(() => {
     const withData = monthlyData.filter(m => m.income > 0 || m.expense > 0)
@@ -380,13 +423,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     cashflow: '플로우',
     tags: '태그',
     reduce: '절감',
+    budget: '예산',
   }
 
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
       <div className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto scrollbar-none gap-0.5">
-        {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce'] as ViewMode[]).map((m) => (
+        {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce', 'budget'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
@@ -452,6 +496,41 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               </div>
             )
           })()}
+
+          {/* 전월 동기간 비교 */}
+          {(mtdComparison.thisMTD > 0 || mtdComparison.prevMTD > 0) && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[15px] font-bold text-white">전월 동기간 비교</p>
+                <span className="text-[10px] text-[#4E5968]">{mtdComparison.dayOfMonth}일까지 기준</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
+                  <p className="text-[10px] text-[#8B95A1] mb-1.5">이달 지출</p>
+                  <p className="text-[18px] font-black text-[#F25260] num leading-none">{fmt(mtdComparison.thisMTD)}</p>
+                  <p className="text-[10px] text-[#4E5968] mt-1">원</p>
+                </div>
+                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
+                  <p className="text-[10px] text-[#8B95A1] mb-1.5">전달 동기간</p>
+                  <p className="text-[18px] font-black text-[#4E5968] num leading-none">{fmt(mtdComparison.prevMTD)}</p>
+                  <p className="text-[10px] text-[#4E5968] mt-1">원</p>
+                </div>
+              </div>
+              {mtdComparison.diff !== null && (
+                <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl ${mtdComparison.diff > 0 ? 'bg-[#F25260]/10 border border-[#F25260]/20' : mtdComparison.diff < 0 ? 'bg-[#2ACF6A]/10 border border-[#2ACF6A]/20' : 'bg-[#2C2C2E]'}`}>
+                  <span className="text-lg">{mtdComparison.diff > 0 ? '📈' : mtdComparison.diff < 0 ? '📉' : '✅'}</span>
+                  <p className="text-sm font-semibold" style={{ color: mtdComparison.diff > 0 ? '#F25260' : mtdComparison.diff < 0 ? '#2ACF6A' : '#8B95A1' }}>
+                    {mtdComparison.diff > 0 ? `전달보다 ${mtdComparison.diff}% 더 썼어요` : mtdComparison.diff < 0 ? `전달보다 ${Math.abs(mtdComparison.diff)}% 절약 중!` : '전달과 동일한 페이스예요'}
+                  </p>
+                  {mtdComparison.diff !== 0 && (
+                    <span className="ml-auto text-[11px] font-bold num" style={{ color: mtdComparison.diff > 0 ? '#F25260' : '#2ACF6A' }}>
+                      {mtdComparison.diff > 0 ? '+' : ''}{fmt(mtdComparison.thisMTD - mtdComparison.prevMTD)}원
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 전월 대비 */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
@@ -822,6 +901,33 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             </div>
           )}
 
+          {/* 이달 요약 복사 */}
+          {(current.income > 0 || current.expense > 0) && (
+            <button
+              onClick={() => {
+                const [y, m] = yearMonth.split('-').map(Number)
+                const balance = current.income - current.expense
+                const top3 = expenseByCategory.slice(0, 3).map(e => `  · ${CATEGORY_EMOJI[e.cat] ?? ''} ${e.cat}: ${e.amt.toLocaleString()}원 (${e.pct}%)`).join('\n')
+                const text = [
+                  `📊 ${y}년 ${m}월 가계부 요약`,
+                  `─────────────────`,
+                  `💰 수입: ${current.income.toLocaleString()}원`,
+                  `💸 지출: ${current.expense.toLocaleString()}원`,
+                  `🏦 잔액: ${balance >= 0 ? '+' : ''}${balance.toLocaleString()}원`,
+                  top3 ? `\n📌 지출 TOP3\n${top3}` : '',
+                  `\n#잔고플랜 #가계부`,
+                ].filter(Boolean).join('\n')
+                void navigator.clipboard.writeText(text).then(() => {
+                  setSummaryCopied(true)
+                  setTimeout(() => setSummaryCopied(false), 2000)
+                })
+              }}
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all ${summaryCopied ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/30 text-[#2ACF6A]' : 'border-white/10 text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20'}`}
+            >
+              {summaryCopied ? '✓ 복사 완료!' : '📋 이달 요약 복사'}
+            </button>
+          )}
+
           {/* 전월 대비 카테고리 비교 */}
           {categoryMomComparison.length > 0 && (
             <div className="bg-[#1C1C1E] rounded-2xl p-5">
@@ -936,6 +1042,35 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             )}
           </div>
 
+          {/* 연간 지출 TOP5 */}
+          {yearlyCategoryData.length > 0 && (
+            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+              <p className="text-[15px] font-bold text-white mb-4">{selectedYear}년 지출 TOP5</p>
+              <div className="space-y-3">
+                {yearlyCategoryData.map((d, i) => (
+                  <div key={d.cat}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs text-[#8B95A1]">
+                        <span className="text-[10px] text-[#4E5968] mr-1">#{i + 1}</span>
+                        {CATEGORY_EMOJI[d.cat] ?? ''} {d.cat}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-[#8B95A1] num">{fmt(d.amt)}원</span>
+                        <span className="text-[11px] font-bold text-[#F25260] num">{d.pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-[#F25260] transition-all duration-700"
+                        style={{ width: progressMounted ? `${d.pct}%` : '0%' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 12개월 차트 */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <p className="text-[15px] font-bold text-white mb-1">월별 추이</p>
@@ -1022,7 +1157,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                   <span className="text-xs text-[#4E5968] ml-auto">{yearMonth.replace('-', '년 ')}월</span>
                 </div>
                 <div className="space-y-3">
-                  {tagData.slice(0, 8).map((item, idx) => {
+                  {(showAllTags ? tagData : tagData.slice(0, 5)).map((item, idx) => {
                     const maxExpense = tagData[0].expense || 1
                     const barPct = Math.round((item.expense / maxExpense) * 100)
                     return (
@@ -1057,6 +1192,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                     )
                   })}
                 </div>
+                {tagData.length > 5 && (
+                  <button
+                    onClick={() => setShowAllTags((v) => !v)}
+                    className="w-full mt-3 py-2 rounded-xl text-[12px] font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:bg-[#2C2C2E] transition-colors"
+                  >
+                    {showAllTags ? '접기' : `${tagData.length - 5}개 더보기`}
+                  </button>
+                )}
               </div>
 
               {/* 태그 지출 막대 차트 (상위 6) */}
@@ -1171,6 +1314,15 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       {/* ──── 절감 제안 뷰 ──── */}
       {viewMode === 'reduce' && (
         <SpendingAnalysisView transactions={transactions} budgets={budgets} />
+      )}
+
+      {/* ──── 예산 vs 실지출 뷰 ──── */}
+      {viewMode === 'budget' && (
+        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+          <p className="text-[15px] font-bold text-white mb-1">예산 vs 실지출</p>
+          <p className="text-xs text-[#8B95A1] mb-4">{yearMonth.replace('-', '년 ')}월 카테고리별 예산 대비 지출</p>
+          <BudgetCompareChart transactions={transactions} budgets={budgets} yearMonth={yearMonth} />
+        </div>
       )}
 
       {/* ──── 캐시플로 뷰 ──── */}
