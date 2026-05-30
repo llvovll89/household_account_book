@@ -347,6 +347,7 @@ export async function fetchQuotes(tickers: string[]): Promise<Record<string, Sto
 
   const quotes: Record<string, StockQuote> = {}
   for (const r of results) {
+    if (!r.symbol) continue
     const originalTicker = symbolToTicker[r.symbol] ?? r.symbol
     quotes[originalTicker] = {
       symbol: r.symbol,

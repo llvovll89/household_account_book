@@ -632,6 +632,7 @@ export default function App() {
         handleUpdateMemo,
         handleDeleteMemo,
         handleTogglePin,
+        handleBulkDeleteTransactions,
     } = useAppHandlers({
         transactions,
         editingTransaction,

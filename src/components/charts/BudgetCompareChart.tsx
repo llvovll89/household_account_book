@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { Budget, Transaction } from '../../types'
 import { CATEGORY_EMOJI } from '../../types'
 import { fmtShort as fmt } from '../../lib/format'
@@ -57,8 +57,8 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
             type="category"
             dataKey="category"
             width={68}
-            tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => (
-              <text x={x} y={y} dy={4} textAnchor="end" fill="#8B95A1" fontSize={11}>
+            tick={({ x, y, payload }: { x: string | number; y: string | number; payload: { value: string } }) => (
+              <text x={Number(x)} y={Number(y)} dy={4} textAnchor="end" fill="#8B95A1" fontSize={11}>
                 {CATEGORY_EMOJI[payload.value] ?? ''} {payload.value}
               </text>
             )}
