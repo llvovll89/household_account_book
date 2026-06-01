@@ -4,7 +4,6 @@ import type { StockTrade, StockQuote } from '../types'
 import { calcHoldings } from '../lib/stockCalc'
 import { fmt, fmtQty, fmtPrice } from '../lib/format'
 import { searchStocks, type StockSearchResult } from '../lib/stockPriceApi'
-import { getKrStockName } from '../lib/krStocks'
 
 interface Props {
   trades: StockTrade[]
@@ -118,7 +117,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
           {/* 자동완성 드롭다운 */}
           {suggestions.length > 0 && (
-            <ul className="absolute top-full left-0 right-10 mt-1 bg-[#2C2C2E] rounded-xl overflow-hidden z-10 shadow-lg border border-white/[0.06]">
+            <ul className="absolute top-full left-0 right-10 mt-1 bg-[#2C2C2E] rounded-xl overflow-hidden z-10 shadow-lg border border-white/6">
               {suggestions.map((s) => (
                 <li
                   key={s.symbol}
@@ -172,7 +171,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">
-                      {getKrStockName(item.ticker) || quote?.shortName || item.ticker}
+                      {quote?.shortName || item.ticker}
                     </p>
                     <p className="text-[10px] text-[#4E5968] truncate">{item.ticker}</p>
                     {item.holding ? (
@@ -208,7 +207,7 @@ export default function StockWatchlist({ trades, watchlist, prices = {}, onAdd, 
 
                 {/* 미실현 손익 (보유 + 가격 데이터 있을 때) */}
                 {item.holding && quote && (
-                  <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center justify-between">
+                  <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
                     <p className="text-[10px] text-[#4E5968]">
                       평가금액 {fmtPrice(quote.currentPrice * item.holding.quantity, currency)}
                     </p>

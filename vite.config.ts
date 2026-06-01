@@ -5,6 +5,22 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (id.includes('xlsx')) return 'vendor-xlsx'
+          if (id.includes('pdfjs-dist')) return 'vendor-pdf'
+          if (id.includes('papaparse')) return 'vendor-csv'
+          if (id.includes('firebase')) return 'vendor-firebase'
+          if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts'
+          if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       // 개발환경 CORS 우회: /yf-api/* → https://query1.finance.yahoo.com/*
@@ -63,6 +79,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: [
+          '**/assets/vendor-xlsx-*.js',
+          '**/assets/vendor-pdf-*.js',
+          '**/assets/ImportModal-*.js',
+          '**/assets/TransactionModal-*.js',
+          '**/assets/StockTradeModal-*.js',
+          '**/assets/SyncConflictModal-*.js',
+          '**/assets/SyncRecoveryGuideModal-*.js',
+          '**/assets/MergeLocalDataModal-*.js',
+          '**/assets/AutoApplyRecurringModal-*.js',
+          '**/assets/HelpModal-*.js',
+          '**/assets/CategoryModal-*.js',
+          '**/assets/PaymentMethodsModal-*.js',
+          '**/assets/StockDetailModal-*.js',
+        ],
         clientsClaim: true,
         skipWaiting: true,
         // 폰트 등 외부 리소스는 네트워크 우선, 나머지는 캐시 우선

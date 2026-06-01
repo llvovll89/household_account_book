@@ -1,13 +1,22 @@
-import { useMemo } from 'react'
+import { Suspense, lazy, useMemo } from 'react'
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import type { StockTrade } from '../../types'
 import type { StockSubTab } from '../../types/navigation'
 import { calcHoldings } from '../../lib/stockCalc'
 import useStockPrice from '../../hooks/useStockPrice'
-import StockPortfolio from '../StockPortfolio'
-import StockWatchlist from '../StockWatchlist'
-import StockTradeList from '../StockTradeList'
-import StockPerformance from '../StockPerformance'
+
+const StockPortfolio = lazy(() => import('../StockPortfolio'))
+const StockWatchlist = lazy(() => import('../StockWatchlist'))
+const StockTradeList = lazy(() => import('../StockTradeList'))
+const StockPerformance = lazy(() => import('../StockPerformance'))
+
+function SubTabFallback() {
+  return (
+    <div className="bg-[#1C1C1E] rounded-2xl p-6 text-center">
+      <p className="text-sm font-semibold text-[#8B95A1]">주식 화면을 불러오는 중...</p>
+    </div>
+  )
+}
 
 interface Props {
   stockSubTab: StockSubTab
@@ -111,37 +120,45 @@ export default function StocksWorkspace({
       {/* 서브 탭 컨텐츠 */}
       {stockSubTab === 'portfolio' && (
         <div key="portfolio" className="tab-content">
-          <StockPortfolio
-            trades={stockTrades}
-            prices={prices}
-            onEdit={onTradeEdit}
-            onDelete={onTradeDelete}
-          />
+          <Suspense fallback={<SubTabFallback />}>
+            <StockPortfolio
+              trades={stockTrades}
+              prices={prices}
+              onEdit={onTradeEdit}
+              onDelete={onTradeDelete}
+            />
+          </Suspense>
         </div>
       )}
       {stockSubTab === 'watchlist' && (
         <div key="watchlist" className="tab-content">
-          <StockWatchlist
-            trades={stockTrades}
-            watchlist={stockWatchlist}
-            prices={prices}
-            onAdd={onWatchAdd}
-            onRemove={onWatchRemove}
-          />
+          <Suspense fallback={<SubTabFallback />}>
+            <StockWatchlist
+              trades={stockTrades}
+              watchlist={stockWatchlist}
+              prices={prices}
+              onAdd={onWatchAdd}
+              onRemove={onWatchRemove}
+            />
+          </Suspense>
         </div>
       )}
       {stockSubTab === 'trades' && (
         <div key="trades" className="tab-content">
-          <StockTradeList
-            trades={stockTrades}
-            onEdit={onTradeEdit}
-            onDelete={onTradeDelete}
-          />
+          <Suspense fallback={<SubTabFallback />}>
+            <StockTradeList
+              trades={stockTrades}
+              onEdit={onTradeEdit}
+              onDelete={onTradeDelete}
+            />
+          </Suspense>
         </div>
       )}
       {stockSubTab === 'performance' && (
         <div key="performance" className="tab-content">
-          <StockPerformance trades={stockTrades} />
+          <Suspense fallback={<SubTabFallback />}>
+            <StockPerformance trades={stockTrades} />
+          </Suspense>
         </div>
       )}
     </>

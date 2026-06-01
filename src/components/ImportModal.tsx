@@ -154,7 +154,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
     <>
       <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
         onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/[0.06] modal-panel">
+        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel">
 
           {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
@@ -184,7 +184,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                   <span className={`text-[11px] font-semibold ${step === s ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>
                     {s === 'upload' ? '파일' : s === 'mapping' ? '컬럼' : '확인'}
                   </span>
-                  {i < 2 && <div className="flex-1 h-px bg-white/[0.06] ml-1" />}
+                  {i < 2 && <div className="flex-1 h-px bg-white/6 ml-1" />}
                 </div>
               )
             })}
@@ -199,7 +199,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                 onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
                 onClick={() => fileInputRef.current?.click()}
                 className={`rounded-2xl p-10 flex flex-col items-center gap-5 cursor-pointer transition-all border ${
-                  isDragging ? 'bg-[#3D8EF8]/10 border-[#3D8EF8]/40' : 'bg-[#2C2C2E] border-white/[0.05] hover:border-white/10'
+                  isDragging ? 'bg-[#3D8EF8]/10 border-[#3D8EF8]/40' : 'bg-[#2C2C2E] border-white/5 hover:border-white/10'
                 }`}
               >
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDragging ? 'bg-[#3D8EF8]/20' : 'bg-[#3A3A3C]'}`}>
@@ -246,7 +246,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               {/* 가로+세로 스크롤 모두 허용, 시간값이 잘리지 않게 표시 */}
               <div
                 ref={mappingTableRef}
-                className="table-h-scroll rounded-2xl overflow-auto max-h-72 border border-white/[0.05]"
+                className="table-h-scroll rounded-2xl overflow-auto max-h-72 border border-white/5"
                 onScroll={(e) => {
                   const target = e.currentTarget
                   const remain = target.scrollHeight - target.scrollTop - target.clientHeight
@@ -276,13 +276,13 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.03]">
+                  <tbody className="divide-y divide-white/3">
                     {csvRows.slice(0, mappingVisibleCount).map((row, i) => (
                       <tr
                         key={i}
                         title="행 클릭: 원본 상세 보기"
                         onClick={() => setMappingDetailIdx(i)}
-                        className="cursor-pointer transition-colors hover:bg-white/[0.04] active:bg-white/[0.07]"
+                        className="cursor-pointer transition-colors hover:bg-white/4 active:bg-white/7"
                       >
                         {csvHeaders.map((h) => (
                           <td
@@ -340,11 +340,11 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                     <p className="text-xl font-bold text-[#3D8EF8] num">{importCount}</p>
                     <p className="text-[10px] text-[#3D8EF8]/70 font-semibold mt-0.5">가져올 내역</p>
                   </div>
-                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#2C2C2E] border-white/[0.04]'}`}>
+                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#2C2C2E] border-white/4'}`}>
                     <p className={`text-xl font-bold num ${dupCount > 0 ? 'text-[#F5BE3A]' : 'text-[#4E5968]'}`}>{dupCount}</p>
                     <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-[#F5BE3A]/70' : 'text-[#4E5968]'}`}>중복 제외</p>
                   </div>
-                  <div className="bg-[#2C2C2E] rounded-2xl p-3 text-center border border-white/[0.04]">
+                  <div className="bg-[#2C2C2E] rounded-2xl p-3 text-center border border-white/4">
                     <p className="text-xl font-bold text-[#8B95A1] num">{previewRows.length}</p>
                     <p className="text-[10px] text-[#4E5968] font-semibold mt-0.5">전체</p>
                   </div>
@@ -361,7 +361,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               {/* 테이블 — 단일 테이블 + sticky thead + flex-1로 남은 공간 채움 */}
               <div
                 ref={previewTableRef}
-                className="mx-6 flex-1 min-h-0 rounded-2xl border border-white/[0.05] overflow-auto"
+                className="mx-6 flex-1 min-h-0 rounded-2xl border border-white/5 overflow-auto"
                 onScroll={(e) => {
                   const target = e.currentTarget
                   const remain = target.scrollHeight - target.scrollTop - target.clientHeight
@@ -383,23 +383,23 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.03]">
+                  <tbody className="divide-y divide-white/3">
                     {previewRows.slice(0, visibleCount).map((row, i) => (
                       <tr key={i}
                         title="행 클릭: 상세 보기"
-                        className={`cursor-pointer transition-colors hover:bg-white/[0.04] active:bg-white/[0.07] ${row.skip ? 'opacity-30' : ''}`}
+                        className={`cursor-pointer transition-colors hover:bg-white/4 active:bg-white/7 ${row.skip ? 'opacity-30' : ''}`}
                         onClick={() => openDetail(i)}>
                         <td className="px-3 py-2.5 w-10" onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" checked={!row.skip}
                             onChange={(e) => updateRow(i, { skip: !e.target.checked })}
                             className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
                         </td>
-                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap min-w-[88px]">{row.date}</td>
-                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] max-w-[90px] truncate">{row.description || '-'}</td>
+                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap min-w-22">{row.date}</td>
+                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] max-w-22.5 truncate">{row.description || '-'}</td>
                         <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap">
                           {CATEGORY_EMOJI[row.category]} {row.category}
                         </td>
-                        <td className={`px-3 py-2.5 text-[11px] font-bold text-right num whitespace-nowrap min-w-[92px] ${row.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
+                        <td className={`px-3 py-2.5 text-[11px] font-bold text-right num whitespace-nowrap min-w-23 ${row.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
                           {row.type === 'income' ? '+' : '-'}{row.amount.toLocaleString()}원
                         </td>
                       </tr>
@@ -415,7 +415,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               </div>
 
               {/* 하단 버튼 */}
-              <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0 flex gap-3">
+              <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0 flex gap-3">
                 <button onClick={() => setStep(isPDF ? 'upload' : 'mapping')}
                   className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors">
                   이전
@@ -461,7 +461,7 @@ function MappingSelect({ label, value, headers, optional, onChange }: {
       <label className="block text-[11px] font-semibold text-[#4E5968] mb-1.5">{label}</label>
       <div className="relative">
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-[#2C2C2E] border border-white/[0.06] rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
+          className="w-full bg-[#2C2C2E] border border-white/6 rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
           <option value="" className="text-[#4E5968]">{optional ? '없음' : '선택'}</option>
           {headers.map((h) => <option key={h} value={h}>{h}</option>)}
         </select>

@@ -15,6 +15,8 @@ interface Props {
   stockSubTab: StockSubTab
   onLedgerTabChange: (tab: Tab) => void
   onStockSubTabChange: (tab: StockSubTab) => void
+  onLedgerTabHover?: (tab: Tab) => void
+  onStockSubTabHover?: (tab: StockSubTab) => void
 }
 
 const STOCKS_SUB_TABS: Array<{
@@ -35,6 +37,8 @@ export default function BottomNavigation({
   stockSubTab,
   onLedgerTabChange,
   onStockSubTabChange,
+  onLedgerTabHover,
+  onStockSubTabHover,
 }: Props) {
   const ledgerActiveIdx = ledgerTabs.findIndex((t) => t.id === activeTab)
   const stockActiveIdx = STOCKS_SUB_TABS.findIndex((t) => t.id === stockSubTab)
@@ -57,13 +61,27 @@ export default function BottomNavigation({
             />
           )}
           {activeMode === 'ledger' && ledgerTabs.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => onLedgerTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors">
+            <button
+              key={id}
+              onClick={() => onLedgerTabChange(id)}
+              onMouseEnter={() => onLedgerTabHover?.(id)}
+              onFocus={() => onLedgerTabHover?.(id)}
+              onTouchStart={() => onLedgerTabHover?.(id)}
+              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
+            >
               <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`} />
               <span className={`text-[10px] font-bold transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>
           ))}
           {activeMode === 'stocks' && STOCKS_SUB_TABS.map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => onStockSubTabChange(id)} className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors">
+            <button
+              key={id}
+              onClick={() => onStockSubTabChange(id)}
+              onMouseEnter={() => onStockSubTabHover?.(id)}
+              onFocus={() => onStockSubTabHover?.(id)}
+              onTouchStart={() => onStockSubTabHover?.(id)}
+              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
+            >
               <Icon size={20} strokeWidth={stockSubTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`} />
               <span className={`text-[10px] font-bold transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>

@@ -27,7 +27,9 @@ type FilterType = 'all' | 'income' | 'expense'
 type MethodFilterType = 'all' | 'cash' | 'check' | 'credit' | string
 type BillingFilterType = 'all' | 'current' | 'next' | 'later'
 type PeriodMode = 'day' | 'week' | 'month'
+type QuickFilterPreset = 'all' | 'cash-expense' | 'check-expense' | 'credit-current' | 'credit-next'
 
+const FILTER_TYPE_KEY = 'hb_tx_type_filter'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
@@ -60,7 +62,11 @@ function HighlightText({ text, query, className }: { text: string; query: string
 }
 
 export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onArchiveDone }: Props) {
-  const [filter, setFilter] = useState<FilterType>('all')
+  const [filter, setFilter] = useState<FilterType>(() => {
+    const saved = localStorage.getItem(FILTER_TYPE_KEY)
+    if (saved === 'income' || saved === 'expense' || saved === 'all') return saved
+    return 'all'
+  })
   const [methodFilter, setMethodFilter] = useState<MethodFilterType>(() => {
     const saved = localStorage.getItem(METHOD_FILTER_KEY)
     if (saved === 'card') return 'credit'
@@ -104,6 +110,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     if (!saved) return null
     return /^\d{4}-\d{2}$/.test(saved) ? saved : null
   })
+
+  useEffect(() => {
+    localStorage.setItem(FILTER_TYPE_KEY, filter)
+  }, [filter])
 
   useEffect(() => {
     localStorage.setItem(METHOD_FILTER_KEY, methodFilter)
@@ -383,6 +393,59 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     setActiveTag((prev) => (prev === tag ? null : tag))
   }
 
+  function applyQuickPreset(preset: QuickFilterPreset) {
+    setActiveTag(null)
+    setSearch('')
+    setStatementMonthFilter(null)
+
+    if (preset === 'all') {
+      setFilter('all')
+      setMethodFilter('all')
+      setBillingFilter('all')
+      return
+    }
+
+    if (preset === 'cash-expense') {
+      setFilter('expense')
+      setMethodFilter('cash')
+      setBillingFilter('all')
+      return
+    }
+
+    if (preset === 'check-expense') {
+      setFilter('expense')
+      setMethodFilter('check')
+      setBillingFilter('all')
+      return
+    }
+
+    if (preset === 'credit-current') {
+      setFilter('expense')
+      setMethodFilter('credit')
+      setBillingFilter('current')
+      return
+    }
+
+    setFilter('expense')
+    setMethodFilter('credit')
+    setBillingFilter('next')
+  }
+
+  function isQuickPresetActive(preset: QuickFilterPreset): boolean {
+    if (preset === 'all') {
+      return filter === 'all'
+        && methodFilter === 'all'
+        && billingFilter === 'all'
+        && !statementMonthFilter
+        && !activeTag
+        && !search
+    }
+    if (preset === 'cash-expense') return filter === 'expense' && methodFilter === 'cash' && billingFilter === 'all' && !statementMonthFilter
+    if (preset === 'check-expense') return filter === 'expense' && methodFilter === 'check' && billingFilter === 'all' && !statementMonthFilter
+    if (preset === 'credit-current') return filter === 'expense' && methodFilter === 'credit' && billingFilter === 'current' && !statementMonthFilter
+    return filter === 'expense' && methodFilter === 'credit' && billingFilter === 'next' && !statementMonthFilter
+  }
+
   return (
     <div className="space-y-3 tab-content">
       {/* 뷰 전환 + 내보내기 */}
@@ -498,6 +561,30 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                     )}
                   </div>
                 )}
+              </div>
+
+              <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-3 gap-1">
+                {([
+                  { key: 'all', label: '전체' },
+                  { key: 'credit-current', label: '카드 이번' },
+                  { key: 'credit-next', label: '카드 다음' },
+                  { key: 'cash-expense', label: '현금 지출' },
+                  { key: 'check-expense', label: '체크 지출' },
+                ] as { key: QuickFilterPreset; label: string }[]).map((preset) => {
+                  const active = isQuickPresetActive(preset.key)
+                  return (
+                    <button
+                      key={preset.key}
+                      onClick={() => applyQuickPreset(preset.key)}
+                      className={`py-2 rounded-xl text-[11px] font-bold transition-all ${active
+                        ? 'bg-[#3D8EF8] text-white'
+                        : 'text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]'
+                        }`}
+                    >
+                      {preset.label}
+                    </button>
+                  )
+                })}
               </div>
 
               {/* 검색 */}

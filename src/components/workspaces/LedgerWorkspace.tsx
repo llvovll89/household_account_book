@@ -1,11 +1,21 @@
+import { Suspense, lazy } from 'react'
 import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
 import type { Tab } from '../../types/navigation'
-import Dashboard from '../Dashboard'
-import TransactionList from '../TransactionList'
-import Analytics from '../Analytics'
-import MemoSection from '../MemoSection'
-import SubscriptionView from '../SubscriptionView'
-import GoalsView from '../GoalsView'
+
+const Dashboard = lazy(() => import('../Dashboard'))
+const TransactionList = lazy(() => import('../TransactionList'))
+const Analytics = lazy(() => import('../Analytics'))
+const MemoSection = lazy(() => import('../MemoSection'))
+const SubscriptionView = lazy(() => import('../SubscriptionView'))
+const GoalsView = lazy(() => import('../GoalsView'))
+
+function TabFallback() {
+  return (
+    <div className="bg-[#1C1C1E] rounded-2xl p-6 text-center">
+      <p className="text-sm font-semibold text-[#8B95A1]">탭 화면을 불러오는 중...</p>
+    </div>
+  )
+}
 
 interface Props {
   activeTab: Tab
@@ -76,71 +86,83 @@ export default function LedgerWorkspace({
     <>
       {activeTab === 'home' && (
         <div key="home" className="tab-content">
-          <Dashboard
-            transactions={transactions}
-            budgets={budgets}
-            recurring={recurring}
-            stockTrades={stockTrades}
-            goals={goals}
-            settingsVersion={settingsVersion}
-            yearMonth={yearMonth}
-            customExpenseCategories={customExpenseCategories}
-            userPaymentMethods={userPaymentMethods}
-            subscriptions={subscriptions}
-            onBudgetsChange={onBudgetsChange}
-            onRecurringSave={onRecurringSave}
-            onApplyRecurring={onApplyRecurring}
-            onOpenCategoryModal={onOpenCategoryModal}
-            onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
-          />
+          <Suspense fallback={<TabFallback />}>
+            <Dashboard
+              transactions={transactions}
+              budgets={budgets}
+              recurring={recurring}
+              stockTrades={stockTrades}
+              goals={goals}
+              settingsVersion={settingsVersion}
+              yearMonth={yearMonth}
+              customExpenseCategories={customExpenseCategories}
+              userPaymentMethods={userPaymentMethods}
+              subscriptions={subscriptions}
+              onBudgetsChange={onBudgetsChange}
+              onRecurringSave={onRecurringSave}
+              onApplyRecurring={onApplyRecurring}
+              onOpenCategoryModal={onOpenCategoryModal}
+              onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
+            />
+          </Suspense>
         </div>
       )}
       {activeTab === 'transactions' && (
         <div key="transactions" className="tab-content">
-          <TransactionList
-            transactions={transactions}
-            yearMonth={yearMonth}
-            userPaymentMethods={userPaymentMethods}
-            onEdit={onTransactionEdit}
-            onDelete={onTransactionDelete}
-            onBulkDelete={onBulkDeleteTransactions}
-            onArchiveDone={onTransactionArchive}
-          />
+          <Suspense fallback={<TabFallback />}>
+            <TransactionList
+              transactions={transactions}
+              yearMonth={yearMonth}
+              userPaymentMethods={userPaymentMethods}
+              onEdit={onTransactionEdit}
+              onDelete={onTransactionDelete}
+              onBulkDelete={onBulkDeleteTransactions}
+              onArchiveDone={onTransactionArchive}
+            />
+          </Suspense>
         </div>
       )}
       {activeTab === 'analytics' && (
         <div key="analytics" className="tab-content">
-          <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />
+          <Suspense fallback={<TabFallback />}>
+            <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />
+          </Suspense>
         </div>
       )}
       {activeTab === 'memos' && (
         <div key="memos" className="tab-content">
-          <MemoSection
-            memos={memos}
-            onAdd={onMemoAdd}
-            onUpdate={onMemoUpdate}
-            onDelete={onMemoDelete}
-            onTogglePin={onMemoTogglePin}
-            externalAddTrigger={memoAddTrigger}
-          />
+          <Suspense fallback={<TabFallback />}>
+            <MemoSection
+              memos={memos}
+              onAdd={onMemoAdd}
+              onUpdate={onMemoUpdate}
+              onDelete={onMemoDelete}
+              onTogglePin={onMemoTogglePin}
+              externalAddTrigger={memoAddTrigger}
+            />
+          </Suspense>
         </div>
       )}
       {activeTab === 'subscriptions' && (
         <div key="subscriptions" className="tab-content">
-          <SubscriptionView
-            subscriptions={subscriptions}
-            addTrigger={subscriptionAddTrigger}
-            onChange={onSubscriptionsChange}
-          />
+          <Suspense fallback={<TabFallback />}>
+            <SubscriptionView
+              subscriptions={subscriptions}
+              addTrigger={subscriptionAddTrigger}
+              onChange={onSubscriptionsChange}
+            />
+          </Suspense>
         </div>
       )}
       {activeTab === 'goals' && (
         <div key="goals" className="tab-content">
-          <GoalsView
-            goals={goals}
-            addTrigger={goalAddTrigger}
-            onChange={onGoalsChange}
-          />
+          <Suspense fallback={<TabFallback />}>
+            <GoalsView
+              goals={goals}
+              addTrigger={goalAddTrigger}
+              onChange={onGoalsChange}
+            />
+          </Suspense>
         </div>
       )}
     </>

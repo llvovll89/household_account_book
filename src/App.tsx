@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
+import { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, AlertTriangle, Info, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
 import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
@@ -12,21 +12,23 @@ import { useAuthSync } from './hooks/useAuthSync'
 import { useAppHandlers } from './hooks/useAppHandlers'
 import type { UIAction } from './hooks/useAppHandlers.types'
 import { registerToastHandler, showToast, type ToastVariant } from './lib/toast'
-import TransactionModal from './components/TransactionModal'
-import ImportModal from './components/ImportModal'
-import HelpModal from './components/HelpModal'
-import StockTradeModal from './components/StockTradeModal'
-import CategoryModal from './components/CategoryModal'
-import PaymentMethodsModal from './components/PaymentMethodsModal'
-import LedgerWorkspace from './components/workspaces/LedgerWorkspace'
-import StocksWorkspace from './components/workspaces/StocksWorkspace'
 import BottomNavigation from './components/layout/BottomNavigation'
-import MergeLocalDataModal from './components/MergeLocalDataModal'
-import AutoApplyRecurringModal from './components/AutoApplyRecurringModal'
-import SyncConflictModal from './components/SyncConflictModal'
-import SyncRecoveryGuideModal from './components/SyncRecoveryGuideModal'
+
+const TransactionModal = lazy(() => import('./components/TransactionModal'))
+const ImportModal = lazy(() => import('./components/ImportModal'))
+const HelpModal = lazy(() => import('./components/HelpModal'))
+const StockTradeModal = lazy(() => import('./components/StockTradeModal'))
+const CategoryModal = lazy(() => import('./components/CategoryModal'))
+const PaymentMethodsModal = lazy(() => import('./components/PaymentMethodsModal'))
+const LedgerWorkspace = lazy(() => import('./components/workspaces/LedgerWorkspace'))
+const StocksWorkspace = lazy(() => import('./components/workspaces/StocksWorkspace'))
+const MergeLocalDataModal = lazy(() => import('./components/MergeLocalDataModal'))
+const AutoApplyRecurringModal = lazy(() => import('./components/AutoApplyRecurringModal'))
+const SyncConflictModal = lazy(() => import('./components/SyncConflictModal'))
+const SyncRecoveryGuideModal = lazy(() => import('./components/SyncRecoveryGuideModal'))
 
 const DATA_LOAD_TIMEOUT_MS = 9000
+const FILTER_TYPE_KEY = 'hb_tx_type_filter'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
 const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
@@ -79,9 +81,14 @@ function scopeLabel(scope: RemoteVersionKey): string {
     return labels[scope]
 }
 
-function failureReasonLabel(code: 'conflict' | 'save-failed'): string {
-    if (code === 'conflict') return '충돌'
-    return '저장오류'
+function getRetryReasonTotals(reasonsByScope: Partial<Record<RemoteVersionKey, RetryReasonCode[]>>) {
+    let conflict = 0
+    let saveFailed = 0
+    for (const reasons of Object.values(reasonsByScope)) {
+        if ((reasons ?? []).includes('conflict')) conflict += 1
+        if ((reasons ?? []).includes('save-failed')) saveFailed += 1
+    }
+    return { conflict, saveFailed }
 }
 
 
@@ -266,8 +273,12 @@ export default function App() {
         const onOnline = () => {
             setIsOnline(true)
             setHasPendingSync(localStorage.getItem('hb_pending_sync') === 'true')
+            showToast('온라인으로 전환됐어요. 미동기화 항목을 다시 저장할 수 있어요.')
         }
-        const onOffline = () => setIsOnline(false)
+        const onOffline = () => {
+            setIsOnline(false)
+            showToast('오프라인 상태예요. 변경사항은 임시 저장 후 연결 복구 시 동기화돼요.')
+        }
         window.addEventListener('online', onOnline)
         window.addEventListener('offline', onOffline)
         return () => {
@@ -367,6 +378,206 @@ export default function App() {
     const activeMode: AppMode = user ? mode : 'ledger'
     const visibleTabs = LEDGER_TABS
     const activeTab: Tab = activeMode === 'stocks' ? 'stocks' : (tab === 'stocks' ? 'home' : tab)
+
+    const prefetchLedgerTab = useCallback((target: Tab) => {
+        if (target === 'home') {
+            void import('./components/Dashboard')
+            return
+        }
+        if (target === 'transactions') {
+            void import('./components/TransactionList')
+            return
+        }
+        if (target === 'analytics') {
+            void import('./components/Analytics')
+            return
+        }
+        if (target === 'memos') {
+            void import('./components/MemoSection')
+            return
+        }
+        if (target === 'subscriptions') {
+            void import('./components/SubscriptionView')
+            return
+        }
+        if (target === 'goals') {
+            void import('./components/GoalsView')
+        }
+    }, [])
+
+    const prefetchStockSubTab = useCallback((target: StockSubTab) => {
+        if (target === 'portfolio') {
+            void import('./components/StockPortfolio')
+            return
+        }
+        if (target === 'watchlist') {
+            void import('./components/StockWatchlist')
+            return
+        }
+        if (target === 'trades') {
+            void import('./components/StockTradeList')
+            return
+        }
+        if (target === 'performance') {
+            void import('./components/StockPerformance')
+        }
+    }, [])
+
+    const prefetchMode = useCallback((target: AppMode) => {
+        if (target === 'stocks') {
+            prefetchStockSubTab('portfolio')
+            prefetchStockSubTab('watchlist')
+            return
+        }
+        prefetchLedgerTab('home')
+        prefetchLedgerTab('transactions')
+    }, [prefetchLedgerTab, prefetchStockSubTab])
+
+    const prefetchFabModal = useCallback(() => {
+        if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
+            void import('./components/StockTradeModal')
+            return
+        }
+        if (activeTab === 'memos' || activeTab === 'subscriptions' || activeTab === 'goals') {
+            return
+        }
+        void import('./components/TransactionModal')
+    }, [activeTab, stockSubTab])
+
+    const prefetchImportUtilities = useCallback(() => {
+        void import('./components/ImportModal')
+        void import('./components/PaymentMethodsModal')
+    }, [])
+
+    const prefetchHelp = useCallback(() => {
+        void import('./components/HelpModal')
+    }, [])
+
+    const transitionStartRef = useRef<number | null>(null)
+    const transitionLabelRef = useRef<string | null>(null)
+
+    const handleLedgerTabChange = useCallback((nextTab: Tab) => {
+        if (import.meta.env.DEV) {
+            transitionStartRef.current = performance.now()
+            transitionLabelRef.current = `ledger:${nextTab}`
+        }
+
+        prefetchLedgerTab(nextTab)
+        const likelyNext: Partial<Record<Tab, Tab>> = {
+            home: 'transactions',
+            transactions: 'analytics',
+            analytics: 'home',
+            memos: 'transactions',
+            subscriptions: 'home',
+            goals: 'home',
+        }
+        const predicted = likelyNext[nextTab]
+        if (predicted) prefetchLedgerTab(predicted)
+        setTab(nextTab)
+    }, [prefetchLedgerTab])
+
+    const handleStockSubTabChange = useCallback((nextSubTab: StockSubTab) => {
+        if (import.meta.env.DEV) {
+            transitionStartRef.current = performance.now()
+            transitionLabelRef.current = `stocks:${nextSubTab}`
+        }
+
+        prefetchStockSubTab(nextSubTab)
+        const likelyNext: Partial<Record<StockSubTab, StockSubTab>> = {
+            portfolio: 'watchlist',
+            watchlist: 'trades',
+            trades: 'performance',
+            performance: 'portfolio',
+        }
+        const predicted = likelyNext[nextSubTab]
+        if (predicted) prefetchStockSubTab(predicted)
+        dispatchUI({ type: 'SET_STOCK_SUBTAB', value: nextSubTab })
+    }, [prefetchStockSubTab])
+
+    useEffect(() => {
+        const preloadByContext = () => {
+            if (activeMode === 'stocks') {
+                prefetchStockSubTab('portfolio')
+                prefetchStockSubTab('watchlist')
+                prefetchStockSubTab('trades')
+                prefetchStockSubTab('performance')
+                void import('./components/StockTradeModal')
+                return
+            }
+
+            if (activeTab === 'home') {
+                prefetchLedgerTab('transactions')
+                prefetchLedgerTab('analytics')
+                void import('./components/TransactionModal')
+                return
+            }
+
+            if (activeTab === 'transactions') {
+                prefetchLedgerTab('home')
+                prefetchLedgerTab('analytics')
+                void import('./components/TransactionModal')
+                return
+            }
+
+            if (activeTab === 'analytics') {
+                prefetchLedgerTab('home')
+                prefetchLedgerTab('transactions')
+                return
+            }
+
+            if (activeTab === 'memos') {
+                prefetchLedgerTab('transactions')
+                return
+            }
+
+            if (activeTab === 'subscriptions' || activeTab === 'goals') {
+                prefetchLedgerTab('home')
+            }
+        }
+
+        const w = window as Window & {
+            requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+            cancelIdleCallback?: (id: number) => void
+        }
+
+        let timeoutId: ReturnType<typeof setTimeout> | null = null
+        let idleId: number | null = null
+
+        if (w.requestIdleCallback) {
+            idleId = w.requestIdleCallback(() => {
+                preloadByContext()
+            }, { timeout: 1200 })
+        } else {
+            timeoutId = setTimeout(() => {
+                preloadByContext()
+            }, 220)
+        }
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId)
+            if (idleId !== null && w.cancelIdleCallback) w.cancelIdleCallback(idleId)
+        }
+    }, [activeMode, activeTab, prefetchLedgerTab, prefetchStockSubTab])
+
+    useEffect(() => {
+        if (!import.meta.env.DEV) return
+        if (transitionStartRef.current === null || !transitionLabelRef.current) return
+
+        const startedAt = transitionStartRef.current
+        const label = transitionLabelRef.current
+        transitionStartRef.current = null
+        transitionLabelRef.current = null
+
+        const frame1 = requestAnimationFrame(() => {
+            const frame2 = requestAnimationFrame(() => {
+                const elapsed = performance.now() - startedAt
+                console.debug(`[tab-transition] ${label} ${elapsed.toFixed(1)}ms`)
+            })
+            void frame2
+        })
+
+        return () => cancelAnimationFrame(frame1)
+    }, [activeMode, activeTab, stockSubTab])
 
     const persist = useCallback((task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => {
         void task()
@@ -532,10 +743,16 @@ export default function App() {
                 setHasPendingSync(true)
                 const failedLabels = Array.from(failedScopes).map(scopeLabel)
                 const failedSummary = failedLabels.length > 0 ? ` (${failedLabels.join(', ')})` : ''
-                const reasonSummary = Array.from(failedReasons.entries())
-                    .map(([scope, reasons]) => `${scopeLabel(scope)}:${Array.from(reasons).map(failureReasonLabel).join('/')}`)
-                    .join(', ')
-                const reasonSuffix = reasonSummary ? ` [${reasonSummary}]` : ''
+                let conflictCount = 0
+                let saveFailedCount = 0
+                for (const reasons of failedReasons.values()) {
+                    if (reasons.has('conflict')) conflictCount += 1
+                    if (reasons.has('save-failed')) saveFailedCount += 1
+                }
+                const reasonParts: string[] = []
+                if (conflictCount > 0) reasonParts.push(`충돌 ${conflictCount}범위`)
+                if (saveFailedCount > 0) reasonParts.push(`저장오류 ${saveFailedCount}범위`)
+                const reasonSuffix = reasonParts.length > 0 ? ` (${reasonParts.join(' · ')})` : ''
                 showToast(`재시도 후 ${stillFailed.length}건이 남았어요.${failedSummary}${reasonSuffix}`)
             } finally {
                 setIsRetryingPersist(false)
@@ -657,6 +874,7 @@ export default function App() {
     const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
     const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
     const openTransactionsWithBilling = useCallback((billing: 'current' | 'next') => {
+        localStorage.setItem(FILTER_TYPE_KEY, 'expense')
         localStorage.setItem(METHOD_FILTER_KEY, 'credit')
         localStorage.setItem(BILLING_FILTER_KEY, billing)
         localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY)
@@ -697,6 +915,16 @@ export default function App() {
         [transactions, yearMonth, cardBillingDay]
     )
     const stockTickerCount = useMemo(() => new Set(stockTrades.map((t) => t.ticker)).size, [stockTrades])
+    const retryReasonTotals = useMemo(() => getRetryReasonTotals(lastRetryReasons), [lastRetryReasons])
+    const syncStatus = useMemo(() => {
+        if (!isOnline && hasPendingSync) {
+            return { title: '오프라인이며 동기화 대기 항목이 있어요', label: '오프라인+대기' }
+        }
+        if (!isOnline) {
+            return { title: '오프라인 상태입니다', label: '오프라인' }
+        }
+        return { title: '저장되지 않은 변경사항이 있어요', label: '미동기화' }
+    }, [isOnline, hasPendingSync])
 
     const showFAB = activeMode === 'stocks'
         ? stockSubTab === 'portfolio' || stockSubTab === 'trades'
@@ -748,7 +976,7 @@ export default function App() {
                             {/* 오프라인 / 미동기화 상태 배지 */}
                             {(!isOnline || hasPendingSync) && (
                                 <div
-                                    title={!isOnline ? '오프라인 상태입니다' : '저장되지 않은 변경사항이 있어요'}
+                                    title={syncStatus.title}
                                     className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#2C2C2E] border border-white/6"
                                 >
                                     {!isOnline
@@ -756,7 +984,7 @@ export default function App() {
                                         : <CloudOff size={11} className="text-[#F5BE3A]" />
                                     }
                                     <span className="text-[10px] font-bold text-[#8B95A1]">
-                                        {!isOnline ? '오프라인' : '미동기화'}
+                                        {syncStatus.label}
                                     </span>
                                 </div>
                             )}
@@ -764,6 +992,9 @@ export default function App() {
                                 <div className="relative" ref={userMenuRef}>
                                     <button
                                         onClick={() => setShowUserMenu((v) => !v)}
+                                        onMouseEnter={prefetchImportUtilities}
+                                        onFocus={prefetchImportUtilities}
+                                        onTouchStart={prefetchImportUtilities}
                                         aria-label="메뉴"
                                         className="w-8 h-8 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center overflow-hidden"
                                     >
@@ -814,7 +1045,13 @@ export default function App() {
                             ) : (
                                 <div className="flex items-center gap-2">
                                     {activeMode === 'ledger' && (
-                                        <button onClick={() => dispatchUI({ type: 'SET_IMPORT', value: true })} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]">
+                                        <button
+                                            onClick={() => dispatchUI({ type: 'SET_IMPORT', value: true })}
+                                            onMouseEnter={prefetchImportUtilities}
+                                            onFocus={prefetchImportUtilities}
+                                            onTouchStart={prefetchImportUtilities}
+                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
+                                        >
                                             <FileDown size={12} />
                                         </button>
                                     )}
@@ -832,6 +1069,9 @@ export default function App() {
                                 setMode('ledger')
                                 if (tab === 'stocks') setTab('home')
                             }}
+                            onMouseEnter={() => prefetchMode('ledger')}
+                            onFocus={() => prefetchMode('ledger')}
+                            onTouchStart={() => prefetchMode('ledger')}
                             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'ledger' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1] hover:bg-white/5'}`}
                         >
                             가계부
@@ -847,6 +1087,9 @@ export default function App() {
                                 setTab('stocks')
                                 dispatchUI({ type: 'SET_STOCK_SUBTAB', value: 'portfolio' })
                             }}
+                            onMouseEnter={() => prefetchMode('stocks')}
+                            onFocus={() => prefetchMode('stocks')}
+                            onTouchStart={() => prefetchMode('stocks')}
                             className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === 'stocks' ? 'bg-[#F5BE3A] text-[#111111]' : 'text-[#8B95A1] hover:bg-white/5'}`}
                         >
                             주식
@@ -920,9 +1163,7 @@ export default function App() {
                                 <p className="text-[10px] text-[#F5AAB1] truncate">네트워크 복구 후 다시 저장해주세요.</p>
                                 {Object.keys(lastRetryReasons).length > 0 && (
                                     <p className="text-[10px] text-[#F0B7BE] mt-0.5 truncate">
-                                        {Object.entries(lastRetryReasons)
-                                            .map(([scope, reasons]) => `${scopeLabel(scope as RemoteVersionKey)}:${(reasons ?? []).map(failureReasonLabel).join('/')}`)
-                                            .join(', ')}
+                                        {`최근 원인: 충돌 ${retryReasonTotals.conflict}범위 · 저장오류 ${retryReasonTotals.saveFailed}범위`}
                                     </p>
                                 )}
                             </div>
@@ -951,50 +1192,54 @@ export default function App() {
 
             <main className="max-w-lg mx-auto px-4 py-4">
                 {activeMode === 'ledger' && (
-                    <LedgerWorkspace
-                        activeTab={activeTab}
-                        transactions={transactions}
-                        budgets={budgets}
-                        recurring={recurring}
-                        stockTrades={stockTrades}
-                        subscriptions={subscriptions}
-                        goals={goals}
-                        settingsVersion={settingsVersion + settingsSyncTick}
-                        yearMonth={yearMonth}
-                        customExpenseCategories={customExpenseCategories}
-                        userPaymentMethods={userPaymentMethods}
-                        memos={memos}
-                        memoAddTrigger={memoAddTrigger}
-                        subscriptionAddTrigger={subscriptionAddTrigger}
-                        goalAddTrigger={goalAddTrigger}
-                        onBudgetsChange={handleBudgetsChange}
-                        onRecurringSave={handleRecurringSave}
-                        onApplyRecurring={handleApplyRecurring}
-                        onSubscriptionsChange={handleSubscriptionsChange}
-                        onGoalsChange={handleGoalsChange}
-                        onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
-                        onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
-                        onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
-                        onTransactionDelete={handleDeleteTransaction}
-                        onBulkDeleteTransactions={handleBulkDeleteTransactions}
-                        onTransactionArchive={handleTransactionArchive}
-                        onMemoAdd={handleAddMemo}
-                        onMemoUpdate={handleUpdateMemo}
-                        onMemoDelete={handleDeleteMemo}
-                        onMemoTogglePin={handleTogglePin}
-                    />
+                    <Suspense fallback={null}>
+                        <LedgerWorkspace
+                            activeTab={activeTab}
+                            transactions={transactions}
+                            budgets={budgets}
+                            recurring={recurring}
+                            stockTrades={stockTrades}
+                            subscriptions={subscriptions}
+                            goals={goals}
+                            settingsVersion={settingsVersion + settingsSyncTick}
+                            yearMonth={yearMonth}
+                            customExpenseCategories={customExpenseCategories}
+                            userPaymentMethods={userPaymentMethods}
+                            memos={memos}
+                            memoAddTrigger={memoAddTrigger}
+                            subscriptionAddTrigger={subscriptionAddTrigger}
+                            goalAddTrigger={goalAddTrigger}
+                            onBudgetsChange={handleBudgetsChange}
+                            onRecurringSave={handleRecurringSave}
+                            onApplyRecurring={handleApplyRecurring}
+                            onSubscriptionsChange={handleSubscriptionsChange}
+                            onGoalsChange={handleGoalsChange}
+                            onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
+                            onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
+                            onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
+                            onTransactionDelete={handleDeleteTransaction}
+                            onBulkDeleteTransactions={handleBulkDeleteTransactions}
+                            onTransactionArchive={handleTransactionArchive}
+                            onMemoAdd={handleAddMemo}
+                            onMemoUpdate={handleUpdateMemo}
+                            onMemoDelete={handleDeleteMemo}
+                            onMemoTogglePin={handleTogglePin}
+                        />
+                    </Suspense>
                 )}
                 {activeTab === 'stocks' && (
-                    <StocksWorkspace
-                        stockSubTab={stockSubTab}
-                        stockTrades={stockTrades}
-                        stockWatchlist={stockWatchlist}
-                        onStockSubTabChange={(v) => dispatchUI({ type: 'SET_STOCK_SUBTAB', value: v })}
-                        onTradeEdit={(t) => dispatchUI({ type: 'OPEN_STOCK_MODAL', editing: t })}
-                        onTradeDelete={handleDeleteStockTrade}
-                        onWatchAdd={handleAddWatchTicker}
-                        onWatchRemove={handleRemoveWatchTicker}
-                    />
+                    <Suspense fallback={null}>
+                        <StocksWorkspace
+                            stockSubTab={stockSubTab}
+                            stockTrades={stockTrades}
+                            stockWatchlist={stockWatchlist}
+                            onStockSubTabChange={handleStockSubTabChange}
+                            onTradeEdit={(t) => dispatchUI({ type: 'OPEN_STOCK_MODAL', editing: t })}
+                            onTradeDelete={handleDeleteStockTrade}
+                            onWatchAdd={handleAddWatchTicker}
+                            onWatchRemove={handleRemoveWatchTicker}
+                        />
+                    </Suspense>
                 )}
             </main>
 
@@ -1002,6 +1247,9 @@ export default function App() {
                 <div className="max-w-lg mx-auto relative h-0">
                     {showFAB && (
                         <button
+                            onMouseEnter={prefetchFabModal}
+                            onFocus={prefetchFabModal}
+                            onTouchStart={prefetchFabModal}
                             onClick={() => {
                                 if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
                                     dispatchUI({ type: 'OPEN_STOCK_MODAL' })
@@ -1022,7 +1270,14 @@ export default function App() {
                         </button>
                     )}
 
-                    <button onClick={() => dispatchUI({ type: 'SET_HELP', value: true })} aria-label="사용 가이드" className="pointer-events-auto absolute left-5 bottom-fab-safe w-8 h-8 bg-[#F5F7F8] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all text-sm font-bold">
+                    <button
+                        onClick={() => dispatchUI({ type: 'SET_HELP', value: true })}
+                        onMouseEnter={prefetchHelp}
+                        onFocus={prefetchHelp}
+                        onTouchStart={prefetchHelp}
+                        aria-label="사용 가이드"
+                        className="pointer-events-auto absolute left-5 bottom-fab-safe w-8 h-8 bg-[#F5F7F8] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all text-sm font-bold"
+                    >
                         ?
                     </button>
                 </div>
@@ -1050,8 +1305,10 @@ export default function App() {
                 ledgerTabs={visibleTabs}
                 activeTab={activeTab}
                 stockSubTab={stockSubTab}
-                onLedgerTabChange={setTab}
-                onStockSubTabChange={(v) => dispatchUI({ type: 'SET_STOCK_SUBTAB', value: v })}
+                onLedgerTabChange={handleLedgerTabChange}
+                onStockSubTabChange={handleStockSubTabChange}
+                onLedgerTabHover={prefetchLedgerTab}
+                onStockSubTabHover={prefetchStockSubTab}
             />
 
             {toastMsg && (
@@ -1067,136 +1324,158 @@ export default function App() {
             )}
 
             {showStockModal && (
-                <StockTradeModal
-                    trade={editingTrade}
-                    onSave={handleSaveStockTrade}
-                    onClose={() => dispatchUI({ type: 'CLOSE_STOCK_MODAL' })}
-                />
+                <Suspense fallback={null}>
+                    <StockTradeModal
+                        trade={editingTrade}
+                        onSave={handleSaveStockTrade}
+                        onClose={() => dispatchUI({ type: 'CLOSE_STOCK_MODAL' })}
+                    />
+                </Suspense>
             )}
-            {showHelp && <HelpModal onClose={() => dispatchUI({ type: 'SET_HELP', value: false })} />}
+            {showHelp && (
+                <Suspense fallback={null}>
+                    <HelpModal onClose={() => dispatchUI({ type: 'SET_HELP', value: false })} />
+                </Suspense>
+            )}
             {showImport && (
-                <ImportModal
-                    existingTransactions={transactions}
-                    onImport={handleBulkImport}
-                    onClose={() => dispatchUI({ type: 'SET_IMPORT', value: false })}
-                />
+                <Suspense fallback={null}>
+                    <ImportModal
+                        existingTransactions={transactions}
+                        onImport={handleBulkImport}
+                        onClose={() => dispatchUI({ type: 'SET_IMPORT', value: false })}
+                    />
+                </Suspense>
             )}
             {showModal && (
-                <TransactionModal
-                    transaction={editingTransaction}
-                    onSave={handleSaveTransaction}
-                    onClose={() => dispatchUI({ type: 'CLOSE_TX_MODAL' })}
-                    customExpenseCategories={customExpenseCategories}
-                    customIncomeCategories={customIncomeCategories}
-                    userPaymentMethods={userPaymentMethods}
-                    transactionTemplates={transactionTemplates}
-                    onSaveTemplates={handleSaveTemplates}
-                    onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
-                />
+                <Suspense fallback={null}>
+                    <TransactionModal
+                        transaction={editingTransaction}
+                        onSave={handleSaveTransaction}
+                        onClose={() => dispatchUI({ type: 'CLOSE_TX_MODAL' })}
+                        customExpenseCategories={customExpenseCategories}
+                        customIncomeCategories={customIncomeCategories}
+                        userPaymentMethods={userPaymentMethods}
+                        transactionTemplates={transactionTemplates}
+                        onSaveTemplates={handleSaveTemplates}
+                        onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
+                    />
+                </Suspense>
             )}
             {showCategoryModal && (
-                <CategoryModal
-                    customExpenseCategories={customExpenseCategories}
-                    customIncomeCategories={customIncomeCategories}
-                    onSave={handleSaveCategories}
-                    onClose={() => dispatchUI({ type: 'SET_CATEGORY', value: false })}
-                />
+                <Suspense fallback={null}>
+                    <CategoryModal
+                        customExpenseCategories={customExpenseCategories}
+                        customIncomeCategories={customIncomeCategories}
+                        onSave={handleSaveCategories}
+                        onClose={() => dispatchUI({ type: 'SET_CATEGORY', value: false })}
+                    />
+                </Suspense>
             )}
             {showPaymentMethodsModal && (
-                <PaymentMethodsModal
-                    userPaymentMethods={userPaymentMethods}
-                    onSave={handleSavePaymentMethods}
-                    onClose={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: false })}
-                />
+                <Suspense fallback={null}>
+                    <PaymentMethodsModal
+                        userPaymentMethods={userPaymentMethods}
+                        onSave={handleSavePaymentMethods}
+                        onClose={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: false })}
+                    />
+                </Suspense>
             )}
 
             {showMergeModal && (
-                <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} counts={localDataCounts} />
+                <Suspense fallback={null}>
+                    <MergeLocalDataModal onConfirm={handleMergeConfirm} onCancel={handleMergeCancel} counts={localDataCounts} />
+                </Suspense>
             )}
 
             {showSyncConflictModal && (
-                <SyncConflictModal
-                    conflictKeys={conflictKeys}
-                    selectedKeys={selectedConflictKeys}
-                    versionDiffs={conflictVersionDiffs}
-                    countDiffs={conflictCountDiffs}
-                    remoteUpdatedAt={conflictRemoteUpdatedAt}
-                    rememberPolicy={rememberConflictPolicy}
-                    onToggleKey={(key) => toggleConflictKey(key as RemoteVersionKey)}
-                    onSelectRecommended={selectRecommendedConflictKeys}
-                    onSelectAll={selectAllConflictKeys}
-                    onClearSelection={clearConflictKeySelection}
-                    onToggleRememberPolicy={setRememberConflictPolicy}
-                    onUseRemote={handleUseRemoteData}
-                    onRetryMine={handleRetryMineAfterSync}
-                    onClose={() => {
-                        setShowSyncConflictModal(false)
-                        setConflictVersionDiffs({})
-                        setConflictCountDiffs({})
-                        setConflictRemoteUpdatedAt(null)
-                    }}
-                />
+                <Suspense fallback={null}>
+                    <SyncConflictModal
+                        conflictKeys={conflictKeys}
+                        selectedKeys={selectedConflictKeys}
+                        versionDiffs={conflictVersionDiffs}
+                        countDiffs={conflictCountDiffs}
+                        remoteUpdatedAt={conflictRemoteUpdatedAt}
+                        rememberPolicy={rememberConflictPolicy}
+                        onToggleKey={(key) => toggleConflictKey(key as RemoteVersionKey)}
+                        onSelectRecommended={selectRecommendedConflictKeys}
+                        onSelectAll={selectAllConflictKeys}
+                        onClearSelection={clearConflictKeySelection}
+                        onToggleRememberPolicy={setRememberConflictPolicy}
+                        onUseRemote={handleUseRemoteData}
+                        onRetryMine={handleRetryMineAfterSync}
+                        onClose={() => {
+                            setShowSyncConflictModal(false)
+                            setConflictVersionDiffs({})
+                            setConflictCountDiffs({})
+                            setConflictRemoteUpdatedAt(null)
+                        }}
+                    />
+                </Suspense>
             )}
 
             {showSyncRecoveryGuideModal && (
-                <SyncRecoveryGuideModal
-                    reasons={Array.from(new Set(Object.values(lastRetryReasons).flatMap((codes) => codes ?? [])))}
-                    onOpenConflict={() => {
-                        setShowSyncRecoveryGuideModal(false)
-                        if (conflictKeys.length > 0) {
-                            setShowSyncConflictModal(true)
-                        } else {
-                            showToast('현재 충돌 항목이 없어요.')
-                        }
-                    }}
-                    onRetryNow={() => {
-                        retryFailedPersistTasks(undefined, 'all')
-                    }}
-                    onRetryConflictOnly={() => {
-                        const scopes = getScopesByReasons(['conflict'])
-                        if (scopes.length === 0) {
-                            showToast('충돌 항목이 없어요.')
-                            return
-                        }
-                        retryFailedPersistTasks(scopes, 'conflict-only')
-                    }}
-                    onRetrySaveFailedOnly={() => {
-                        const scopes = getScopesByReasons(['save-failed'])
-                        if (scopes.length === 0) {
-                            showToast('저장오류 항목이 없어요.')
-                            return
-                        }
-                        retryFailedPersistTasks(scopes, 'save-failed-only')
-                    }}
-                    isRetrying={isRetryingPersist}
-                    retryProgress={retryProgress}
-                    retryResult={lastRetryResult
-                        ? {
-                            attempted: lastRetryResult.attempted,
-                            succeeded: lastRetryResult.succeeded,
-                            failed: lastRetryResult.failed,
-                            mode: lastRetryResult.mode,
-                            finishedAt: lastRetryResult.finishedAt,
-                            failedScopeSummary: lastRetryResult.failedByScope
-                                .map((entry) => `${scopeLabel(entry.scope)} ${entry.count}건`)
-                                .join(', '),
-                        }
-                        : null}
-                    onClose={() => setShowSyncRecoveryGuideModal(false)}
-                />
+                <Suspense fallback={null}>
+                    <SyncRecoveryGuideModal
+                        reasons={Array.from(new Set(Object.values(lastRetryReasons).flatMap((codes) => codes ?? [])))}
+                        onOpenConflict={() => {
+                            setShowSyncRecoveryGuideModal(false)
+                            if (conflictKeys.length > 0) {
+                                setShowSyncConflictModal(true)
+                            } else {
+                                showToast('현재 충돌 항목이 없어요.')
+                            }
+                        }}
+                        onRetryNow={() => {
+                            retryFailedPersistTasks(undefined, 'all')
+                        }}
+                        onRetryConflictOnly={() => {
+                            const scopes = getScopesByReasons(['conflict'])
+                            if (scopes.length === 0) {
+                                showToast('충돌 항목이 없어요.')
+                                return
+                            }
+                            retryFailedPersistTasks(scopes, 'conflict-only')
+                        }}
+                        onRetrySaveFailedOnly={() => {
+                            const scopes = getScopesByReasons(['save-failed'])
+                            if (scopes.length === 0) {
+                                showToast('저장오류 항목이 없어요.')
+                                return
+                            }
+                            retryFailedPersistTasks(scopes, 'save-failed-only')
+                        }}
+                        isRetrying={isRetryingPersist}
+                        retryProgress={retryProgress}
+                        retryResult={lastRetryResult
+                            ? {
+                                attempted: lastRetryResult.attempted,
+                                succeeded: lastRetryResult.succeeded,
+                                failed: lastRetryResult.failed,
+                                mode: lastRetryResult.mode,
+                                finishedAt: lastRetryResult.finishedAt,
+                                failedScopeSummary: lastRetryResult.failedByScope
+                                    .map((entry) => `${scopeLabel(entry.scope)} ${entry.count}건`)
+                                    .join(', '),
+                            }
+                            : null}
+                        onClose={() => setShowSyncRecoveryGuideModal(false)}
+                    />
+                </Suspense>
             )}
 
             {showAutoApplyModal && autoApplyPending.length > 0 && (
-                <AutoApplyRecurringModal
-                    pending={autoApplyPending}
-                    onConfirm={async () => {
-                        const todayYM = getYearMonth(new Date())
-                        setShowAutoApplyModal(false)
-                        await handleApplyRecurring(autoApplyPending, todayYM)
-                        showToast(`정기 항목 ${autoApplyPending.length}건이 등록되었습니다.`)
-                    }}
-                    onDismiss={() => setShowAutoApplyModal(false)}
-                />
+                <Suspense fallback={null}>
+                    <AutoApplyRecurringModal
+                        pending={autoApplyPending}
+                        onConfirm={async () => {
+                            const todayYM = getYearMonth(new Date())
+                            setShowAutoApplyModal(false)
+                            await handleApplyRecurring(autoApplyPending, todayYM)
+                            showToast(`정기 항목 ${autoApplyPending.length}건이 등록되었습니다.`)
+                        }}
+                        onDismiss={() => setShowAutoApplyModal(false)}
+                    />
+                </Suspense>
             )}
 
             {showAuthModal && (
@@ -1240,7 +1519,7 @@ export default function App() {
             )}
 
             {confirmModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70]" onClick={() => dispatchUI({ type: 'CLOSE_CONFIRM' })}>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-70" onClick={() => dispatchUI({ type: 'CLOSE_CONFIRM' })}>
                     <div className="bg-[#1C1C1E] rounded-3xl p-6 mx-4 max-w-xs w-full border border-white/8" onClick={(e) => e.stopPropagation()}>
                         <p className="text-white font-semibold text-center text-[15px] mb-6">{confirmModal.message}</p>
                         <div className="flex gap-2">
