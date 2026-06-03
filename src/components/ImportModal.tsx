@@ -153,6 +153,9 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
   return (
     <>
       <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-modal-title"
         onClick={(e) => e.target === e.currentTarget && onClose()}>
         <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel">
 
@@ -164,10 +167,10 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
           {/* 제목 */}
           <div className="flex items-start justify-between px-6 pt-2 pb-4 shrink-0">
             <div>
-              <h2 className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
+              <h2 id="import-modal-title" className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
               <p className="text-xs text-[#4E5968] mt-0.5">CSV · PDF · 농협 · 대구 · 국민 · 신한 · 우리 · 하나</p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
+            <button aria-label="가져오기 모달 닫기" onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
               <X size={16} className="text-[#8B95A1]" />
             </button>
           </div>

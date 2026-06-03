@@ -16,6 +16,7 @@ interface Props {
 type Range = 'thisMonth' | 'lastMonth' | 'thisYear' | 'all' | 'custom'
 
 const LOCAL_STORAGE_MAX_BYTES = 5 * 1024 * 1024 // 5MB
+const LOCAL_STORAGE_WARN_BYTES = 4 * 1024 * 1024 // 4MB
 
 function getYearMonth(offset = 0) {
   const d = new Date()
@@ -43,7 +44,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
 
   const storageUsed = useMemo(() => getLocalStorageUsageBytes(), [])
   const usagePct = Math.min((storageUsed / LOCAL_STORAGE_MAX_BYTES) * 100, 100)
-  const isStorageWarning = usagePct >= 70
+  const isStorageWarning = storageUsed >= LOCAL_STORAGE_WARN_BYTES
 
   function getFiltered(): Transaction[] {
     const now = new Date()
@@ -141,6 +142,9 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="내역 내보내기"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 modal-panel">
@@ -153,7 +157,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             <h2 className="text-[18px] font-bold text-white">내역 내보내기</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">CSV 파일로 다운로드 (Excel 호환)</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button aria-label="내역 내보내기 닫기" onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -178,7 +182,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             </div>
             {isStorageWarning && (
               <p className="text-[10px] text-[#F5BE3A] mt-1.5">
-                저장 공간이 부족합니다. 오래된 내역을 내보내고 정리하세요.
+                저장 공간이 {fmtBytes(LOCAL_STORAGE_WARN_BYTES)}를 넘어섰어요. 오래된 내역을 내보내고 정리하세요.
               </p>
             )}
           </div>

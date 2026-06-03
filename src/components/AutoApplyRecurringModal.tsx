@@ -2,13 +2,17 @@ import { RefreshCw, X } from 'lucide-react'
 import type { RecurringTransaction } from '../types'
 import { CATEGORY_COLOR, CATEGORY_EMOJI } from '../types'
 
+type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
+
 interface Props {
   pending: RecurringTransaction[]
+  mode: AutoApplyRecurringMode
+  onModeChange: (mode: AutoApplyRecurringMode) => void
   onConfirm: () => void
   onDismiss: () => void
 }
 
-export default function AutoApplyRecurringModal({ pending, onConfirm, onDismiss }: Props) {
+export default function AutoApplyRecurringModal({ pending, mode, onModeChange, onConfirm, onDismiss }: Props) {
   const total = pending.reduce((sum, r) => {
     return r.type === 'expense' ? sum - r.amount : sum + r.amount
   }, 0)
@@ -16,6 +20,9 @@ export default function AutoApplyRecurringModal({ pending, onConfirm, onDismiss 
   return (
     <div
       className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="반복거래 자동 등록 설정"
       onClick={(e) => e.target === e.currentTarget && onDismiss()}
     >
       <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
@@ -73,14 +80,46 @@ export default function AutoApplyRecurringModal({ pending, onConfirm, onDismiss 
           </span>
         </div>
 
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold text-[#8B95A1]">다음 달부터 반복거래 처리 방식</p>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => onModeChange('ask')}
+              aria-pressed={mode === 'ask'}
+              className={`py-2 rounded-lg text-[11px] font-bold transition-colors ${mode === 'ask' ? 'bg-[#3D8EF8] text-white' : 'bg-[#1C1C1E] text-[#8B95A1]'}`}
+            >
+              매달 확인
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('always')}
+              aria-pressed={mode === 'always'}
+              className={`py-2 rounded-lg text-[11px] font-bold transition-colors ${mode === 'always' ? 'bg-[#2ACF6A] text-[#0D0F14]' : 'bg-[#1C1C1E] text-[#8B95A1]'}`}
+            >
+              자동 등록
+            </button>
+            <button
+              type="button"
+              onClick={() => onModeChange('never')}
+              aria-pressed={mode === 'never'}
+              className={`py-2 rounded-lg text-[11px] font-bold transition-colors ${mode === 'never' ? 'bg-[#F25260] text-white' : 'bg-[#1C1C1E] text-[#8B95A1]'}`}
+            >
+              표시 안 함
+            </button>
+          </div>
+        </div>
+
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={onDismiss}
             className="flex-1 py-2.5 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-sm font-bold"
           >
             나중에
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             className="flex-1 py-2.5 rounded-xl bg-[#3D8EF8] text-white text-sm font-bold hover:bg-[#5AA0FF] transition-colors"
           >

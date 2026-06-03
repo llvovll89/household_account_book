@@ -37,6 +37,8 @@ const FILTER_PANEL_OPEN_KEY = 'hb_tx_filter_panel_open'
 const BALANCE_SECTION_OPEN_KEY = 'hb_tx_balance_section_open'
 const ACTIVE_FILTERS_SECTION_OPEN_KEY = 'hb_tx_active_filters_section_open'
 const INSIGHTS_SECTION_OPEN_KEY = 'hb_tx_insights_section_open'
+const GROUP_PAGE_SIZE = 12
+const ITEM_PAGE_SIZE = 20
 
 function getInitialSectionOpen(storageKey: string) {
   const saved = localStorage.getItem(storageKey)
@@ -105,6 +107,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [isBalanceSectionOpen, setIsBalanceSectionOpen] = useState(() => getInitialSectionOpen(BALANCE_SECTION_OPEN_KEY))
   const [isActiveFiltersSectionOpen, setIsActiveFiltersSectionOpen] = useState(() => getInitialSectionOpen(ACTIVE_FILTERS_SECTION_OPEN_KEY))
   const [isInsightsSectionOpen, setIsInsightsSectionOpen] = useState(() => getInitialSectionOpen(INSIGHTS_SECTION_OPEN_KEY))
+  const [visibleGroupCount, setVisibleGroupCount] = useState(GROUP_PAGE_SIZE)
+  const [visibleItemCountByDate, setVisibleItemCountByDate] = useState<Record<string, number>>({})
   const [statementMonthFilter, setStatementMonthFilter] = useState<string | null>(() => {
     const saved = localStorage.getItem(STATEMENT_MONTH_FILTER_KEY)
     if (!saved) return null
@@ -273,6 +277,38 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     })
     return Array.from(map.entries())
   }, [monthly])
+
+  const visibleGrouped = useMemo(
+    () => grouped.slice(0, visibleGroupCount),
+    [grouped, visibleGroupCount],
+  )
+
+  const hasMoreGroups = visibleGroupCount < grouped.length
+
+  useEffect(() => {
+    setVisibleGroupCount(GROUP_PAGE_SIZE)
+    setVisibleItemCountByDate({})
+  }, [
+    yearMonth,
+    filter,
+    methodFilter,
+    billingFilter,
+    periodMode,
+    normalizedBaseDate,
+    weekRange.start,
+    weekRange.end,
+    statementMonthFilter,
+    activeTag,
+    debouncedSearch,
+    viewMode,
+  ])
+
+  useEffect(() => {
+    if (grouped.length === 0) return
+    if (visibleGroupCount > grouped.length) {
+      setVisibleGroupCount(Math.max(GROUP_PAGE_SIZE, grouped.length))
+    }
+  }, [grouped.length, visibleGroupCount])
 
   // 태그별 합계 (현재 필터 기준)
   const tagSummary = useMemo(() => {
@@ -1014,8 +1050,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             )}
           </div>
         ) : (
-          grouped.map(([date, list]) => {
+          visibleGrouped.map(([date, list]) => {
             const dayBalance = getDayBalance(list)
+            const visibleItemCount = visibleItemCountByDate[date] ?? ITEM_PAGE_SIZE
+            const visibleItems = list.slice(0, visibleItemCount)
+            const hasMoreItemsInDate = visibleItemCount < list.length
             return (
               <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                 {/* 날짜 헤더 */}
@@ -1044,12 +1083,12 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                 </button>
 
                 {!collapsedGroups.has(date) && <div>
-                  {list.map((t, idx) => {
+                  {visibleItems.map((t, idx) => {
                     const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                     const tags = t.tags ?? []
                     const isSwiped = swipedId === t.id
                     return (
-                      <div key={t.id} className={`relative overflow-hidden list-item-enter ${idx < list.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`} style={{ animationDelay: `${Math.min(idx, 9) * 30}ms`, borderLeft: t.type === 'expense' && maxExpenseAmount > 0 ? `3px solid rgba(242,82,96,${(0.25 + (t.amount / maxExpenseAmount) * 0.75).toFixed(2)})` : undefined }}>
+                      <div key={t.id} className={`relative overflow-hidden list-item-enter ${idx < visibleItems.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`} style={{ animationDelay: `${Math.min(idx, 9) * 30}ms`, borderLeft: t.type === 'expense' && maxExpenseAmount > 0 ? `3px solid rgba(242,82,96,${(0.25 + (t.amount / maxExpenseAmount) * 0.75).toFixed(2)})` : undefined }}>
                         {/* 스와이프 액션 패널 */}
                         <div className={`absolute right-0 top-0 bottom-0 flex items-center gap-1 px-3 transition-all duration-200 ${isSwiped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                           <button
@@ -1203,10 +1242,37 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                       </div>
                     )
                   })}
+
+                  {hasMoreItemsInDate && (
+                    <div className="px-4 pb-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleItemCountByDate((prev) => ({
+                          ...prev,
+                          [date]: (prev[date] ?? ITEM_PAGE_SIZE) + ITEM_PAGE_SIZE,
+                        }))}
+                        className="w-full py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+                      >
+                        이 날짜 내역 더 보기 ({visibleItems.length}/{list.length})
+                      </button>
+                    </div>
+                  )}
                 </div>}
               </div>
             )
           })
+        )}
+
+        {viewMode === 'list' && hasMoreGroups && (
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              onClick={() => setVisibleGroupCount((prev) => prev + GROUP_PAGE_SIZE)}
+              className="px-4 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+            >
+              내역 더 보기 ({visibleGrouped.length}/{grouped.length})
+            </button>
+          </div>
         )}
 
       </> /* end list view */}

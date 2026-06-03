@@ -91,6 +91,9 @@ export default function HelpModal({ onClose }: Props) {
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="help-modal-title"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel">
@@ -102,10 +105,11 @@ export default function HelpModal({ onClose }: Props) {
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">사용 가이드</h2>
+            <h2 id="help-modal-title" className="text-[18px] font-bold text-white">사용 가이드</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">잔고플랜 앱 기능 안내</p>
           </div>
           <button
+            aria-label="사용 가이드 닫기"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center"
           >

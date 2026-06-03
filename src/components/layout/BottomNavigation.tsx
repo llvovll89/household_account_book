@@ -42,11 +42,12 @@ export default function BottomNavigation({
 }: Props) {
   const ledgerActiveIdx = ledgerTabs.findIndex((t) => t.id === activeTab)
   const stockActiveIdx = STOCKS_SUB_TABS.findIndex((t) => t.id === stockSubTab)
+  const tabListLabel = activeMode === 'ledger' ? '가계부 하단 탭' : '주식 하단 탭'
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40">
+    <nav aria-label="하단 탭 메뉴" className="fixed bottom-0 left-0 right-0 z-40">
       <div className="max-w-lg mx-auto bg-[#111111]/90 backdrop-blur-xl border-t border-[rgba(255,255,255,0.06)]">
-        <div className="relative flex pb-safe">
+        <div role="tablist" aria-label={tabListLabel} className="relative flex pb-safe">
           {/* 슬라이딩 인디케이터 */}
           {activeMode === 'ledger' && ledgerActiveIdx >= 0 && (
             <div
@@ -62,11 +63,16 @@ export default function BottomNavigation({
           )}
           {activeMode === 'ledger' && ledgerTabs.map(({ id, label, Icon }) => (
             <button
+              type="button"
               key={id}
               onClick={() => onLedgerTabChange(id)}
               onMouseEnter={() => onLedgerTabHover?.(id)}
               onFocus={() => onLedgerTabHover?.(id)}
               onTouchStart={() => onLedgerTabHover?.(id)}
+              role="tab"
+              aria-selected={activeTab === id}
+              aria-label={`${label} 탭`}
+              aria-current={activeTab === id ? 'page' : undefined}
               className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
             >
               <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`} />
@@ -75,11 +81,16 @@ export default function BottomNavigation({
           ))}
           {activeMode === 'stocks' && STOCKS_SUB_TABS.map(({ id, label, Icon }) => (
             <button
+              type="button"
               key={id}
               onClick={() => onStockSubTabChange(id)}
               onMouseEnter={() => onStockSubTabHover?.(id)}
               onFocus={() => onStockSubTabHover?.(id)}
               onTouchStart={() => onStockSubTabHover?.(id)}
+              role="tab"
+              aria-selected={stockSubTab === id}
+              aria-label={`${label} 탭`}
+              aria-current={stockSubTab === id ? 'page' : undefined}
               className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
             >
               <Icon size={20} strokeWidth={stockSubTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`} />

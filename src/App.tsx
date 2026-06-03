@@ -13,6 +13,7 @@ import { useAppHandlers } from './hooks/useAppHandlers'
 import type { UIAction } from './hooks/useAppHandlers.types'
 import { registerToastHandler, showToast, type ToastVariant } from './lib/toast'
 import BottomNavigation from './components/layout/BottomNavigation'
+import WorkspaceSkeleton from './components/layout/WorkspaceSkeleton'
 
 const TransactionModal = lazy(() => import('./components/TransactionModal'))
 const ImportModal = lazy(() => import('./components/ImportModal'))
@@ -34,6 +35,9 @@ const BILLING_FILTER_KEY = 'hb_tx_billing_filter'
 const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
 const CONFLICT_SCOPE_PREF_KEY = 'hb_conflict_scope_pref'
 const CONFLICT_POLICY_REMEMBER_KEY = 'hb_conflict_policy_remember'
+const AUTO_APPLY_RECURRING_MODE_KEY = 'hb_recurring_auto_apply_mode'
+
+type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
 
 function getYearMonth(date: Date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -65,6 +69,12 @@ function getDefaultSelectedConflictKeys(keys: RemoteVersionKey[], preferredScope
     if (keys.length <= 1) return keys
     const withoutSettings = keys.filter((key) => key !== 'settings')
     return withoutSettings.length > 0 ? withoutSettings : keys
+}
+
+function parseAutoApplyRecurringMode(): AutoApplyRecurringMode {
+    const raw = localStorage.getItem(AUTO_APPLY_RECURRING_MODE_KEY)
+    if (raw === 'always' || raw === 'never' || raw === 'ask') return raw
+    return 'ask'
 }
 
 function scopeLabel(scope: RemoteVersionKey): string {
@@ -244,6 +254,7 @@ export default function App() {
 
     const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
     const [showAutoApplyModal, setShowAutoApplyModal] = useState(false)
+    const [autoApplyMode, setAutoApplyMode] = useState<AutoApplyRecurringMode>(() => parseAutoApplyRecurringMode())
     const autoApplyCheckedRef = useRef(false)
 
     const [showUserMenu, setShowUserMenu] = useState(false)
@@ -311,6 +322,10 @@ export default function App() {
         localStorage.setItem(CONFLICT_POLICY_REMEMBER_KEY, rememberConflictPolicy ? '1' : '0')
     }, [rememberConflictPolicy])
 
+    useEffect(() => {
+        localStorage.setItem(AUTO_APPLY_RECURRING_MODE_KEY, autoApplyMode)
+    }, [autoApplyMode])
+
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
         const timeout = new Promise<never>((_, reject) => {
@@ -355,25 +370,6 @@ export default function App() {
         handleEmailAuth,
         handleLogout,
     } = useAuthSync({ hydrateData })
-
-    // 앱 로드 시 오늘 날짜 기준 정기 항목 자동 감지
-    useEffect(() => {
-        if (!authReady || isSyncing || autoApplyCheckedRef.current) return
-        if (recurring.length === 0) return
-        autoApplyCheckedRef.current = true
-
-        const today = new Date()
-        const todayDay = today.getDate()
-        const todayYM = getYearMonth(today)
-
-        const pending = recurring.filter(
-            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay
-        )
-        if (pending.length > 0) {
-            setAutoApplyPending(pending)
-            setShowAutoApplyModal(true)
-        }
-    }, [authReady, isSyncing, recurring])
 
     const activeMode: AppMode = user ? mode : 'ledger'
     const visibleTabs = LEDGER_TABS
@@ -871,6 +867,36 @@ export default function App() {
         dispatchUI,
     })
 
+    // 앱 로드 시 오늘 날짜 기준 정기 항목 자동 감지
+    useEffect(() => {
+        if (!authReady || isSyncing || autoApplyCheckedRef.current) return
+        if (recurring.length === 0) return
+        autoApplyCheckedRef.current = true
+
+        const today = new Date()
+        const todayDay = today.getDate()
+        const todayYM = getYearMonth(today)
+
+        const pending = recurring.filter(
+            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay
+        )
+        if (pending.length === 0) return
+
+        if (autoApplyMode === 'always') {
+            void handleApplyRecurring(pending, todayYM)
+                .then(() => showToast(`정기 항목 ${pending.length}건이 자동 등록되었습니다.`))
+                .catch(() => showToast('정기 항목 자동 등록에 실패했어요.'))
+            return
+        }
+
+        if (autoApplyMode === 'never') {
+            return
+        }
+
+        setAutoApplyPending(pending)
+        setShowAutoApplyModal(true)
+    }, [authReady, isSyncing, recurring, autoApplyMode, handleApplyRecurring])
+
     const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
     const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
     const openTransactionsWithBilling = useCallback((billing: 'current' | 'next') => {
@@ -1050,12 +1076,13 @@ export default function App() {
                                             onMouseEnter={prefetchImportUtilities}
                                             onFocus={prefetchImportUtilities}
                                             onTouchStart={prefetchImportUtilities}
+                                            aria-label="거래내역 가져오기"
                                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
                                         >
                                             <FileDown size={12} />
                                         </button>
                                     )}
-                                    <button onClick={() => setShowAuthModal(true)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15">
+                                    <button aria-label="로그인 모달 열기" onClick={() => setShowAuthModal(true)} className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15">
                                         로그인
                                     </button>
                                 </div>
@@ -1099,13 +1126,13 @@ export default function App() {
                     {activeMode === 'ledger' ? (
                         <>
                             <div className="flex items-center justify-center gap-3 mt-3">
-                                <button onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
+                                <button aria-label="이전 달 보기" onClick={prevMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
                                     <ChevronLeft size={16} className="text-[#8B95A1]" />
                                 </button>
-                                <button onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#111111]' : 'bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]'}`}>
+                                <button aria-label="이번 달로 이동" onClick={() => setCurrentDate(new Date())} className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? 'bg-white text-[#111111]' : 'bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]'}`}>
                                     {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
                                 </button>
-                                <button onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
+                                <button aria-label="다음 달 보기" onClick={nextMonth} className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform">
                                     <ChevronRight size={16} className="text-[#8B95A1]" />
                                 </button>
                             </div>
@@ -1127,6 +1154,7 @@ export default function App() {
                                             <button
                                                 type="button"
                                                 onClick={() => openTransactionsWithBilling('current')}
+                                                aria-label="카드 이번 청구 내역 필터 보기"
                                                 className="text-[10px] font-bold text-[#F5BE3A] num hover:text-[#FFD66A] transition-colors px-2 py-0.5 rounded-full bg-[#F5BE3A]/12"
                                                 title="카드 이번 청구 내역 보기"
                                             >
@@ -1135,6 +1163,7 @@ export default function App() {
                                             <button
                                                 type="button"
                                                 onClick={() => openTransactionsWithBilling('next')}
+                                                aria-label="카드 다음 청구 내역 필터 보기"
                                                 className="text-[10px] font-bold text-[#79B2FF] num hover:text-[#A9CCFF] transition-colors px-2 py-0.5 rounded-full bg-[#3D8EF8]/12"
                                                 title="카드 다음 청구 내역 보기"
                                             >
@@ -1192,7 +1221,7 @@ export default function App() {
 
             <main className="max-w-lg mx-auto px-4 py-4">
                 {activeMode === 'ledger' && (
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<WorkspaceSkeleton mode="ledger" />}>
                         <LedgerWorkspace
                             activeTab={activeTab}
                             transactions={transactions}
@@ -1228,7 +1257,7 @@ export default function App() {
                     </Suspense>
                 )}
                 {activeTab === 'stocks' && (
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<WorkspaceSkeleton mode="stocks" />}>
                         <StocksWorkspace
                             stockSubTab={stockSubTab}
                             stockTrades={stockTrades}
@@ -1467,6 +1496,8 @@ export default function App() {
                 <Suspense fallback={null}>
                     <AutoApplyRecurringModal
                         pending={autoApplyPending}
+                        mode={autoApplyMode}
+                        onModeChange={setAutoApplyMode}
                         onConfirm={async () => {
                             const todayYM = getYearMonth(new Date())
                             setShowAutoApplyModal(false)
@@ -1479,11 +1510,11 @@ export default function App() {
             )}
 
             {showAuthModal && (
-                <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center">
+                <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
                     <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-white text-base font-bold">계정 로그인</h3>
-                            <button onClick={() => setShowAuthModal(false)} className="text-xs font-bold text-[#8B95A1]">닫기</button>
+                            <h3 id="auth-modal-title" className="text-white text-base font-bold">계정 로그인</h3>
+                            <button aria-label="로그인 모달 닫기" onClick={() => setShowAuthModal(false)} className="text-xs font-bold text-[#8B95A1]">닫기</button>
                         </div>
 
                         <div className="flex gap-2">
@@ -1502,8 +1533,8 @@ export default function App() {
                         </div>
 
                         <div className="space-y-2">
-                            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="이메일" className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]" />
-                            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="비밀번호 (6자 이상)" className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]" />
+                            <input aria-label="이메일" value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="이메일" className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]" />
+                            <input aria-label="비밀번호" value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="비밀번호 (6자 이상)" className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]" />
                         </div>
 
                         <button onClick={handleEmailAuth} disabled={authBusy} className="w-full py-2.5 rounded-xl bg-[#3D8EF8] disabled:opacity-50 text-white text-sm font-bold">

@@ -610,21 +610,41 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     <div className="space-y-3 tab-content">
       {/* 예산 초과 알림 */}
       {overBudget.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/20">
-          <AlertTriangle size={16} className="text-[#F25260] shrink-0" />
-          <p className="text-sm text-[#F25260] font-semibold">
-            {overBudget.map(b => b.category).join(', ')} 예산을 초과했어요
-          </p>
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/20">
+          <div className="flex items-center gap-3 min-w-0">
+            <AlertTriangle size={16} className="text-[#F25260] shrink-0" />
+            <p className="text-sm text-[#F25260] font-semibold truncate">
+              {overBudget.map(b => b.category).join(', ')} 예산을 초과했어요
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowBudget(true)}
+            aria-label="예산 관리 열기"
+            className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#F25260]/20 text-[#F25260] hover:bg-[#F25260]/30 transition-colors"
+          >
+            예산 관리
+          </button>
         </div>
       )}
 
       {/* 예산 80% 경고 */}
       {nearBudget.length > 0 && overBudget.length === 0 && (
-        <div className="flex items-center gap-3 px-4 py-3.5 bg-[#F5BE3A]/10 rounded-2xl border border-[#F5BE3A]/20">
-          <AlertTriangle size={16} className="text-[#F5BE3A] shrink-0" />
-          <p className="text-sm text-[#F5BE3A] font-semibold">
-            {nearBudget.map(b => b.category).join(', ')} 예산이 80% 이상 사용됐어요
-          </p>
+        <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-[#F5BE3A]/10 rounded-2xl border border-[#F5BE3A]/20">
+          <div className="flex items-center gap-3 min-w-0">
+            <AlertTriangle size={16} className="text-[#F5BE3A] shrink-0" />
+            <p className="text-sm text-[#F5BE3A] font-semibold truncate">
+              {nearBudget.map(b => b.category).join(', ')} 예산이 80% 이상 사용됐어요
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowBudget(true)}
+            aria-label="예산 관리 열기"
+            className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#F5BE3A]/20 text-[#F5BE3A] hover:bg-[#F5BE3A]/30 transition-colors"
+          >
+            예산 관리
+          </button>
         </div>
       )}
 
