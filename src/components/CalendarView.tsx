@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Pencil, Trash2, X } from 'lucide-react'
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
-import { fmt, toLocalDateStr } from '../lib/format'
+import { fmt, parseYmdLocal, toLocalDateStr } from '../lib/format'
 
 interface Props {
   transactions: Transaction[]
@@ -55,7 +55,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
   }
 
   function formatSelectedDate(date: string) {
-    const d = new Date(date)
+    const d = parseYmdLocal(date)
     const days = ['일', '월', '화', '수', '목', '금', '토']
     return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`
   }

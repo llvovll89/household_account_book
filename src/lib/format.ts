@@ -3,6 +3,17 @@ export function fmt(n: number): string {
   return Math.round(n).toLocaleString('ko-KR')
 }
 
+/** YYYY-MM-DD를 로컬 시간대 기준 Date로 변환 */
+export function parseYmdLocal(dateStr: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr)
+  if (!m) return new Date(`${dateStr}T00:00:00`)
+
+  const year = Number(m[1])
+  const month = Number(m[2])
+  const day = Number(m[3])
+  return new Date(year, month - 1, day)
+}
+
 /** 숫자를 축약 표기로 변환 (예: 15000000 → "1500만", 1000000000 → "10.0억") */
 export function fmtShort(n: number): string {
   if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`
@@ -17,7 +28,7 @@ export function fmtQty(q: number): string {
 
 /** 날짜 문자열(YYYY-MM-DD)을 표시용 문자열로 변환 */
 export function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
+  const d = parseYmdLocal(dateStr)
   const today = new Date()
   const yesterday = new Date()
   yesterday.setDate(today.getDate() - 1)

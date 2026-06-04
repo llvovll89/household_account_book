@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Minus } from 'lucide-react'
 import type { SavingsGoal } from '../types'
-import { fmt } from '../lib/format'
-import { generateId } from '../lib/format'
+import { fmt, generateId, parseYmdLocal } from '../lib/format'
 import { showToast } from '../lib/toast'
 
 interface Props {
@@ -38,7 +37,7 @@ const PRESET_COLORS = [
 ]
 
 function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr)
+  const target = parseYmdLocal(dateStr)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))

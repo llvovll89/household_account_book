@@ -6,8 +6,9 @@ import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
 import TransactionDetailModal from './TransactionDetailModal'
-import { fmt, toLocalDateStr } from '../lib/format'
+import { fmt, parseYmdLocal, toLocalDateStr } from '../lib/format'
 import { loadSettings, saveSettings } from '../lib/storage'
+import type { SwipeSensitivity } from '../lib/storage'
 import { getBillingStage, getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
 import { showToast } from '../lib/toast'
 
@@ -37,6 +38,7 @@ const FILTER_PANEL_OPEN_KEY = 'hb_tx_filter_panel_open'
 const BALANCE_SECTION_OPEN_KEY = 'hb_tx_balance_section_open'
 const ACTIVE_FILTERS_SECTION_OPEN_KEY = 'hb_tx_active_filters_section_open'
 const INSIGHTS_SECTION_OPEN_KEY = 'hb_tx_insights_section_open'
+const SWIPE_SENSITIVITY_KEY = 'hb_tx_swipe_sensitivity'
 const GROUP_PAGE_SIZE = 12
 const ITEM_PAGE_SIZE = 20
 
@@ -100,6 +102,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const didHydrateSwipeRef = useRef(false)
+  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
   const [billingDayInput, setBillingDayInput] = useState('25')
@@ -107,6 +112,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [isBalanceSectionOpen, setIsBalanceSectionOpen] = useState(() => getInitialSectionOpen(BALANCE_SECTION_OPEN_KEY))
   const [isActiveFiltersSectionOpen, setIsActiveFiltersSectionOpen] = useState(() => getInitialSectionOpen(ACTIVE_FILTERS_SECTION_OPEN_KEY))
   const [isInsightsSectionOpen, setIsInsightsSectionOpen] = useState(() => getInitialSectionOpen(INSIGHTS_SECTION_OPEN_KEY))
+  const [swipeSensitivity, setSwipeSensitivity] = useState<SwipeSensitivity>('medium')
   const [visibleGroupCount, setVisibleGroupCount] = useState(GROUP_PAGE_SIZE)
   const [visibleItemCountByDate, setVisibleItemCountByDate] = useState<Record<string, number>>({})
   const [statementMonthFilter, setStatementMonthFilter] = useState<string | null>(() => {
@@ -144,6 +150,21 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   }, [isInsightsSectionOpen])
 
   useEffect(() => {
+    if (!didHydrateSwipeRef.current) return
+    localStorage.setItem(SWIPE_SENSITIVITY_KEY, swipeSensitivity)
+
+    void (async () => {
+      try {
+        const current = await loadSettings()
+        if (current.swipeSensitivity === swipeSensitivity) return
+        await saveSettings({ ...current, swipeSensitivity })
+      } catch {
+        // 설정 저장 실패 시에도 UX 동작은 로컬 상태로 유지
+      }
+    })()
+  }, [swipeSensitivity])
+
+  useEffect(() => {
     if (!statementMonthFilter) {
       localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY)
       return
@@ -158,6 +179,18 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
       if (!cancelled) {
         const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
         setCardBillingDay(firstCredit?.billingDay ?? settings.cardBillingDay ?? 25)
+
+        const legacy = localStorage.getItem(SWIPE_SENSITIVITY_KEY)
+        const legacySensitivity: SwipeSensitivity | null =
+          legacy === 'low' || legacy === 'medium' || legacy === 'high' ? legacy : null
+        const nextSensitivity = settings.swipeSensitivity ?? legacySensitivity ?? 'medium'
+
+        setSwipeSensitivity(nextSensitivity)
+        didHydrateSwipeRef.current = true
+
+        if (settings.swipeSensitivity !== nextSensitivity) {
+          void saveSettings({ ...settings, swipeSensitivity: nextSensitivity })
+        }
       }
     })
 
@@ -205,7 +238,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   }, [baseDate, yearMonth, latestMonthDate])
 
   const weekRange = useMemo(() => {
-    const d = new Date(normalizedBaseDate)
+    const d = parseYmdLocal(normalizedBaseDate)
     const start = new Date(d)
     start.setDate(d.getDate() - d.getDay())
     const end = new Date(start)
@@ -269,13 +302,34 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   )
 
   const grouped = useMemo(() => {
-    const map = new Map<string, Transaction[]>()
+    const map = new Map<string, {
+      date: string
+      list: Transaction[]
+      income: number
+      expense: number
+      balance: number
+    }>()
     monthly.forEach((t) => {
-      const list = map.get(t.date) || []
-      list.push(t)
-      map.set(t.date, list)
+      const existing = map.get(t.date)
+      if (existing) {
+        existing.list.push(t)
+        if (t.type === 'income') existing.income += t.amount
+        else existing.expense += t.amount
+        existing.balance = existing.income - existing.expense
+        return
+      }
+
+      const income = t.type === 'income' ? t.amount : 0
+      const expense = t.type === 'expense' ? t.amount : 0
+      map.set(t.date, {
+        date: t.date,
+        list: [t],
+        income,
+        expense,
+        balance: income - expense,
+      })
     })
-    return Array.from(map.entries())
+    return Array.from(map.values())
   }, [monthly])
 
   const visibleGrouped = useMemo(
@@ -284,6 +338,16 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   )
 
   const hasMoreGroups = visibleGroupCount < grouped.length
+
+  const swipeThresholds = useMemo(() => {
+    if (swipeSensitivity === 'high') {
+      return { open: 44, close: 18, minHorizontal: 24 }
+    }
+    if (swipeSensitivity === 'low') {
+      return { open: 68, close: 30, minHorizontal: 40 }
+    }
+    return { open: 56, close: 24, minHorizontal: 32 }
+  }, [swipeSensitivity])
 
   useEffect(() => {
     setVisibleGroupCount(GROUP_PAGE_SIZE)
@@ -326,14 +390,25 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     return Array.from(map.entries()).sort((a, b) => (b[1].income + b[1].expense) - (a[1].income + a[1].expense))
   }, [monthly])
 
-  const { filteredIncome, filteredExpense } = useMemo(() => ({
-    filteredIncome: monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-    filteredExpense: monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-  }), [monthly])
+  const { filteredIncome, filteredExpense, maxExpenseAmount } = useMemo(() => {
+    let income = 0
+    let expense = 0
+    let maxExpense = 0
 
-  const maxExpenseAmount = useMemo(() => {
-    const amounts = monthly.filter(t => t.type === 'expense').map(t => t.amount)
-    return amounts.length ? Math.max(...amounts) : 0
+    monthly.forEach((t) => {
+      if (t.type === 'income') {
+        income += t.amount
+        return
+      }
+      expense += t.amount
+      if (t.amount > maxExpense) maxExpense = t.amount
+    })
+
+    return {
+      filteredIncome: income,
+      filteredExpense: expense,
+      maxExpenseAmount: maxExpense,
+    }
   }, [monthly])
 
   const isFiltered = filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || !!statementMonthFilter || !!activeTag || !!search
@@ -395,7 +470,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const periodLabel = periodMode === 'day' ? '일' : periodMode === 'week' ? '주' : '월'
 
   function formatDate(dateStr: string) {
-    const d = new Date(dateStr)
+    const d = parseYmdLocal(dateStr)
     const days = ['일', '월', '화', '수', '목', '금', '토']
     const today = toLocalDateStr()
     const yd = new Date(); yd.setDate(yd.getDate() - 1)
@@ -405,17 +480,42 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`
   }
 
-  function getDayBalance(list: Transaction[]) {
-    const inc = list.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-    const exp = list.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    return inc - exp
-  }
-
   function formatWeekRangeLabel(startDate: string, endDate: string) {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    const start = parseYmdLocal(startDate)
+    const end = parseYmdLocal(endDate)
     return `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`
   }
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (viewMode !== 'list') return
+      const activeEl = document.activeElement as HTMLElement | null
+      const activeTag = activeEl?.tagName
+      const typingContext = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeEl?.isContentEditable
+
+      if (e.key === '/' && !typingContext) {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        return
+      }
+
+      if (e.key === 'Escape') {
+        if (swipedId) {
+          e.preventDefault()
+          setSwipedId(null)
+          return
+        }
+        if (search) {
+          e.preventDefault()
+          setSearch('')
+          searchInputRef.current?.blur()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [viewMode, search, swipedId])
 
   function resetAllFilters() {
     setFilter('all')
@@ -537,6 +637,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="flex items-center gap-2 px-3 py-3">
             <button
               onClick={() => setIsFilterPanelOpen((v) => !v)}
+                aria-expanded={isFilterPanelOpen}
+                aria-controls="transaction-filter-panel"
               className="flex-1 min-w-0 flex items-center justify-between px-2 py-0 text-left"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -556,7 +658,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </div>
 
           {isFilterPanelOpen && (
-            <div className="space-y-3 px-3 pb-3">
+            <div id="transaction-filter-panel" className="space-y-3 px-3 pb-3">
               <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
                 <div className="flex gap-1">
                   {([
@@ -624,12 +726,40 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                 })}
               </div>
 
+              <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs text-[#8B95A1] font-semibold">스와이프 민감도</span>
+                  <span className="text-[11px] text-[#4E5968] font-medium">모바일 제스처</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {([
+                    { key: 'low', label: '둔감' },
+                    { key: 'medium', label: '보통' },
+                    { key: 'high', label: '민감' },
+                  ] as { key: SwipeSensitivity; label: string }[]).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setSwipeSensitivity(option.key)}
+                      className={`py-2 rounded-xl text-xs font-bold transition-all ${swipeSensitivity === option.key
+                        ? 'bg-[#3D8EF8] text-white'
+                        : 'text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]'
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* 검색 */}
               <div role="search" className="relative">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]" />
                 <input
+                  ref={searchInputRef}
                   type="text"
                   aria-label="내역 검색"
+                  aria-keyshortcuts="/ Escape"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="카테고리, 설명, #태그로 검색"
@@ -641,6 +771,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   </button>
                 )}
               </div>
+              <p className="px-1 text-[11px] text-[#4E5968] font-medium">단축키: / 검색, Esc 초기화</p>
 
               {/* 필터 탭 */}
               <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
@@ -793,6 +924,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
           <button
             onClick={() => setIsBalanceSectionOpen((v) => !v)}
+            aria-expanded={isBalanceSectionOpen}
+            aria-controls="transaction-balance-section"
             className="w-full flex items-center justify-between px-5 py-3 text-left"
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -805,7 +938,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </button>
 
           {isBalanceSectionOpen && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 pb-3">
+            <div id="transaction-balance-section" className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 pb-3">
               {userPaymentMethods.length > 0 ? (
                 (['cash', 'check', 'credit'] as const)
                   .filter((t) => userPaymentMethods.some((m) => m.type === t))
@@ -853,6 +986,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setShowTagSummary((v) => !v)}
+              aria-expanded={showTagSummary}
+              aria-controls="transaction-tag-summary"
               className="w-full flex items-center justify-between px-5 py-3.5 text-left"
             >
               <div className="flex items-center gap-2">
@@ -868,7 +1003,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             </button>
 
             {showTagSummary && (
-              <div className="px-4 pb-4 space-y-1.5">
+              <div id="transaction-tag-summary" className="px-4 pb-4 space-y-1.5">
                 {tagSummary.map(([tag, stat]) => {
                   const net = stat.income - stat.expense
                   const isActive = activeTag === tag
@@ -921,6 +1056,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setIsActiveFiltersSectionOpen((v) => !v)}
+              aria-expanded={isActiveFiltersSectionOpen}
+              aria-controls="transaction-active-filters"
               className="w-full flex items-center justify-between px-5 py-3 text-left"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -931,7 +1068,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             </button>
 
             {isActiveFiltersSectionOpen && (
-              <div className="flex flex-wrap gap-1.5 px-4 pb-4">
+              <div id="transaction-active-filters" className="flex flex-wrap gap-1.5 px-4 pb-4">
                 {filter !== 'all' && (
                   <button
                     onClick={() => setFilter('all')}
@@ -989,6 +1126,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
             <button
               onClick={() => setIsInsightsSectionOpen((v) => !v)}
+              aria-expanded={isInsightsSectionOpen}
+              aria-controls="transaction-insights-section"
               className="w-full flex items-center justify-between px-5 py-3 text-left"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -999,7 +1138,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             </button>
 
             {isInsightsSectionOpen && (
-              <div className="space-y-2 px-3 pb-3">
+              <div id="transaction-insights-section" className="space-y-2 px-3 pb-3">
                 {/* 필터 결과 합계 */}
                 {isFiltered && monthly.length > 0 && (
                   <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3 flex items-center justify-between">
@@ -1051,8 +1190,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             )}
           </div>
         ) : (
-          visibleGrouped.map(([date, list]) => {
-            const dayBalance = getDayBalance(list)
+          visibleGrouped.map(({ date, list, income: dayIncome, expense: dayExpense, balance: dayBalance }) => {
             const visibleItemCount = visibleItemCountByDate[date] ?? ITEM_PAGE_SIZE
             const visibleItems = list.slice(0, visibleItemCount)
             const hasMoreItemsInDate = visibleItemCount < list.length
@@ -1061,6 +1199,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                 {/* 날짜 헤더 */}
                 <button
                   className="w-full flex items-center justify-between px-5 pt-4 pb-3 text-left"
+                  aria-expanded={!collapsedGroups.has(date)}
+                  aria-controls={`group-${date}`}
                   onClick={() => setCollapsedGroups(prev => {
                     const next = new Set(prev)
                     if (next.has(date)) next.delete(date)
@@ -1070,11 +1210,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                 >
                   <span className="text-sm font-bold text-white">{formatDate(date)}</span>
                   <div className="flex items-center gap-2">
-                    {list.some(t => t.type === 'income') && (
-                      <span className="text-[11px] font-bold num text-[#2ACF6A]">+{fmt(list.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0))}</span>
+                    {dayIncome > 0 && (
+                      <span className="text-[11px] font-bold num text-[#2ACF6A]">+{fmt(dayIncome)}</span>
                     )}
-                    {list.some(t => t.type === 'expense') && (
-                      <span className="text-[11px] font-bold num text-[#F25260]">-{fmt(list.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0))}</span>
+                    {dayExpense > 0 && (
+                      <span className="text-[11px] font-bold num text-[#F25260]">-{fmt(dayExpense)}</span>
                     )}
                     <span className={`text-[11px] font-bold num pl-1 border-l border-white/10 ${dayBalance >= 0 ? 'text-[#3D8EF8]' : 'text-[#F25260]'}`}>
                       {dayBalance >= 0 ? '+' : ''}{fmt(dayBalance)}
@@ -1083,7 +1223,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   </div>
                 </button>
 
-                {!collapsedGroups.has(date) && <div>
+                {!collapsedGroups.has(date) && <div id={`group-${date}`}>
                   {visibleItems.map((t, idx) => {
                     const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                     const tags = t.tags ?? []
@@ -1107,6 +1247,8 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         </div>
                       <div
                         style={{ transform: isSwiped ? 'translateX(-88px)' : 'translateX(0)', transition: 'transform 0.2s ease' }}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
                           if (isSelectionMode) {
                             setSelectedIds((prev) => {
@@ -1118,12 +1260,38 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                           }
                           setSwipedId(null); if (!isSwiped) setDetailTransaction(t)
                         }}
-                        onTouchStart={(e) => { if (!isSelectionMode) touchStartX.current = e.touches[0].clientX }}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter' && e.key !== ' ') return
+                          e.preventDefault()
+                          if (isSelectionMode) {
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev)
+                              next.has(t.id) ? next.delete(t.id) : next.add(t.id)
+                              return next
+                            })
+                            return
+                          }
+                          setSwipedId(null)
+                          if (!isSwiped) setDetailTransaction(t)
+                        }}
+                        onTouchStart={(e) => {
+                          if (isSelectionMode) return
+                          touchStartX.current = e.touches[0].clientX
+                          touchStartY.current = e.touches[0].clientY
+                        }}
                         onTouchEnd={(e) => {
                           if (isSelectionMode) return
-                          const delta = e.changedTouches[0].clientX - touchStartX.current
-                          if (delta < -50) setSwipedId(t.id)
-                          else if (delta > 20) setSwipedId(null)
+                          const deltaX = e.changedTouches[0].clientX - touchStartX.current
+                          const deltaY = e.changedTouches[0].clientY - touchStartY.current
+                          const absX = Math.abs(deltaX)
+                          const absY = Math.abs(deltaY)
+
+                          // 세로 스크롤 제스처는 스와이프로 처리하지 않는다.
+                          if (absY > absX) return
+                          if (absX < swipeThresholds.minHorizontal) return
+
+                          if (deltaX < -swipeThresholds.open) setSwipedId(t.id)
+                          else if (deltaX > swipeThresholds.close) setSwipedId(null)
                         }}
                         className="flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
                       >

@@ -17,6 +17,7 @@ import {
   clearLocalData,
   getLocalStorageUsageBytes,
   hasLocalMigratableData,
+  loadSettings,
   mergeLocalIntoFirebase,
   StorageConflictError,
   saveTransactions,
@@ -97,6 +98,20 @@ describe('storage util', () => {
   it('localStorage 사용량은 0보다 큰 바이트를 반환한다', () => {
     localStorage.setItem('hb_settings', JSON.stringify({ payday: 25 }))
     expect(getLocalStorageUsageBytes()).toBeGreaterThan(0)
+  })
+
+  it('loadSettings는 swipeSensitivity 기본값을 medium으로 보장한다', async () => {
+    localStorage.setItem('hb_settings', JSON.stringify({ payday: 25 }))
+
+    const settings = await loadSettings()
+    expect(settings.swipeSensitivity).toBe('medium')
+  })
+
+  it('loadSettings는 잘못된 swipeSensitivity 값을 medium으로 보정한다', async () => {
+    localStorage.setItem('hb_settings', JSON.stringify({ swipeSensitivity: 'invalid' }))
+
+    const settings = await loadSettings()
+    expect(settings.swipeSensitivity).toBe('medium')
   })
 
   it('mergeLocalIntoFirebase는 로컬/원격 데이터를 병합한 뒤 로컬 키를 정리한다', async () => {

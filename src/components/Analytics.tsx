@@ -5,7 +5,7 @@ import type { Budget, Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI } from '../types'
 import SpendingAnalysisView from './SpendingAnalysisView'
 import { useMonthlyData } from '../lib/useMonthlyData'
-import { fmt as fmtFull, fmtShort as fmt } from '../lib/format'
+import { fmt as fmtFull, fmtShort as fmt, parseYmdLocal } from '../lib/format'
 import TrendAreaChart from './charts/TrendAreaChart'
 import WeekdayBarChart from './charts/WeekdayBarChart'
 import DonutChart from './charts/DonutChart'
@@ -190,7 +190,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     const totals = Array(7).fill(0)
     const counts = Array(7).fill(0)
     currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
-      const dow = new Date(t.date).getDay()
+      const dow = parseYmdLocal(t.date).getDay()
       totals[dow] += t.amount
       counts[dow]++
     })
@@ -332,8 +332,8 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     // 주말 vs 평일 지출 비교
     const expTx = currentMonthly.filter(t => t.type === 'expense')
     if (expTx.length >= 4) {
-      const weekend = expTx.filter(t => { const d = new Date(t.date).getDay(); return d === 0 || d === 6 }).reduce((s, t) => s + t.amount, 0)
-      const weekday = expTx.filter(t => { const d = new Date(t.date).getDay(); return d >= 1 && d <= 5 }).reduce((s, t) => s + t.amount, 0)
+      const weekend = expTx.filter(t => { const d = parseYmdLocal(t.date).getDay(); return d === 0 || d === 6 }).reduce((s, t) => s + t.amount, 0)
+      const weekday = expTx.filter(t => { const d = parseYmdLocal(t.date).getDay(); return d >= 1 && d <= 5 }).reduce((s, t) => s + t.amount, 0)
       if (weekend > 0 && weekday > 0) {
         const weekendAvg = weekend / 2
         const weekdayAvg = weekday / 5

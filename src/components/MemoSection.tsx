@@ -3,7 +3,7 @@ import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, C
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, MEMO_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
-import { toLocalDateStr } from '../lib/format'
+import { parseYmdLocal, toLocalDateStr } from '../lib/format'
 
 interface Props {
   memos: Memo[]
@@ -260,7 +260,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   }
 
   function formatSelectedDateLabel(date: string) {
-    const d = new Date(date)
+    const d = parseYmdLocal(date)
     return `${d.getMonth() + 1}월 ${d.getDate()}일`
   }
 

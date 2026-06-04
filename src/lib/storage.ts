@@ -29,6 +29,8 @@ const FIREBASE_CACHE_KEY = 'hb_firebase_cache'
 
 type StorageMode = 'local' | 'firebase'
 
+export type SwipeSensitivity = 'low' | 'medium' | 'high'
+
 export interface AppSettings {
   payday: number | 'last' | null
   cardBillingDay: number | null
@@ -37,6 +39,7 @@ export interface AppSettings {
   customIncomeCategories: string[]
   stockWatchlist: string[]
   transactionTemplates: import('../types').TransactionTemplate[]
+  swipeSensitivity?: SwipeSensitivity
 }
 
 interface RemoteState {
@@ -158,13 +161,20 @@ const DEFAULT_SETTINGS: AppSettings = {
   customIncomeCategories: [],
   stockWatchlist: [],
   transactionTemplates: [],
+  swipeSensitivity: 'medium',
 }
 
 function migrateSettings(settings: AppSettings): AppSettings {
+  const normalizedSensitivity: SwipeSensitivity =
+    settings.swipeSensitivity === 'low' || settings.swipeSensitivity === 'medium' || settings.swipeSensitivity === 'high'
+      ? settings.swipeSensitivity
+      : 'medium'
+
   if (!Array.isArray(settings.userPaymentMethods) || settings.userPaymentMethods.length === 0) {
     const billingDay = settings.cardBillingDay ?? 25
     return {
       ...settings,
+      swipeSensitivity: normalizedSensitivity,
       userPaymentMethods: [
         { id: 'cash', type: 'cash', label: '현금' },
         { id: 'check_1', type: 'check', label: '체크카드' },
@@ -172,7 +182,10 @@ function migrateSettings(settings: AppSettings): AppSettings {
       ],
     }
   }
-  return settings
+  return {
+    ...settings,
+    swipeSensitivity: normalizedSensitivity,
+  }
 }
 
 function parseJSON<T>(value: string | null, fallback: T): T {

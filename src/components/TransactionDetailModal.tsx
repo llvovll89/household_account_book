@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { X, Pencil, Trash2 } from 'lucide-react'
 import type { Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
-import { fmt } from '../lib/format'
+import { fmt, parseYmdLocal } from '../lib/format'
 import { loadSettings } from '../lib/storage'
 import { getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
 
@@ -15,7 +15,7 @@ interface Props {
 }
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr)
+  const d = parseYmdLocal(dateStr)
   const days = ['일', '월', '화', '수', '목', '금', '토']
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`
 }
