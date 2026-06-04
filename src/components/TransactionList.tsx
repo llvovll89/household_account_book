@@ -6,7 +6,7 @@ import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
 import TransactionDetailModal from './TransactionDetailModal'
-import { fmt } from '../lib/format'
+import { fmt, toLocalDateStr } from '../lib/format'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { getBillingStage, getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
 import { showToast } from '../lib/toast'
@@ -210,7 +210,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     start.setDate(d.getDate() - d.getDay())
     const end = new Date(start)
     end.setDate(start.getDate() + 6)
-    const toYmd = (date: Date) => date.toISOString().slice(0, 10)
+    const toYmd = (date: Date) => toLocalDateStr(date)
     return { start: toYmd(start), end: toYmd(end) }
   }, [normalizedBaseDate])
 
@@ -397,8 +397,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   function formatDate(dateStr: string) {
     const d = new Date(dateStr)
     const days = ['일', '월', '화', '수', '목', '금', '토']
-    const today = new Date().toISOString().slice(0, 10)
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+    const today = toLocalDateStr()
+    const yd = new Date(); yd.setDate(yd.getDate() - 1)
+    const yesterday = toLocalDateStr(yd)
     if (dateStr === today) return '오늘'
     if (dateStr === yesterday) return '어제'
     return `${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`

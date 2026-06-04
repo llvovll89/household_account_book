@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Pencil, Trash2, X } from 'lucide-react'
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
-import { fmt } from '../lib/format'
+import { fmt, toLocalDateStr } from '../lib/format'
 
 interface Props {
   transactions: Transaction[]
@@ -22,7 +22,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
   const cells = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1).getDay() // 0=일
     const daysInMonth = new Date(year, month, 0).getDate()
-    const today = new Date().toISOString().slice(0, 10)
+    const today = toLocalDateStr()
 
     const result: { date: string | null; income: number; expense: number; isToday: boolean }[] = []
 

@@ -3,6 +3,7 @@ import { Pin, Pencil, Trash2, X, Check, ChevronDown, CalendarDays, LayoutGrid, C
 import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, MEMO_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
+import { toLocalDateStr } from '../lib/format'
 
 interface Props {
   memos: Memo[]
@@ -55,7 +56,7 @@ function formatAmount(n: number) {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return toLocalDateStr()
 }
 
 
@@ -123,7 +124,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     const month = calendarMonth.getMonth() + 1
     const firstDay = new Date(year, month - 1, 1).getDay()
     const daysInMonth = new Date(year, month, 0).getDate()
-    const today = new Date().toISOString().slice(0, 10)
+    const today = toLocalDateStr()
 
     const result: { date: string | null; count: number; isToday: boolean }[] = []
 

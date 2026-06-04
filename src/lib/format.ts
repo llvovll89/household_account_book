@@ -36,6 +36,11 @@ export function fmtPrice(price: number, currency: string): string {
   return `${price.toFixed(2)} ${currency}`
 }
 
+/** 로컬 날짜를 YYYY-MM-DD 문자열로 반환 (toISOString은 UTC 기준이라 한국 시간과 어긋날 수 있음) */
+export function toLocalDateStr(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** 고유 ID 생성 */
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)

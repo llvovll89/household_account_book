@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import type { StockTrade, StockTradeType } from '../types'
 import FancyDatePicker from './FancyDatePicker'
+import { toLocalDateStr } from '../lib/format'
 
 interface Props {
   trade?: StockTrade | null
@@ -15,7 +16,7 @@ export default function StockTradeModal({ trade, onSave, onClose }: Props) {
   const tickerRef = useRef<HTMLInputElement>(null)
   const [tradeType, setTradeType] = useState<StockTradeType>('buy')
   const [ticker, setTicker] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(toLocalDateStr())
   const [price, setPrice] = useState('')
   const [quantity, setQuantity] = useState('')
   const [fee, setFee] = useState('0')

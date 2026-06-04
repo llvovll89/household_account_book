@@ -9,7 +9,7 @@ import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
-import { generateId } from '../lib/format'
+import { generateId, toLocalDateStr } from '../lib/format'
 
 interface Props {
   transaction?: Transaction | null
@@ -46,7 +46,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(toLocalDateStr())
   const [dateEnd, setDateEnd] = useState('')
   const [showDateEnd, setShowDateEnd] = useState(false)
   const [queue, setQueue] = useState<QueueItem[]>([])

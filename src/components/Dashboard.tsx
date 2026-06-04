@@ -10,7 +10,7 @@ import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
-import { fmt, fmtShort } from '../lib/format'
+import { fmt, fmtShort, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { calcHoldings } from '../lib/stockCalc'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
@@ -530,8 +530,9 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const [y, m] = yearMonth.split('-').map(Number)
     const now = new Date()
     if (now.getFullYear() !== y || now.getMonth() + 1 !== m) return null
-    const todayStr = now.toISOString().slice(0, 10)
-    const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10)
+    const todayStr = toLocalDateStr(now)
+    const yd = new Date(now); yd.setDate(now.getDate() - 1)
+    const yesterdayStr = toLocalDateStr(yd)
     const todayTx = monthly.filter(t => t.date === todayStr)
     const yesterdayTx = monthly.filter(t => t.date === yesterdayStr)
     const todayExpense = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
@@ -569,7 +570,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const startOfLastWeek = new Date(endOfLastWeek)
     startOfLastWeek.setDate(endOfLastWeek.getDate() - 6)
 
-    const toStr = (d: Date) => d.toISOString().slice(0, 10)
+    const toStr = (d: Date) => toLocalDateStr(d)
     const thisWeekStart = toStr(startOfThisWeek)
     const todayStr = toStr(today)
     const lastWeekStart = toStr(startOfLastWeek)
