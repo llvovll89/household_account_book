@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Check, Minus } from 'lucide-react'
-import type { SavingsGoal } from '../types'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Plus, Pencil, Trash2, X, Check, Minus, Link } from 'lucide-react'
+import type { SavingsGoal, Transaction } from '../types'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types'
 import { fmt, generateId, parseYmdLocal } from '../lib/format'
 import { showToast } from '../lib/toast'
 
 interface Props {
   goals: SavingsGoal[]
+  transactions?: Transaction[]
   addTrigger?: number
   onChange: (items: SavingsGoal[]) => void
 }
@@ -51,9 +53,11 @@ const EMPTY = {
   color: PRESET_COLORS[0],
   deadline: '',
   memo: '',
+  linkedCategory: '',
+  linkedTags: [] as string[],
 }
 
-export default function GoalsView({ goals, addTrigger, onChange }: Props) {
+export default function GoalsView({ goals, transactions = [], addTrigger, onChange }: Props) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { const id = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(id) }, [])
   const [showSheet, setShowSheet] = useState(false)
@@ -94,6 +98,8 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
       color: g.color,
       deadline: g.deadline ?? '',
       memo: g.memo,
+      linkedCategory: g.linkedCategory ?? '',
+      linkedTags: g.linkedTags ?? [],
     })
     setTargetStr(g.targetAmount > 0 ? String(g.targetAmount) : '')
     setCurrentStr(g.currentAmount > 0 ? String(g.currentAmount) : '')
@@ -113,10 +119,12 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
     if (!validate()) return
     const target = Number(targetStr)
     const current = Math.min(Number(currentStr) || 0, target)
+    const linkedCategory = form.linkedCategory || undefined
+    const linkedTags = form.linkedTags.length > 0 ? form.linkedTags : undefined
     if (editing) {
       onChange(goals.map(g =>
         g.id === editing.id
-          ? { ...g, ...form, targetAmount: target, currentAmount: current, deadline: form.deadline || undefined }
+          ? { ...g, ...form, targetAmount: target, currentAmount: current, deadline: form.deadline || undefined, linkedCategory, linkedTags }
           : g
       ))
     } else {
@@ -126,6 +134,8 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
         targetAmount: target,
         currentAmount: current,
         deadline: form.deadline || undefined,
+        linkedCategory,
+        linkedTags,
         createdAt: Date.now(),
       }])
     }
@@ -174,6 +184,30 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
         return pb - pa
       })
     : goals
+
+  // 목표별 자동 집계 금액 (카테고리 또는 태그 기준)
+  const autoAmounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const g of goals) {
+      if (!g.linkedCategory && (!g.linkedTags || g.linkedTags.length === 0)) continue
+      const total = transactions
+        .filter((t) => {
+          if (g.linkedCategory && t.category !== g.linkedCategory) return false
+          if (g.linkedTags && g.linkedTags.length > 0 && !g.linkedTags.some((tag) => t.tags?.includes(tag))) return false
+          return true
+        })
+        .reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0)
+      map[g.id] = total
+    }
+    return map
+  }, [goals, transactions])
+
+  // 현재 목표의 모든 태그 목록 (중복 제거)
+  const allTags = useMemo(() => {
+    const set = new Set<string>()
+    transactions.forEach((t) => t.tags?.forEach((tag) => set.add(tag)))
+    return [...set].sort()
+  }, [transactions])
 
   return (
     <div className="space-y-3 tab-content">
@@ -258,6 +292,12 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                       </p>
                     )}
                     {g.memo && <p className="text-[10px] text-[#4E5968] mt-0.5 truncate">{g.memo}</p>}
+                    {(g.linkedCategory || (g.linkedTags && g.linkedTags.length > 0)) && autoAmounts[g.id] !== undefined && (
+                      <p className="text-[10px] mt-0.5 flex items-center gap-1">
+                        <Link size={9} className="text-[#3D8EF8] shrink-0" />
+                        <span className="text-[#3D8EF8] font-bold">자동 집계 {fmt(Math.max(0, autoAmounts[g.id]))}원</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {confirmingId === g.id ? (
@@ -522,6 +562,56 @@ export default function GoalsView({ goals, addTrigger, onChange }: Props) {
                 placeholder="예: 내년 여름 목표"
                 className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
               />
+            </div>
+
+            {/* 자동 연계 */}
+            <div className="bg-[#2C2C2E] rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 mb-0.5">
+                <Link size={13} className="text-[#3D8EF8]" />
+                <p className="text-[13px] font-bold text-white">자동 연계 <span className="text-[10px] font-normal text-[#4E5968]">(선택)</span></p>
+              </div>
+              <p className="text-[11px] text-[#4E5968] -mt-1">거래 내역에서 카테고리/태그로 금액을 자동 집계합니다</p>
+              <div>
+                <label className="text-[11px] text-[#8B95A1] mb-1.5 block">카테고리 연계</label>
+                <select
+                  value={form.linkedCategory}
+                  onChange={e => setForm(f => ({ ...f, linkedCategory: e.target.value }))}
+                  className="w-full bg-[#1C1C1E] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                >
+                  <option value="">연계 안함</option>
+                  <optgroup label="지출">
+                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </optgroup>
+                  <optgroup label="수입">
+                    {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </optgroup>
+                </select>
+              </div>
+              {allTags.length > 0 && (
+                <div>
+                  <label className="text-[11px] text-[#8B95A1] mb-1.5 block">태그 연계</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {allTags.map(tag => {
+                      const selected = form.linkedTags.includes(tag)
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            linkedTags: selected
+                              ? f.linkedTags.filter(t => t !== tag)
+                              : [...f.linkedTags, tag],
+                          }))}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${selected ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#1C1C1E] text-[#4E5968]'}`}
+                        >
+                          #{tag}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <button

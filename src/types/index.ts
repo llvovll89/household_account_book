@@ -55,6 +55,7 @@ export interface Budget {
   category: string
   limit: number // 월 예산 (원)
   carryover?: boolean // 미사용 예산을 다음 달로 이월
+  yearMonth?: string // YYYY-MM, 설정 시 해당 월에만 적용 (없으면 전체 월 기본값)
 }
 
 export interface RecurringTransaction {
@@ -125,6 +126,8 @@ export interface SavingsGoal {
   deadline?: string     // 목표 기한 YYYY-MM-DD (선택)
   memo: string
   createdAt: number
+  linkedCategory?: string  // 이 카테고리의 누적 지출/수입을 자동 집계
+  linkedTags?: string[]    // 이 태그를 가진 거래를 자동 집계
 }
 
 export interface Subscription {
@@ -211,3 +214,4 @@ export type DashboardWidgetId =
   | 'payday-countdown'
   | 'net-worth'
   | 'goal-daily-needed'
+  | 'spending-spike'

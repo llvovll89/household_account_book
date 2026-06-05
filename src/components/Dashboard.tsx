@@ -296,6 +296,14 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     [recurring, yearMonth]
   )
 
+  // 이번 달에 적용되는 유효 예산 (월별 특화 > 전체 기본값)
+  const effectiveBudgets = useMemo(() => {
+    const monthSpecific = budgets.filter((b) => b.yearMonth === yearMonth)
+    if (monthSpecific.length === 0) return budgets.filter((b) => !b.yearMonth)
+    const covered = new Set(monthSpecific.map((b) => b.category))
+    return [...monthSpecific, ...budgets.filter((b) => !b.yearMonth && !covered.has(b.category))]
+  }, [budgets, yearMonth])
+
   // 이월 금액 계산 (전월 미사용 예산)
   const carryoverAmounts = useMemo(() => {
     const map: Record<string, number> = {}
@@ -303,7 +311,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const prevYM = m === 1
       ? `${y - 1}-12`
       : `${y}-${String(m - 1).padStart(2, '0')}`
-    for (const b of budgets) {
+    for (const b of effectiveBudgets) {
       if (!b.carryover) continue
       const prevSpent = transactions
         .filter((t) => t.type === 'expense' && t.category === b.category && t.date.startsWith(prevYM))
@@ -312,7 +320,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       if (unused > 0) map[b.category] = unused
     }
     return map
-  }, [budgets, transactions, yearMonth])
+  }, [effectiveBudgets, transactions, yearMonth])
 
   // 예산 초과/경고 카테고리 (이월 포함 유효 한도 기준)
   const { overBudget, nearBudget } = useMemo(() => {
@@ -320,17 +328,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     monthly.filter((t) => t.type === 'expense').forEach((t) => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
-    const over = budgets.filter((b) => {
+    const over = effectiveBudgets.filter((b) => {
       const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
       return (map[b.category] || 0) > effectiveLimit
     })
-    const near = budgets.filter((b) => {
+    const near = effectiveBudgets.filter((b) => {
       const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
       const pct = ((map[b.category] || 0) / effectiveLimit) * 100
       return pct >= 80 && pct <= 100
     })
     return { overBudget: over, nearBudget: near }
-  }, [monthly, budgets, carryoverAmounts])
+  }, [monthly, effectiveBudgets, carryoverAmounts])
 
   // 예산 초과 감지 및 알림
   useEffect(() => {
@@ -561,6 +569,25 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     return map
   }, [transactions, yearMonth])
 
+  // 소비 이상 감지 (전월 대비 30% 이상 && 2만원 이상 급증)
+  const spendingSpikes = useMemo(() => {
+    return Object.entries(spentByCategory)
+      .filter(([cat, amt]) => {
+        const prev = prevMonthCategorySpend[cat] ?? 0
+        if (prev === 0) return false
+        const increase = amt - prev
+        return increase > 0 && (increase / prev) * 100 > 30 && increase > 20_000
+      })
+      .map(([cat, amt]) => ({
+        category: cat,
+        amount: amt,
+        prev: prevMonthCategorySpend[cat] ?? 0,
+        pct: Math.round(((amt - (prevMonthCategorySpend[cat] ?? 0)) / (prevMonthCategorySpend[cat] ?? 0)) * 100),
+      }))
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 3)
+  }, [spentByCategory, prevMonthCategorySpend])
+
   // 이번 주 vs 지난 주 지출 비교
   const weeklySpending = useMemo(() => {
     const today = new Date()
@@ -680,6 +707,34 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                 <span className="text-sm font-bold num text-[#F25260]">
                   -{s.currency === 'USD' ? `$${s.amount}` : `${s.amount.toLocaleString()}원`}
                 </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 소비 이상 감지 알림 */}
+      {!hide('spending-spike') && spendingSpikes.length > 0 && (
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <AlertTriangle size={14} className="text-[#F5BE3A] shrink-0" />
+            <span className="text-sm font-bold text-white">소비 급증 감지</span>
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-[#F5BE3A]/15 text-[#F5BE3A]">
+              {spendingSpikes.length}개 카테고리
+            </span>
+          </div>
+          <div className="space-y-2">
+            {spendingSpikes.map((spike) => (
+              <div key={spike.category} className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0 bg-[#2C2C2E]">
+                  {CATEGORY_EMOJI[spike.category] ?? '📊'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-[#F1F3F6]">{spike.category}</span>
+                  <span className="text-[10px] text-[#4E5968] ml-2">전월 {fmt(spike.prev)}원</span>
+                </div>
+                <span className="text-xs font-bold text-[#F25260] shrink-0">▲{spike.pct}%</span>
+                <span className="text-sm font-bold num text-white shrink-0">{fmt(spike.amount)}원</span>
               </div>
             ))}
           </div>
@@ -1375,6 +1430,21 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               <Settings2 size={12} />
               설정
             </button>
+            {effectiveBudgets.length > 0 && (
+              <button
+                onClick={() => {
+                  const [y, m] = yearMonth.split('-').map(Number)
+                  const nextYM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+                  const filtered = budgets.filter((b) => b.yearMonth !== nextYM)
+                  const nextMonthBudgets = effectiveBudgets.map((b) => ({ ...b, yearMonth: nextYM }))
+                  onBudgetsChange([...filtered, ...nextMonthBudgets])
+                  showToast(`${nextYM} 예산이 복사됐어요`, 2000, 'success')
+                }}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#3D8EF8]/15 text-[#3D8EF8] hover:bg-[#3D8EF8]/25 text-xs font-semibold transition-colors whitespace-nowrap"
+              >
+                다음달 복사
+              </button>
+            )}
           </div>
         </div>
 
@@ -1386,8 +1456,8 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
             + 카테고리별 예산을 설정해보세요
           </button>
         ) : (() => {
-          const totalBudget = budgets.reduce((s, b) => s + b.limit + (carryoverAmounts[b.category] ?? 0), 0)
-          const totalSpent = budgets.reduce((s, b) => s + (spentByCategory[b.category] ?? 0), 0)
+          const totalBudget = effectiveBudgets.reduce((s, b) => s + b.limit + (carryoverAmounts[b.category] ?? 0), 0)
+          const totalSpent = effectiveBudgets.reduce((s, b) => s + (spentByCategory[b.category] ?? 0), 0)
           const totalRemaining = Math.max(0, totalBudget - totalSpent)
           const totalPct = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0
           const isOver = totalSpent > totalBudget
@@ -1416,8 +1486,8 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               {budgetView === 'gauge' ? (
           /* 게이지 뷰 */
           <div className="grid grid-cols-3 gap-4">
-            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => budgets.find(b => b.category === cat)).map((cat) => {
-              const budget = budgets.find((b) => b.category === cat)!
+            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat) => {
+              const budget = effectiveBudgets.find((b) => b.category === cat)!
               const spent = spentByCategory[cat] ?? 0
               const effectiveLimit = budget.limit + (carryoverAmounts[cat] ?? 0)
               const color = CATEGORY_COLOR[cat]?.text ?? '#8B95A1'
@@ -1436,8 +1506,8 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         ) : (
           /* 리스트 뷰 */
           <div className="space-y-3.5">
-            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => budgets.find(b => b.category === cat)).map((cat, catIdx) => {
-              const budget = budgets.find((b) => b.category === cat)!
+            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat, catIdx) => {
+              const budget = effectiveBudgets.find((b) => b.category === cat)!
               const spent = monthly
                 .filter((t) => t.type === 'expense' && t.category === cat)
                 .reduce((s, t) => s + t.amount, 0)
@@ -1666,9 +1736,13 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
       {showBudget && (
         <BudgetModal
-          budgets={budgets}
+          budgets={effectiveBudgets.map((b) => ({ ...b, yearMonth: undefined }))}
           customExpenseCategories={customExpenseCategories}
-          onSave={onBudgetsChange}
+          onSave={(newBudgets) => {
+            // 다른 월 특화 예산은 보존, 전체 기본 예산만 교체
+            const otherMonthSpecific = budgets.filter((b) => b.yearMonth && b.yearMonth !== yearMonth)
+            onBudgetsChange([...otherMonthSpecific, ...newBudgets])
+          }}
           onClose={() => setShowBudget(false)}
         />
       )}

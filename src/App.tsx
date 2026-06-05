@@ -862,6 +862,7 @@ export default function App() {
         handleDeleteMemo,
         handleTogglePin,
         handleBulkDeleteTransactions,
+        handleBulkEditTransactions,
     } = useAppHandlers({
         transactions,
         editingTransaction,
@@ -1274,6 +1275,7 @@ export default function App() {
                             onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                             onTransactionDelete={handleDeleteTransaction}
                             onBulkDeleteTransactions={handleBulkDeleteTransactions}
+                            onBulkEditTransactions={handleBulkEditTransactions}
                             onTransactionArchive={handleTransactionArchive}
                             onMemoAdd={handleAddMemo}
                             onMemoUpdate={handleUpdateMemo}

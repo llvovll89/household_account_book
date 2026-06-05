@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { Pencil, Trash2, Search, X, CalendarDays, List as ListIcon, FileDown, Hash, ChevronDown, ChevronUp, CheckSquare, Square } from 'lucide-react'
 import type { Transaction, UserPaymentMethod } from '../types'
-import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL } from '../types'
+import { CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHOD_LABEL, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types'
 import CalendarView from './CalendarView'
 import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
@@ -19,6 +19,7 @@ interface Props {
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
   onBulkDelete?: (ids: string[]) => void
+  onBulkEdit?: (ids: string[], category: string) => void
   onArchiveDone?: (cutoff: string) => void
   onOpenTagManager?: () => void
 }
@@ -66,7 +67,7 @@ function HighlightText({ text, query, className }: { text: string; query: string
   )
 }
 
-export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onArchiveDone, onOpenTagManager }: Props) {
+export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onBulkEdit, onArchiveDone, onOpenTagManager }: Props) {
   const [filter, setFilter] = useState<FilterType>(() => {
     const saved = localStorage.getItem(FILTER_TYPE_KEY)
     if (saved === 'income' || saved === 'expense' || saved === 'all') return saved
@@ -101,6 +102,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const [swipedId, setSwipedId] = useState<string | null>(null)
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkCategoryPicker, setShowBulkCategoryPicker] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -1459,11 +1461,19 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
       </> /* end list view */}
 
-      {/* 일괄 삭제 액션바 */}
+      {/* 일괄 액션바 */}
       {isSelectionMode && selectedIds.size > 0 && (
         <div className="fixed bottom-20 left-0 right-0 flex justify-center z-30 px-4">
           <div className="flex items-center gap-3 bg-[#1C1C1E] border border-white/10 rounded-3xl px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
             <span className="text-white font-bold text-sm">{selectedIds.size}개 선택됨</span>
+            {onBulkEdit && (
+              <button
+                onClick={() => setShowBulkCategoryPicker(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#3D8EF8]/20 text-[#3D8EF8] font-bold text-sm"
+              >
+                카테고리
+              </button>
+            )}
             <button
               onClick={() => {
                 if (onBulkDelete) onBulkDelete([...selectedIds])
@@ -1474,6 +1484,40 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             >
               <Trash2 size={14} /> 삭제
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 일괄 카테고리 변경 */}
+      {showBulkCategoryPicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60" onClick={() => setShowBulkCategoryPicker(false)}>
+          <div className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-[17px] font-bold text-white">카테고리 변경</p>
+                <p className="text-[12px] text-[#8B95A1] mt-0.5">{selectedIds.size}개 내역에 적용</p>
+              </div>
+              <button onClick={() => setShowBulkCategoryPicker(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E]">
+                <X size={16} className="text-[#8B95A1]" />
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {[...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    if (onBulkEdit) onBulkEdit([...selectedIds], cat)
+                    setShowBulkCategoryPicker(false)
+                    setIsSelectionMode(false)
+                    setSelectedIds(new Set())
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] text-left transition-colors"
+                >
+                  <span className="text-base">{CATEGORY_EMOJI[cat] ?? '📦'}</span>
+                  <span className="text-sm font-semibold text-white">{cat}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -99,6 +99,16 @@ export function useAppHandlers({
     setTransactions((prev) => prev.filter(t => t.date >= cutoff))
   }, [setTransactions])
 
+  const handleBulkEditTransactions = useCallback((ids: string[], category: string) => {
+    const idSet = new Set(ids)
+    setTransactions((prev) => {
+      const next = prev.map((t) => idSet.has(t.id) ? { ...t, category } : t)
+      persist(() => saveTransactions(next), '일괄 카테고리 변경에 실패했습니다.', 'transactions')
+      return next
+    })
+    showToast(`${ids.length}개 내역의 카테고리를 변경했어요`, 2000, 'success')
+  }, [persist, setTransactions])
+
   const handleBulkDeleteTransactions = useCallback((ids: string[]) => {
     dispatchUI({
       type: 'OPEN_CONFIRM',
@@ -385,6 +395,7 @@ export function useAppHandlers({
   return {
     handleSaveTransaction,
     handleDeleteTransaction,
+    handleBulkEditTransactions,
     handleBulkDeleteTransactions,
     handleTransactionArchive,
     handleBulkImport,

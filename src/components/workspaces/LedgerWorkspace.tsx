@@ -43,6 +43,7 @@ interface Props {
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
   onBulkDeleteTransactions?: (ids: string[]) => void
+  onBulkEditTransactions?: (ids: string[], category: string) => void
   onTransactionArchive: (cutoff: string) => void
   onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
@@ -79,6 +80,7 @@ export default function LedgerWorkspace({
   onTransactionEdit,
   onTransactionDelete,
   onBulkDeleteTransactions,
+  onBulkEditTransactions,
   onTransactionArchive,
   onMemoAdd,
   onMemoUpdate,
@@ -125,6 +127,7 @@ export default function LedgerWorkspace({
               onEdit={onTransactionEdit}
               onDelete={onTransactionDelete}
               onBulkDelete={onBulkDeleteTransactions}
+              onBulkEdit={onBulkEditTransactions}
               onArchiveDone={onTransactionArchive}
               onOpenTagManager={onOpenTagManager}
             />
@@ -168,6 +171,7 @@ export default function LedgerWorkspace({
           <Suspense fallback={<TabFallback />}>
             <GoalsView
               goals={goals}
+              transactions={transactions}
               addTrigger={goalAddTrigger}
               onChange={onGoalsChange}
             />

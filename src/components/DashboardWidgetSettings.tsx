@@ -21,6 +21,7 @@ const WIDGETS: WidgetDef[] = [
   { id: 'payday-countdown', label: '월급날 카운트다운', description: '월급일까지 남은 일수 및 일일 가용액' },
   { id: 'net-worth', label: '순자산 현황', description: '누적 잔액 · 주식 · 저축 목표' },
   { id: 'goal-daily-needed', label: '목표 일일 저금액', description: '저축 목표 달성 필요 일일액' },
+  { id: 'spending-spike', label: '소비 급증 감지', description: '전월 대비 30% 이상 급증한 카테고리 알림' },
 ]
 
 interface Props {
