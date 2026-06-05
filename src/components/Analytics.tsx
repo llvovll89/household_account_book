@@ -99,30 +99,43 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
   }, [transactions, selectedYear])
 
+  // ── 이번 달 거래 (공유 memoized 배열) ──────────────────
+  const currentMonthly = useMemo(
+    () => transactions.filter((t) => t.date.startsWith(yearMonth)),
+    [transactions, yearMonth]
+  )
+  const currentExpense = useMemo(
+    () => currentMonthly.filter((t) => t.type === 'expense'),
+    [currentMonthly]
+  )
+  const currentIncome = useMemo(
+    () => currentMonthly.filter((t) => t.type === 'income'),
+    [currentMonthly]
+  )
+
   // ── 이번 달 카테고리별 지출 ────────────────────────────
-  const currentMonthly = transactions.filter((t) => t.date.startsWith(yearMonth))
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {}
-    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+    currentExpense.forEach((t) => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
     const total = Object.values(map).reduce((s, v) => s + v, 0)
     return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
       .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
-  }, [currentMonthly])
+  }, [currentExpense])
 
   // ── 수입 소스 분석 ────────────────────────────────────
   const incomeByCategory = useMemo(() => {
     const map: Record<string, number> = {}
-    currentMonthly.filter(t => t.type === 'income').forEach(t => {
+    currentIncome.forEach(t => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
     const total = Object.values(map).reduce((s, v) => s + v, 0)
     return Object.entries(map)
       .sort((a, b) => b[1] - a[1])
       .map(([cat, amt]) => ({ cat, amt, pct: total > 0 ? Math.round((amt / total) * 100) : 0 }))
-  }, [currentMonthly])
+  }, [currentIncome])
 
   // ── 전월 대비 카테고리 지출 비교 ────────────────────────
   const categoryMomComparison = useMemo(() => {
@@ -133,7 +146,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     prevMonthly.forEach((t) => { prevMap[t.category] = (prevMap[t.category] || 0) + t.amount })
 
     const currMap: Record<string, number> = {}
-    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+    currentExpense.forEach((t) => {
       currMap[t.category] = (currMap[t.category] || 0) + t.amount
     })
 
@@ -143,7 +156,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       .filter((d) => d.curr > 0 || d.prev > 0)
       .sort((a, b) => b.curr - a.curr)
       .slice(0, 6)
-  }, [transactions, yearMonth, currentMonthly])
+  }, [transactions, yearMonth, currentExpense])
 
   // ── 소비 이상 감지 (전 3개월 평균 대비 1.5배 초과) ──────
   const anomalyCategories = useMemo(() => {
@@ -169,7 +182,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     const daysInMonth = new Date(y, m, 0).getDate()
     const startDow = new Date(y, m - 1, 1).getDay()
     const dailyExpense: Record<number, number> = {}
-    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+    currentExpense.forEach((t) => {
       const day = parseInt(t.date.slice(8, 10))
       dailyExpense[day] = (dailyExpense[day] || 0) + t.amount
     })
@@ -183,13 +196,13 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       cells.push({ day: d, amt, intensity: amt > 0 ? Math.min(1, amt / maxAmt) : 0, isToday: d === todayDate })
     }
     return cells
-  }, [currentMonthly, yearMonth])
+  }, [currentExpense, yearMonth])
 
   // ── 요일별 소비 패턴 (이번 달) ────────────────────────
   const weekdayData = useMemo(() => {
     const totals = Array(7).fill(0)
     const counts = Array(7).fill(0)
-    currentMonthly.filter((t) => t.type === 'expense').forEach((t) => {
+    currentExpense.forEach((t) => {
       const dow = parseYmdLocal(t.date).getDay()
       totals[dow] += t.amount
       counts[dow]++
@@ -199,29 +212,21 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       total: totals[i],
       count: counts[i],
     }))
-  }, [currentMonthly])
+  }, [currentExpense])
 
   const topWeekday = weekdayData.reduce((max, d) => d.total > max.total ? d : max, weekdayData[0])
 
   const paymentMethodStats = useMemo(() => {
-    const cashIncome = currentMonthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'cash')
-      .reduce((s, t) => s + t.amount, 0)
-    const cashExpense = currentMonthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
-      .reduce((s, t) => s + t.amount, 0)
-    const checkIncome = currentMonthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'check')
-      .reduce((s, t) => s + t.amount, 0)
-    const checkExpense = currentMonthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'check')
-      .reduce((s, t) => s + t.amount, 0)
-    const creditIncome = currentMonthly
-      .filter((t) => t.type === 'income' && isCreditPaymentMethod(t.paymentMethod))
-      .reduce((s, t) => s + t.amount, 0)
-    const creditExpense = currentMonthly
-      .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
-      .reduce((s, t) => s + t.amount, 0)
+    // 단일 패스로 6개 집계
+    let cashIncome = 0, cashExpense = 0, checkIncome = 0, checkExpense = 0, creditIncome = 0, creditExpense = 0
+    currentMonthly.forEach((t) => {
+      const isCredit = isCreditPaymentMethod(t.paymentMethod)
+      const pm = isCredit ? 'credit' : (t.paymentMethod ?? 'cash')
+      const amt = t.amount
+      if (pm === 'cash') { t.type === 'income' ? (cashIncome += amt) : (cashExpense += amt) }
+      else if (pm === 'check') { t.type === 'income' ? (checkIncome += amt) : (checkExpense += amt) }
+      else { t.type === 'income' ? (creditIncome += amt) : (creditExpense += amt) }
+    })
 
     const methodCompareData = [
       { label: '현금', income: cashIncome, expense: cashExpense },
@@ -242,6 +247,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
       nextCardBillingRangeLabel: formatBillingRange(getCardBillingRange(nextStatementYM, cardBillingDay)),
     }
   }, [currentMonthly, transactions, yearMonth, cardBillingDay])
+
 
   const paymentMethodTrend = useMemo(
     () => monthlyData.map((m) => {

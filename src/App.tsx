@@ -205,7 +205,11 @@ export default function App() {
     const { showInstallBanner, isIosManualInstall, installGuideText, deferredPrompt, closeInstallBanner, handleInstallClick } = usePWAInstall()
 
     const [mode, setMode] = useState<AppMode>('ledger')
-    const [tab, setTab] = useState<Tab>('home')
+    const [tab, setTab] = useState<Tab>(() => {
+        const saved = localStorage.getItem('hb_active_tab')
+        const valid: Tab[] = ['home', 'transactions', 'analytics', 'memos', 'subscriptions', 'goals']
+        return valid.includes(saved as Tab) ? (saved as Tab) : 'home'
+    })
     const [currentDate, setCurrentDate] = useState(new Date())
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [stockTrades, setStockTrades] = useState<StockTrade[]>([])
@@ -287,6 +291,10 @@ export default function App() {
             toastTimerRef.current = setTimeout(() => setToastMsg(null), duration)
         })
     }, [])
+
+    useEffect(() => {
+        if (tab !== 'stocks') localStorage.setItem('hb_active_tab', tab)
+    }, [tab])
 
     useEffect(() => {
         const onOnline = () => {

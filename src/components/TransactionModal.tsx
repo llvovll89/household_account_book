@@ -60,6 +60,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [creditBillingDayInput, setCreditBillingDayInput] = useState('25')
   const [showTemplates, setShowTemplates] = useState(false)
+  const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
 
   const isEditMode = !!transaction
   const { closing, handleClose } = useModalClose(onClose)
@@ -556,14 +557,19 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   </div>
                   {/* 카테고리 */}
                   <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">카테고리</p>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
+                      {autoCategoryApplied && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
                         style={{ backgroundColor: color.bg }}>
                         {CATEGORY_EMOJI[category] ?? '📦'}
                       </div>
                       <div className="relative flex-1">
-                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setCategory(e.target.value) }}
+                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setAutoCategoryApplied(false); setCategory(e.target.value) }}
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
@@ -589,14 +595,19 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   </div>
                   {/* 카테고리 (기간 모드일 때 별도 행) */}
                   <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">카테고리</p>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
+                      {autoCategoryApplied && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
                         style={{ backgroundColor: color.bg }}>
                         {CATEGORY_EMOJI[category] ?? '📦'}
                       </div>
                       <div className="relative flex-1">
-                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setCategory(e.target.value) }}
+                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setAutoCategoryApplied(false); setCategory(e.target.value) }}
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
@@ -623,7 +634,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   setDescription(val)
                   if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
                     const matched = applyAutoCategory(val, type, autoCategoryRules)
-                    if (matched) setCategory(matched)
+                    if (matched) { setCategory(matched); setAutoCategoryApplied(true) }
+                    else setAutoCategoryApplied(false)
                   }
                 }}
                 placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}

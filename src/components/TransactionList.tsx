@@ -768,13 +768,27 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   placeholder="카테고리, 설명, #태그로 검색"
                   className="w-full bg-[#2C2C2E] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                 />
+                {search !== debouncedSearch && (
+                  <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#3D8EF8]/30 border-t-[#3D8EF8] animate-spin" />
+                )}
                 {search && (
                   <button onClick={() => setSearch('')} aria-label="검색어 지우기" className="absolute right-4 top-1/2 -translate-y-1/2">
                     <X size={14} className="text-[#4E5968]" />
                   </button>
                 )}
               </div>
-              <p className="px-1 text-[11px] text-[#4E5968] font-medium">단축키: / 검색, Esc 초기화</p>
+              <p className="px-1 text-[11px] font-medium">
+                {debouncedSearch ? (
+                  <>
+                    <span className="text-[#3D8EF8] font-bold">
+                      {grouped.reduce((s, g) => s + g.list.length, 0)}건
+                    </span>
+                    <span className="text-[#4E5968]"> 검색됨 · Esc 초기화</span>
+                  </>
+                ) : (
+                  <span className="text-[#4E5968]">단축키: / 검색, Esc 초기화</span>
+                )}
+              </p>
 
               {/* 필터 탭 */}
               <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
