@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp } from 'lucide-react'
-import type { Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
+import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -26,11 +26,13 @@ interface Props {
   customExpenseCategories: string[]
   userPaymentMethods: UserPaymentMethod[]
   subscriptions: Subscription[]
+  hiddenWidgets?: DashboardWidgetId[]
   onBudgetsChange: (b: Budget[]) => void
   onRecurringSave: (items: RecurringTransaction[]) => void
   onApplyRecurring: (items: RecurringTransaction[]) => void
   onOpenCategoryModal: () => void
   onOpenPaymentMethodsModal: () => void
+  onOpenWidgetSettings?: () => void
 }
 
 function calcNet(items: Transaction[]) {
@@ -94,7 +96,8 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
   )
 }
 
-export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onOpenWidgetSettings }: Props) {
+  const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
@@ -650,7 +653,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 구독 다음 청구 예고 */}
-      {upcomingSubscriptions.length > 0 && (
+      {!hide('subscription-alert') && upcomingSubscriptions.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-2">
@@ -684,7 +687,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 정기 지출 미적용 알림 */}
-      {pendingRecurring.length > 0 && (
+      {!hide('recurring-pending') && pendingRecurring.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -747,6 +750,15 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       <div className="rounded-2xl p-6 bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] card-enter" style={{ animationDelay: '0ms' }}>
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-medium text-[#8B95A1]">이번 달 잔액</p>
+          {onOpenWidgetSettings && (
+            <button
+              onClick={onOpenWidgetSettings}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] transition-colors"
+              title="위젯 설정"
+            >
+              <SlidersHorizontal size={13} />
+            </button>
+          )}
           {noSpendStreak >= 2 ? (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F5BE3A]/15 text-[#F5BE3A]">
               🔥 {noSpendStreak}일 연속 무지출
@@ -878,7 +890,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       </div>
 
       {/* 6개월 스파크라인 요약 */}
-      <div className="flex gap-2">
+      {!hide('sparkline-summary') && <div className="flex gap-2">
         <SparklineCard
           data={sparkIncome}
           color="#3D8EF8"
@@ -899,10 +911,10 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
           label="잔액"
           value={`${balance >= 0 ? '' : '-'}${fmtShort(Math.abs(balance))}원`}
         />
-      </div>
+      </div>}
 
       {/* 오늘 지출 카드 */}
-      {todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
+      {!hide('today-spending') && todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
         noSpendStreak >= 1 && (
           <div className="flex items-center gap-3 px-4 py-3.5 bg-[#2ACF6A]/10 rounded-2xl border border-[#2ACF6A]/20">
             <span className="text-2xl">🎯</span>
@@ -956,7 +968,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       ))}
 
       {/* 재정 건강도 */}
-      {income > 0 && (
+      {!hide('health-score') && income > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl p-5 card-enter" style={{ animationDelay: '50ms' }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[15px] font-bold text-white">재정 건강도</p>
@@ -985,7 +997,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 소비 페이스 인디케이터 */}
-      {spendingPace && (
+      {!hide('spending-pace') && spendingPace && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">소비 페이스</p>
@@ -1042,7 +1054,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 이번 주 vs 지난 주 지출 비교 */}
-      {(weeklySpending.thisWeek > 0 || weeklySpending.lastWeek > 0) && (
+      {!hide('weekly-comparison') && (weeklySpending.thisWeek > 0 || weeklySpending.lastWeek > 0) && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">주간 지출</p>
@@ -1119,7 +1131,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 시간대별 지출 패턴 */}
-      {expense > 0 && timeOfDaySpending.some(s => s.amount > 0) && (
+      {!hide('timeofday-spending') && expense > 0 && timeOfDaySpending.some(s => s.amount > 0) && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">시간대별 지출</p>
@@ -1167,7 +1179,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 이달 최대 지출 TOP3 */}
-      {top3Expenses.length > 0 && (
+      {!hide('top3-expenses') && top3Expenses.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-3">이달 최대 지출</p>
           <div className="space-y-2.5">
@@ -1199,7 +1211,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 월급날 카운트다운 */}
-      {!payday && !editingPayday && (
+      {!hide('payday-countdown') && !payday && !editingPayday && (
         <button
           onClick={() => { setEditingPayday(true); setPaydayInput('') }}
           className="w-full flex items-center gap-2 justify-center py-3 rounded-2xl border border-dashed border-white/10 text-xs font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
@@ -1208,7 +1220,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         </button>
       )}
 
-      {editingPayday && (
+      {!hide('payday-countdown') && editingPayday && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5 space-y-2">
           <div className="flex gap-2 mb-1">
             <button
@@ -1257,7 +1269,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         </div>
       )}
 
-      {payday && !editingPayday && paydayInfo && (
+      {!hide('payday-countdown') && payday && !editingPayday && paydayInfo && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
@@ -1550,7 +1562,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 순자산 카드 */}
-      {(transactions.length > 0 || stockTrades.length > 0) && (
+      {!hide('net-worth') && (transactions.length > 0 || stockTrades.length > 0) && (
         <div className="bg-[#1C1C1E] rounded-3xl px-5 py-3.5">
           <div className="flex items-center gap-2 mb-2.5">
             <PieChart size={14} className="text-[#3D8EF8]" />
@@ -1619,7 +1631,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 목표 일일 저금 필요액 */}
-      {goalsDailyNeeded && (
+      {!hide('goal-daily-needed') && goalsDailyNeeded && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5 flex items-center gap-3">
           <span className="text-2xl">{goalsDailyNeeded.nearest.emoji}</span>
           <div className="flex-1">

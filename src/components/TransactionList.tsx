@@ -20,6 +20,7 @@ interface Props {
   onDelete: (id: string) => void
   onBulkDelete?: (ids: string[]) => void
   onArchiveDone?: (cutoff: string) => void
+  onOpenTagManager?: () => void
 }
 
 type ViewMode = 'list' | 'calendar'
@@ -65,7 +66,7 @@ function HighlightText({ text, query, className }: { text: string; query: string
   )
 }
 
-export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onArchiveDone }: Props) {
+export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onArchiveDone, onOpenTagManager }: Props) {
   const [filter, setFilter] = useState<FilterType>(() => {
     const saved = localStorage.getItem(FILTER_TYPE_KEY)
     if (saved === 'income' || saved === 'expense' || saved === 'all') return saved
@@ -984,13 +985,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
         {tagSummary.length > 0 && (
           <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
-            <button
-              onClick={() => setShowTagSummary((v) => !v)}
-              aria-expanded={showTagSummary}
-              aria-controls="transaction-tag-summary"
-              className="w-full flex items-center justify-between px-5 py-3.5 text-left"
-            >
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between px-5 py-3.5">
+              <button
+                onClick={() => setShowTagSummary((v) => !v)}
+                aria-expanded={showTagSummary}
+                aria-controls="transaction-tag-summary"
+                className="flex items-center gap-2 flex-1 text-left"
+              >
                 <Hash size={14} className="text-[#3D8EF8]" />
                 <span className="text-sm font-bold text-white">태그별 합계</span>
                 {activeTag && (
@@ -998,9 +999,21 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                     #{activeTag} 필터 중
                   </span>
                 )}
+              </button>
+              <div className="flex items-center gap-2">
+                {onOpenTagManager && (
+                  <button
+                    onClick={onOpenTagManager}
+                    className="text-[11px] font-semibold text-[#8B95A1] hover:text-white px-2 py-1 rounded-lg bg-[#2C2C2E] transition-colors"
+                  >
+                    관리
+                  </button>
+                )}
+                <button onClick={() => setShowTagSummary((v) => !v)}>
+                  {showTagSummary ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
+                </button>
               </div>
-              {showTagSummary ? <ChevronUp size={14} className="text-[#4E5968]" /> : <ChevronDown size={14} className="text-[#4E5968]" />}
-            </button>
+            </div>
 
             {showTagSummary && (
               <div id="transaction-tag-summary" className="px-4 pb-4 space-y-1.5">

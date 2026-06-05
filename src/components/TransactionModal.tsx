@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useModalClose } from '../hooks/useModalClose'
 import { X, ChevronDown, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
-import type { Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
@@ -10,6 +10,7 @@ import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
+import { applyAutoCategory } from '../lib/autoCategoryRules'
 
 interface Props {
   transaction?: Transaction | null
@@ -21,6 +22,7 @@ interface Props {
   transactionTemplates?: TransactionTemplate[]
   onSaveTemplates?: (templates: TransactionTemplate[]) => void
   onOpenPaymentMethodsModal?: () => void
+  autoCategoryRules?: AutoCategoryRule[]
 }
 
 type QueueItem = Omit<Transaction, 'id' | 'createdAt'>
@@ -36,10 +38,11 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal, autoCategoryRules = [] }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
+  const categoryManuallySet = useRef(false)
   const [type, setType] = useState<TransactionType>('expense')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
@@ -105,7 +108,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }, [transaction])
 
   useEffect(() => {
-    if (!transaction) setCategory(categories[0])
+    if (!transaction) {
+      setCategory(categories[0])
+      categoryManuallySet.current = false
+    }
   }, [type])
 
   useEffect(() => {
@@ -557,7 +563,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         {CATEGORY_EMOJI[category] ?? '📦'}
                       </div>
                       <div className="relative flex-1">
-                        <select value={category} onChange={(e) => setCategory(e.target.value)}
+                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setCategory(e.target.value) }}
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
@@ -590,7 +596,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         {CATEGORY_EMOJI[category] ?? '📦'}
                       </div>
                       <div className="relative flex-1">
-                        <select value={category} onChange={(e) => setCategory(e.target.value)}
+                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setCategory(e.target.value) }}
                           className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
                           style={{ color: color.text }}>
                           {categories.map((c) => (
@@ -612,7 +618,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </p>
               <textarea
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setDescription(val)
+                  if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
+                    const matched = applyAutoCategory(val, type, autoCategoryRules)
+                    if (matched) setCategory(matched)
+                  }
+                }}
                 placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
                 rows={3}
                 className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"

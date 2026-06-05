@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
+import type { Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
 import type { Tab } from '../../types/navigation'
 
 const Dashboard = lazy(() => import('../Dashboard'))
@@ -48,6 +48,9 @@ interface Props {
   onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
   onMemoDelete: (id: string) => void
   onMemoTogglePin: (id: string) => void
+  hiddenWidgets?: DashboardWidgetId[]
+  onOpenTagManager?: () => void
+  onOpenWidgetSettings?: () => void
 }
 
 export default function LedgerWorkspace({
@@ -81,6 +84,9 @@ export default function LedgerWorkspace({
   onMemoUpdate,
   onMemoDelete,
   onMemoTogglePin,
+  hiddenWidgets = [],
+  onOpenTagManager,
+  onOpenWidgetSettings,
 }: Props) {
   return (
     <>
@@ -98,11 +104,13 @@ export default function LedgerWorkspace({
               customExpenseCategories={customExpenseCategories}
               userPaymentMethods={userPaymentMethods}
               subscriptions={subscriptions}
+              hiddenWidgets={hiddenWidgets}
               onBudgetsChange={onBudgetsChange}
               onRecurringSave={onRecurringSave}
               onApplyRecurring={onApplyRecurring}
               onOpenCategoryModal={onOpenCategoryModal}
               onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
+              onOpenWidgetSettings={onOpenWidgetSettings}
             />
           </Suspense>
         </div>
@@ -118,6 +126,7 @@ export default function LedgerWorkspace({
               onDelete={onTransactionDelete}
               onBulkDelete={onBulkDeleteTransactions}
               onArchiveDone={onTransactionArchive}
+              onOpenTagManager={onOpenTagManager}
             />
           </Suspense>
         </div>

@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'
@@ -29,6 +29,8 @@ interface HandlersInput {
   setCustomIncomeCategories: Dispatch<React.SetStateAction<string[]>>
   setUserPaymentMethods: Dispatch<React.SetStateAction<UserPaymentMethod[]>>
   setTransactionTemplates: Dispatch<React.SetStateAction<TransactionTemplate[]>>
+  setAutoCategoryRules: Dispatch<React.SetStateAction<AutoCategoryRule[]>>
+  setHiddenWidgets: Dispatch<React.SetStateAction<DashboardWidgetId[]>>
   dispatchUI: Dispatch<UIAction>
 }
 
@@ -50,6 +52,8 @@ export function useAppHandlers({
   setCustomIncomeCategories,
   setUserPaymentMethods,
   setTransactionTemplates,
+  setAutoCategoryRules,
+  setHiddenWidgets,
   dispatchUI,
 }: HandlersInput) {
   const handleSaveTransaction = useCallback(
@@ -221,6 +225,78 @@ export function useAppHandlers({
     )
   }, [persist, setTransactionTemplates])
 
+  const handleSaveAutoCategoryRules = useCallback((rules: AutoCategoryRule[]) => {
+    setAutoCategoryRules(rules)
+    persist(
+      async () => {
+        const current = await loadSettings()
+        await saveSettings({ ...current, autoCategoryRules: rules })
+      },
+      '자동 분류 규칙 저장에 실패했습니다.',
+      'settings'
+    )
+  }, [persist, setAutoCategoryRules])
+
+  const handleRenameTag = useCallback((oldName: string, newName: string) => {
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.tags?.includes(oldName)
+          ? { ...t, tags: t.tags.map((tag) => (tag === oldName ? newName : tag)) }
+          : t
+      )
+    )
+    persist(
+      async () => {
+        const { loadTransactions, saveTransactions } = await import('../lib/storage')
+        const current = await loadTransactions()
+        const updated = current.map((t) =>
+          t.tags?.includes(oldName)
+            ? { ...t, tags: t.tags.map((tag: string) => (tag === oldName ? newName : tag)) }
+            : t
+        )
+        await saveTransactions(updated)
+      },
+      '태그 이름 변경에 실패했습니다.',
+      'transactions'
+    )
+  }, [persist, setTransactions])
+
+  const handleDeleteTag = useCallback((name: string) => {
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.tags?.includes(name)
+          ? { ...t, tags: t.tags.filter((tag) => tag !== name) }
+          : t
+      )
+    )
+    persist(
+      async () => {
+        const { loadTransactions, saveTransactions } = await import('../lib/storage')
+        const current = await loadTransactions()
+        const updated = current.map((t) =>
+          t.tags?.includes(name)
+            ? { ...t, tags: t.tags.filter((tag: string) => tag !== name) }
+            : t
+        )
+        await saveTransactions(updated)
+      },
+      '태그 삭제에 실패했습니다.',
+      'transactions'
+    )
+  }, [persist, setTransactions])
+
+  const handleSaveHiddenWidgets = useCallback((hidden: DashboardWidgetId[]) => {
+    setHiddenWidgets(hidden)
+    persist(
+      async () => {
+        const current = await loadSettings()
+        await saveSettings({ ...current, hiddenWidgets: hidden })
+      },
+      '위젯 설정 저장에 실패했습니다.',
+      'settings'
+    )
+  }, [persist, setHiddenWidgets])
+
   const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
@@ -321,6 +397,10 @@ export function useAppHandlers({
     handleApplyRecurring,
     handleSavePaymentMethods,
     handleSaveTemplates,
+    handleSaveAutoCategoryRules,
+    handleRenameTag,
+    handleDeleteTag,
+    handleSaveHiddenWidgets,
     handleSaveCategories,
     handleAddWatchTicker,
     handleRemoveWatchTicker,

@@ -189,3 +189,25 @@ export const CATEGORY_EMOJI: Record<string, string> = {
   쇼핑: '🛍️', '문화/여가': '🎮', 교육: '📚', 저축: '🏦', 기타지출: '📦',
   아이디어: '💡', 할일: '✅', 일정: '📅', 개인: '🙋', 업무: '💼', 중요: '⭐', 기타: '📝',
 }
+
+export interface AutoCategoryRule {
+  id: string
+  keyword: string
+  category: string
+  type: TransactionType
+  enabled: boolean
+}
+
+export type DashboardWidgetId =
+  | 'subscription-alert'
+  | 'recurring-pending'
+  | 'sparkline-summary'
+  | 'today-spending'
+  | 'health-score'
+  | 'spending-pace'
+  | 'weekly-comparison'
+  | 'timeofday-spending'
+  | 'top3-expenses'
+  | 'payday-countdown'
+  | 'net-worth'
+  | 'goal-daily-needed'

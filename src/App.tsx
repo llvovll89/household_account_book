@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, AlertTriangle, Info, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
-import type { Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
 import type { RemoteVersionKey } from './lib/storage'
@@ -27,6 +27,9 @@ const MergeLocalDataModal = lazy(() => import('./components/MergeLocalDataModal'
 const AutoApplyRecurringModal = lazy(() => import('./components/AutoApplyRecurringModal'))
 const SyncConflictModal = lazy(() => import('./components/SyncConflictModal'))
 const SyncRecoveryGuideModal = lazy(() => import('./components/SyncRecoveryGuideModal'))
+const AutoCategoryRuleModal = lazy(() => import('./components/AutoCategoryRuleModal'))
+const TagManagerModal = lazy(() => import('./components/TagManagerModal'))
+const DashboardWidgetSettings = lazy(() => import('./components/DashboardWidgetSettings'))
 
 const DATA_LOAD_TIMEOUT_MS = 9000
 const FILTER_TYPE_KEY = 'hb_tx_type_filter'
@@ -219,6 +222,11 @@ export default function App() {
     const [transactionTemplates, setTransactionTemplates] = useState<TransactionTemplate[]>([])
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
     const [goals, setGoals] = useState<SavingsGoal[]>([])
+    const [autoCategoryRules, setAutoCategoryRules] = useState<AutoCategoryRule[]>([])
+    const [hiddenWidgets, setHiddenWidgets] = useState<DashboardWidgetId[]>([])
+    const [showTagManagerModal, setShowTagManagerModal] = useState(false)
+    const [showAutoCategoryRuleModal, setShowAutoCategoryRuleModal] = useState(false)
+    const [showWidgetSettings, setShowWidgetSettings] = useState(false)
 
     // UI 전용 상태: 11개 useState → useReducer 1개로 통합
     const [ui, dispatchUI] = useReducer(uiReducer, UI_INIT)
@@ -304,6 +312,8 @@ export default function App() {
                 setCardBillingDay(settings.cardBillingDay ?? null)
                 setUserPaymentMethods(settings.userPaymentMethods)
                 setTransactionTemplates(settings.transactionTemplates ?? [])
+                setAutoCategoryRules(settings.autoCategoryRules ?? [])
+                setHiddenWidgets(settings.hiddenWidgets ?? [])
             })
             setSettingsSyncTick((prev) => prev + 1)
         }
@@ -346,6 +356,8 @@ export default function App() {
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories)
         setCustomIncomeCategories(snapshot.settings.customIncomeCategories)
         setTransactionTemplates(snapshot.settings.transactionTemplates ?? [])
+        setAutoCategoryRules(snapshot.settings.autoCategoryRules ?? [])
+        setHiddenWidgets(snapshot.settings.hiddenWidgets ?? [])
     }, [])
 
     const {
@@ -838,6 +850,10 @@ export default function App() {
         handleApplyRecurring,
         handleSavePaymentMethods,
         handleSaveTemplates,
+        handleSaveAutoCategoryRules,
+        handleRenameTag,
+        handleDeleteTag,
+        handleSaveHiddenWidgets,
         handleSaveCategories,
         handleAddWatchTicker,
         handleRemoveWatchTicker,
@@ -864,6 +880,8 @@ export default function App() {
         setCustomIncomeCategories,
         setUserPaymentMethods,
         setTransactionTemplates,
+        setAutoCategoryRules,
+        setHiddenWidgets,
         dispatchUI,
     })
 
@@ -1055,6 +1073,13 @@ export default function App() {
                                                             <CreditCard size={14} className="text-[#8B95A1]" />
                                                             결제수단 관리
                                                         </button>
+                                                        <button
+                                                            onClick={() => { setShowAutoCategoryRuleModal(true); setShowUserMenu(false) }}
+                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                        >
+                                                            <Target size={14} className="text-[#8B95A1]" />
+                                                            자동 분류 규칙
+                                                        </button>
                                                     </>
                                                 )}
                                                 <button
@@ -1238,6 +1263,7 @@ export default function App() {
                             memoAddTrigger={memoAddTrigger}
                             subscriptionAddTrigger={subscriptionAddTrigger}
                             goalAddTrigger={goalAddTrigger}
+                            hiddenWidgets={hiddenWidgets}
                             onBudgetsChange={handleBudgetsChange}
                             onRecurringSave={handleRecurringSave}
                             onApplyRecurring={handleApplyRecurring}
@@ -1253,6 +1279,8 @@ export default function App() {
                             onMemoUpdate={handleUpdateMemo}
                             onMemoDelete={handleDeleteMemo}
                             onMemoTogglePin={handleTogglePin}
+                            onOpenTagManager={() => setShowTagManagerModal(true)}
+                            onOpenWidgetSettings={() => setShowWidgetSettings(true)}
                         />
                     </Suspense>
                 )}
@@ -1387,6 +1415,7 @@ export default function App() {
                         transactionTemplates={transactionTemplates}
                         onSaveTemplates={handleSaveTemplates}
                         onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
+                        autoCategoryRules={autoCategoryRules}
                     />
                 </Suspense>
             )}
@@ -1406,6 +1435,36 @@ export default function App() {
                         userPaymentMethods={userPaymentMethods}
                         onSave={handleSavePaymentMethods}
                         onClose={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: false })}
+                    />
+                </Suspense>
+            )}
+            {showAutoCategoryRuleModal && (
+                <Suspense fallback={null}>
+                    <AutoCategoryRuleModal
+                        rules={autoCategoryRules}
+                        customExpenseCategories={customExpenseCategories}
+                        customIncomeCategories={customIncomeCategories}
+                        onSave={handleSaveAutoCategoryRules}
+                        onClose={() => setShowAutoCategoryRuleModal(false)}
+                    />
+                </Suspense>
+            )}
+            {showTagManagerModal && (
+                <Suspense fallback={null}>
+                    <TagManagerModal
+                        transactions={transactions}
+                        onRenameTag={handleRenameTag}
+                        onDeleteTag={handleDeleteTag}
+                        onClose={() => setShowTagManagerModal(false)}
+                    />
+                </Suspense>
+            )}
+            {showWidgetSettings && (
+                <Suspense fallback={null}>
+                    <DashboardWidgetSettings
+                        hiddenWidgets={hiddenWidgets}
+                        onSave={handleSaveHiddenWidgets}
+                        onClose={() => setShowWidgetSettings(false)}
                     />
                 </Suspense>
             )}

@@ -1,6 +1,6 @@
 import { doc, getDoc, runTransaction } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { Budget, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
+import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
 
 function safeSave(key: string, value: unknown): void {
   try {
@@ -40,6 +40,8 @@ export interface AppSettings {
   stockWatchlist: string[]
   transactionTemplates: import('../types').TransactionTemplate[]
   swipeSensitivity?: SwipeSensitivity
+  autoCategoryRules: AutoCategoryRule[]
+  hiddenWidgets: DashboardWidgetId[]
 }
 
 interface RemoteState {
@@ -162,6 +164,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   stockWatchlist: [],
   transactionTemplates: [],
   swipeSensitivity: 'medium',
+  autoCategoryRules: [],
+  hiddenWidgets: [],
 }
 
 function migrateSettings(settings: AppSettings): AppSettings {
@@ -452,6 +456,8 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
     stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,
     transactionTemplates: (local.transactionTemplates?.length ?? 0) > 0 ? local.transactionTemplates : (remote.transactionTemplates ?? []),
+    autoCategoryRules: (local.autoCategoryRules?.length ?? 0) > 0 ? local.autoCategoryRules : (remote.autoCategoryRules ?? []),
+    hiddenWidgets: local.hiddenWidgets ?? remote.hiddenWidgets ?? [],
   }
 }
 
