@@ -73,6 +73,11 @@ export default function BudgetGauge({ category, emoji, spent, limit, color }: Pr
       <p className="text-[10px] num text-center" style={{ color: displayColor }}>
         {fmt(spent)}<span className="text-[#4E5968]">/{fmt(limit)}</span>
       </p>
+      {isOver ? (
+        <p className="text-[9px] font-bold text-[#F25260] text-center">+{fmt(spent - limit)}원 초과</p>
+      ) : (
+        <p className="text-[9px] text-[#4E5968] text-center">{fmt(limit - spent)}원 남음</p>
+      )}
     </div>
   )
 }

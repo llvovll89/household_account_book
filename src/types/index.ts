@@ -215,3 +215,4 @@ export type DashboardWidgetId =
   | 'net-worth'
   | 'goal-daily-needed'
   | 'spending-spike'
+  | 'spending-savings'

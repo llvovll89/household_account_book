@@ -14,6 +14,7 @@ interface Props {
 
 export default function TrendAreaChart({ data, currentYM }: Props) {
   return (
+    <>
     <ResponsiveContainer width="100%" height={160}>
       <AreaChart data={data} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
         <defs>
@@ -82,5 +83,16 @@ export default function TrendAreaChart({ data, currentYM }: Props) {
         />
       </AreaChart>
     </ResponsiveContainer>
+    <div className="flex items-center justify-center gap-5 mt-1">
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.income }} />
+        <span className="text-[10px]" style={{ color: CHART_COLORS.textSecondary }}>수입</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.expense }} />
+        <span className="text-[10px]" style={{ color: CHART_COLORS.textSecondary }}>지출</span>
+      </div>
+    </div>
+    </>
   )
 }

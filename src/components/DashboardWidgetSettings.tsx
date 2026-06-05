@@ -22,6 +22,7 @@ const WIDGETS: WidgetDef[] = [
   { id: 'net-worth', label: '순자산 현황', description: '누적 잔액 · 주식 · 저축 목표' },
   { id: 'goal-daily-needed', label: '목표 일일 저금액', description: '저축 목표 달성 필요 일일액' },
   { id: 'spending-spike', label: '소비 급증 감지', description: '전월 대비 30% 이상 급증한 카테고리 알림' },
+  { id: 'spending-savings', label: '절약 성과', description: '전월 대비 20% 이상 절약한 카테고리 칭찬 카드' },
 ]
 
 interface Props {

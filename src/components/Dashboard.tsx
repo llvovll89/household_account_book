@@ -400,17 +400,24 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     }
   }, [transactions, stockTrades, goals])
 
-  // 월별 순자산 추이 (전체 거래 기준 누적)
+  // 월별 순자산 추이 (전체 거래 기준 누적) — 단일 패스로 6개 월말 잔액 계산
   const netWorthTrend = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
+    const now = new Date()
+    const months = Array.from({ length: 6 }, (_, i) => {
       const offset = i - 5
-      const d = new Date(new Date().getFullYear(), new Date().getMonth() + offset + 1, 0)
-      const endDate = d.toISOString().slice(0, 10)
-      const total = transactions.reduce((sum, t) => {
-        if (t.date > endDate) return sum
-        return sum + (t.type === 'income' ? t.amount : -t.amount)
-      }, 0)
-      return { label: `${d.getMonth() + 1}월`, value: total }
+      const d = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
+      return { label: `${d.getMonth() + 1}월`, endDate: d.toISOString().slice(0, 10) }
+    })
+    // 거래를 날짜순 정렬 후 누적 합산 (O(n log n + n))
+    const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
+    let cumulative = 0
+    let ti = 0
+    return months.map(({ label, endDate }) => {
+      while (ti < sorted.length && sorted[ti].date <= endDate) {
+        cumulative += sorted[ti].type === 'income' ? sorted[ti].amount : -sorted[ti].amount
+        ti++
+      }
+      return { label, value: cumulative }
     })
   }, [transactions])
 
@@ -568,6 +575,26 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     })
     return map
   }, [transactions, yearMonth])
+
+  // 절약 성과 (전월 대비 20% 이상 && 1만원 이상 절약)
+  const spendingSavings = useMemo(() => {
+    const today = new Date()
+    const [y, m] = yearMonth.split('-').map(Number)
+    if (today.getFullYear() !== y || today.getMonth() + 1 !== m) return []
+    return Object.entries(spentByCategory)
+      .map(([cat, amt]) => {
+        const prev = prevMonthCategorySpend[cat] ?? 0
+        if (prev === 0) return null
+        const saved = prev - amt
+        if (saved < 10_000) return null
+        const pct = Math.round((saved / prev) * 100)
+        if (pct < 20) return null
+        return { category: cat, amount: amt, prev, saved, pct }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => b.saved - a.saved)
+      .slice(0, 3)
+  }, [spentByCategory, prevMonthCategorySpend, yearMonth])
 
   // 소비 이상 감지 (전월 대비 30% 이상 && 2만원 이상 급증)
   const spendingSpikes = useMemo(() => {
@@ -735,6 +762,37 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                 </div>
                 <span className="text-xs font-bold text-[#F25260] shrink-0">▲{spike.pct}%</span>
                 <span className="text-sm font-bold num text-white shrink-0">{fmt(spike.amount)}원</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 절약 성과 */}
+      {!hide('spending-savings') && spendingSavings.length > 0 && (
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-sm">✨</span>
+            <span className="text-sm font-bold text-white">절약 성과</span>
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-[#2ACF6A]/15 text-[#2ACF6A]">
+              전달 대비
+            </span>
+          </div>
+          <div className="space-y-2">
+            {spendingSavings.map(item => (
+              <div key={item.category} className="flex items-center gap-2.5">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0"
+                  style={{ backgroundColor: CATEGORY_COLOR[item.category]?.bg ?? 'rgba(42,207,106,0.1)' }}
+                >
+                  {CATEGORY_EMOJI[item.category] ?? '💰'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-[#F1F3F6]">{item.category}</span>
+                  <span className="text-[10px] text-[#4E5968] ml-2">전월 {fmt(item.prev)}원</span>
+                </div>
+                <span className="text-xs font-bold text-[#2ACF6A] shrink-0">▼{item.pct}%</span>
+                <span className="text-sm font-bold num text-[#2ACF6A] shrink-0">-{fmt(item.saved)}원</span>
               </div>
             ))}
           </div>

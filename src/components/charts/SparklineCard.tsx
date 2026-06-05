@@ -35,7 +35,8 @@ export default function SparklineCard({ data, color, label, value, trend }: Prop
               strokeWidth={1.5}
               fill={`url(#${gradId})`}
               dot={false}
-              isAnimationActive={false}
+              isAnimationActive={true}
+              animationDuration={400}
             />
           </AreaChart>
         </ResponsiveContainer>

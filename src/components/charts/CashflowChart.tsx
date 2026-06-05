@@ -13,6 +13,7 @@ interface Props {
 
 export default function CashflowChart({ data }: Props) {
   return (
+    <>
     <ResponsiveContainer width="100%" height={200}>
       <ComposedChart data={data} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
         <defs>
@@ -80,5 +81,22 @@ export default function CashflowChart({ data }: Props) {
         />
       </ComposedChart>
     </ResponsiveContainer>
+    <div className="flex items-center justify-center gap-5 mt-1">
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.income }} />
+        <span className="text-[10px]" style={{ color: CHART_COLORS.textSecondary }}>수입</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.expense }} />
+        <span className="text-[10px]" style={{ color: CHART_COLORS.textSecondary }}>지출</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <svg width={16} height={8}>
+          <line x1="0" y1="4" x2="16" y2="4" stroke={CHART_COLORS.green} strokeWidth={2} strokeDasharray="4 2" />
+        </svg>
+        <span className="text-[10px]" style={{ color: CHART_COLORS.textSecondary }}>순잔액</span>
+      </div>
+    </div>
+    </>
   )
 }
