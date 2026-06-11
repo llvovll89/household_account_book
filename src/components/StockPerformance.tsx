@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { StockTrade } from '../types'
 import { calcRealizedPnLByTicker, calcTotalFee, calcTotalRealizedPnL } from '../lib/stockCalc'
 import { fmt } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   trades: StockTrade[]
@@ -40,10 +41,8 @@ export default function StockPerformance({ trades }: Props) {
   if (trades.length === 0) {
     return (
       <div className="space-y-3 tab-content">
-        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
-          <p className="text-5xl mb-4">📈</p>
-          <p className="font-bold text-white text-[15px]">성과 데이터가 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">거래가 쌓이면 성과분석이 표시돼요</p>
+        <div className="bg-[#1C1C1E] rounded-2xl">
+          <EmptyState emoji="📈" title="성과 데이터가 없어요" description="거래가 쌓이면 성과분석이 표시돼요" />
         </div>
       </div>
     )

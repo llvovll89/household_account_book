@@ -58,7 +58,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
             <h2 className="text-[18px] font-bold text-white">카테고리 관리</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">사용자 정의 카테고리 추가/삭제</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -108,6 +108,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
                     <span className="text-xs font-semibold text-[#3D8EF8]">{cat}</span>
                     <button
                       onClick={() => handleDelete(cat)}
+                      aria-label={`${cat} 카테고리 삭제`}
                       className="text-[#3D8EF8]/60 hover:text-[#F25260] transition-colors"
                     >
                       <X size={11} />
@@ -131,6 +132,7 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
               />
               <button
                 onClick={handleAdd}
+                aria-label="카테고리 추가"
                 className="w-10 h-10 rounded-xl bg-[#3D8EF8] flex items-center justify-center shrink-0 hover:bg-[#5AA0FF] transition-colors"
               >
                 <Plus size={16} className="text-white" />

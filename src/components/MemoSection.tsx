@@ -4,6 +4,7 @@ import type { Memo, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, MEMO_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { parseYmdLocal, toLocalDateStr } from '../lib/format'
+import { showToast } from '../lib/toast'
 
 interface Props {
   memos: Memo[]
@@ -77,6 +78,22 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const [queue, setQueue] = useState<MemoQueueItem[]>([])
   const [search, setSearch] = useState('')
   const prevExternalAddTriggerRef = useRef(externalAddTrigger)
+  const pendingMemoDeleteTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  function handleDeleteWithUndo(id: string) {
+    const timer = setTimeout(() => {
+      onDelete(id)
+      pendingMemoDeleteTimers.current.delete(id)
+    }, 3500)
+    pendingMemoDeleteTimers.current.set(id, timer)
+    showToast('메모가 삭제됐어요', 3500, 'info', {
+      label: '실행 취소',
+      onClick: () => {
+        clearTimeout(pendingMemoDeleteTimers.current.get(id))
+        pendingMemoDeleteTimers.current.delete(id)
+      },
+    })
+  }
 
   const categories = amountStr
     ? (txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES)
@@ -273,6 +290,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               setViewMode('cards')
               setSelectedDate(null)
             }}
+            aria-pressed={viewMode === 'cards'}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'cards' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
           >
             <LayoutGrid size={12} />
@@ -280,6 +298,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
           </button>
           <button
             onClick={() => setViewMode('calendar')}
+            aria-pressed={viewMode === 'calendar'}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === 'calendar' ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}
           >
             <CalendarDays size={12} />
@@ -370,14 +389,25 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                       : formatDate(memo.updatedAt)}
                   </span>
                   <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onTogglePin(memo.id)}
-                      className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
+                    <button
+                      onClick={() => onTogglePin(memo.id)}
+                      aria-label={memo.pinned ? '고정 해제' : '메모 고정'}
+                      className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                    >
                       <Pin size={10} className={memo.pinned ? 'text-[#F5BE3A]' : 'text-[#4E5968]'} />
                     </button>
-                    <button onClick={() => openEdit(memo)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                    <button
+                      onClick={() => openEdit(memo)}
+                      aria-label="메모 수정"
+                      className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                    >
                       <Pencil size={10} className="text-[#4E5968]" />
                     </button>
-                    <button onClick={() => onDelete(memo.id)} className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors">
+                    <button
+                      onClick={() => handleDeleteWithUndo(memo.id)}
+                      aria-label="메모 삭제"
+                      className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors"
+                    >
                       <Trash2 size={10} className="text-[#F25260]" />
                     </button>
                   </div>
@@ -461,7 +491,8 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
             </div>
 
             {selectedDateMemos.length === 0 ? (
-              <div className="py-10 text-center">
+              <div className="py-10 text-center flex flex-col items-center gap-2">
+                <span className="text-3xl">📅</span>
                 <p className="text-sm text-[#4E5968]">이 날짜에는 메모가 없어요</p>
               </div>
             ) : (
@@ -487,19 +518,25 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
                           )}
                         </div>
                         <div className="flex gap-1 shrink-0">
-                          <button onClick={() => onTogglePin(memo.id)} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" title={memo.pinned ? '핀 해제' : '고정'}>
+                          <button
+                            onClick={() => onTogglePin(memo.id)}
+                            aria-label={memo.pinned ? '고정 해제' : '메모 고정'}
+                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                          >
                             <Pin size={11} className={memo.pinned ? 'text-[#F5BE3A]' : 'text-[#4E5968]'} />
                           </button>
                           <button
-                            onClick={() => {
-                              setSelectedDate(null)
-                              openEdit(memo)
-                            }}
+                            onClick={() => { setSelectedDate(null); openEdit(memo) }}
+                            aria-label="메모 수정"
                             className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
                           >
                             <Pencil size={11} className="text-[#4E5968]" />
                           </button>
-                          <button onClick={() => onDelete(memo.id)} className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors">
+                          <button
+                            onClick={() => handleDeleteWithUndo(memo.id)}
+                            aria-label="메모 삭제"
+                            className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors"
+                          >
                             <Trash2 size={11} className="text-[#F25260]" />
                           </button>
                         </div>

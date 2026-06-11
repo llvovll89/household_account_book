@@ -67,6 +67,8 @@ export default function DashboardWidgetSettings({ hiddenWidgets, onSave, onClose
               <button
                 key={w.id}
                 onClick={() => toggle(w.id)}
+                aria-pressed={enabled}
+                aria-label={`${w.label} 위젯 ${enabled ? '숨기기' : '표시하기'}`}
                 className="w-full flex items-center gap-4 bg-[#2C2C2E] rounded-xl px-4 py-3 text-left"
               >
                 {/* 토글 */}

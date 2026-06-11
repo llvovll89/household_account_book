@@ -166,10 +166,10 @@ export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClos
                   <div key={m.id} className="bg-[#2C2C2E] rounded-2xl px-4 py-3 flex items-center gap-3">
                     <span className="text-base">💳</span>
                     <span className="text-sm font-semibold text-white flex-1">{m.label}</span>
-                    <button onClick={() => handleStartEdit(m)} className="text-[#4E5968] hover:text-[#8B95A1] transition-colors p-1">
+                    <button onClick={() => handleStartEdit(m)} aria-label={`${m.label} 수정`} className="text-[#4E5968] hover:text-[#8B95A1] transition-colors p-1">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(m.id)} className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1">
+                    <button onClick={() => handleDelete(m.id)} aria-label={`${m.label} 삭제`} className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -264,10 +264,10 @@ export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClos
                     <span className="text-[11px] font-bold text-[#F5BE3A] bg-[#F5BE3A]/12 px-2 py-0.5 rounded-full">
                       매월 {m.billingDay ?? 25}일
                     </span>
-                    <button onClick={() => handleStartEdit(m)} className="text-[#4E5968] hover:text-[#8B95A1] transition-colors p-1">
+                    <button onClick={() => handleStartEdit(m)} aria-label={`${m.label} 수정`} className="text-[#4E5968] hover:text-[#8B95A1] transition-colors p-1">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(m.id)} className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1">
+                    <button onClick={() => handleDelete(m.id)} aria-label={`${m.label} 삭제`} className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1">
                       <Trash2 size={14} />
                     </button>
                   </div>

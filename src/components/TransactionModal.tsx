@@ -712,9 +712,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
             {/* 버튼 영역 */}
             {isEditMode ? (
-              <button type="submit"
-                className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all">
-                수정 완료
+              <button type="submit" disabled={uploading}
+                className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {uploading ? '저장 중...' : '수정 완료'}
               </button>
             ) : (
               <>
@@ -722,15 +723,16 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   <button
                     type="button"
                     onClick={handleAddToQueue}
-                    className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                    disabled={uploading}
+                    className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                   >
                     <Plus size={15} />
                     항목 추가
                   </button>
-                  <button type="submit"
-                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] transition-all ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'
-                      }`}>
-                    {queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
+                  <button type="submit" disabled={uploading}
+                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'}`}>
+                    {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                    {uploading ? '저장 중...' : queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
                   </button>
                 </div>
                 {onSaveTemplates && (

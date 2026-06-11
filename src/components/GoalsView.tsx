@@ -307,10 +307,10 @@ export default function GoalsView({ goals, transactions = [], addTrigger, onChan
                       </>
                     ) : (
                       <>
-                        <button onClick={() => openEdit(g)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
+                        <button onClick={() => openEdit(g)} aria-label={`${g.name} 목표 수정`} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors">
                           <Pencil size={11} />
                         </button>
-                        <button onClick={() => handleDelete(g.id)} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
+                        <button onClick={() => handleDelete(g.id)} aria-label={`${g.name} 목표 삭제`} className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors">
                           <Trash2 size={11} />
                         </button>
                       </>

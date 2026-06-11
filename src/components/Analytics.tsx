@@ -440,6 +440,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           <button
             key={m}
             onClick={() => setViewMode(m)}
+            aria-pressed={viewMode === m}
             className={`flex-shrink-0 flex-1 min-w-[52px] py-2.5 rounded-xl text-[13px] font-bold transition-all ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
@@ -657,7 +658,10 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             <p className="text-[15px] font-bold text-white mb-1">이번 달 잔액 흐름</p>
             <p className="text-xs text-[#4E5968] mb-4">일별 누적 순잔액 변화</p>
             {currentMonthly.length === 0 ? (
-              <p className="text-sm text-[#4E5968] text-center py-4">이번 달 내역이 없어요</p>
+              <div className="flex flex-col items-center py-6 gap-2">
+                <TrendingUp size={28} className="text-[#2C2C2E]" />
+                <p className="text-sm text-[#4E5968]">이번 달 내역이 없어요</p>
+              </div>
             ) : (
               <CumulativeLineChart transactions={transactions} yearMonth={yearMonth} />
             )}
@@ -668,7 +672,10 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             <p className="text-[15px] font-bold text-white mb-1">요일별 소비 패턴</p>
             <p className="text-xs text-[#4E5968] mb-4">이번 달 요일별 총 지출</p>
             {weekdayData.every((d) => d.total === 0) ? (
-              <p className="text-sm text-[#4E5968] text-center py-4">이번 달 지출 내역이 없어요</p>
+              <div className="flex flex-col items-center py-6 gap-2">
+                <TrendingDown size={28} className="text-[#2C2C2E]" />
+                <p className="text-sm text-[#4E5968]">이번 달 지출 내역이 없어요</p>
+              </div>
             ) : (
               <>
                 <WeekdayBarChart data={weekdayData} />
@@ -763,6 +770,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                   <button
                     key={t.key}
                     onClick={() => setPmTab(t.key)}
+                    aria-pressed={pmTab === t.key}
                     className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${pmTab === t.key ? 'bg-[#1C1C1E] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'}`}
                   >
                     {t.label}
@@ -928,6 +936,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
                   setTimeout(() => setSummaryCopied(false), 2000)
                 })
               }}
+              disabled={summaryCopied}
               className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all ${summaryCopied ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/30 text-[#2ACF6A]' : 'border-white/10 text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20'}`}
             >
               {summaryCopied ? '✓ 복사 완료!' : '📋 이달 요약 복사'}
@@ -991,6 +1000,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={() => setSelectedYear((y) => y - 1)}
+              aria-label="이전 연도"
               className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center"
             >
               <ChevronLeft size={16} className="text-[#8B95A1]" />
@@ -999,6 +1009,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             <button
               onClick={() => setSelectedYear((y) => y + 1)}
               disabled={selectedYear >= new Date().getFullYear()}
+              aria-label="다음 연도"
               className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center disabled:opacity-30"
             >
               <ChevronRight size={16} className="text-[#8B95A1]" />
@@ -1097,8 +1108,9 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           {(() => {
             const withData = yearlyData.filter(m => m.income > 0 || m.expense > 0)
             if (withData.length === 0) return (
-              <div className="bg-[#1C1C1E] rounded-2xl p-5">
-                <p className="text-sm text-[#4E5968] text-center py-6">{selectedYear}년 내역이 없어요</p>
+              <div className="bg-[#1C1C1E] rounded-2xl p-5 flex flex-col items-center gap-2 py-10">
+                <Minus size={28} className="text-[#2C2C2E]" />
+                <p className="text-sm text-[#4E5968]">{selectedYear}년 내역이 없어요</p>
               </div>
             )
             const bestMonth = withData.reduce((a, b) => b.balance > a.balance ? b : a)
@@ -1151,7 +1163,7 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
             <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
               <Hash size={32} className="text-[#2C2C2E] mx-auto mb-3" />
               <p className="text-sm font-semibold text-[#4E5968]">이번 달 태그 내역이 없어요</p>
-              <p className="text-xs text-[#2C2C2E] mt-1">거래 내역에 태그를 추가하면 분석을 보여드려요</p>
+              <p className="text-xs text-[#4E5968]/50 mt-1">거래 내역에 태그를 추가하면 분석을 보여드려요</p>
             </div>
           ) : (
             <>

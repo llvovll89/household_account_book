@@ -3,6 +3,7 @@ import { TrendingUp, ChevronRight } from 'lucide-react'
 import type { StockTrade, StockQuote } from '../types'
 import { calcHoldings, calcTotalRealizedPnL, calcTotalFee } from '../lib/stockCalc'
 import { fmt, fmtQty, fmtPrice } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 import StockDetailModal from './StockDetailModal'
 
 interface Props {
@@ -68,10 +69,8 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
   if (trades.length === 0) {
     return (
       <div className="space-y-3 tab-content">
-        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
-          <p className="text-5xl mb-4">🧭</p>
-          <p className="font-bold text-white text-[15px]">포트폴리오 데이터가 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">+ 버튼으로 거래를 추가하면 자동으로 구성돼요</p>
+        <div className="bg-[#1C1C1E] rounded-2xl">
+          <EmptyState emoji="🧭" title="포트폴리오 데이터가 없어요" description="+ 버튼으로 거래를 추가하면 자동으로 구성돼요" />
         </div>
       </div>
     )

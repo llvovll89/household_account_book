@@ -111,12 +111,14 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
                     </div>
                     <button
                       onClick={() => startEdit(tag.name)}
+                      aria-label={`#${tag.name} 태그 이름 변경`}
                       className="text-[#8B95A1] hover:text-white transition-colors p-1"
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => onDeleteTag(tag.name)}
+                      aria-label={`#${tag.name} 태그 삭제`}
                       className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1"
                     >
                       <Trash2 size={15} />

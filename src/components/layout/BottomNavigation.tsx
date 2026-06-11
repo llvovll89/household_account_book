@@ -73,10 +73,10 @@ export default function BottomNavigation({
               aria-selected={activeTab === id}
               aria-label={`${label} 탭`}
               aria-current={activeTab === id ? 'page' : undefined}
-              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
+              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 min-h-[56px] transition-colors"
             >
               <Icon size={21} strokeWidth={activeTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`} />
-              <span className={`text-[10px] font-bold transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`}>{label}</span>
+              <span className={`text-[11px] font-bold transition-colors duration-150 ${activeTab === id ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>
           ))}
           {activeMode === 'stocks' && STOCKS_SUB_TABS.map(({ id, label, Icon }) => (
@@ -91,10 +91,10 @@ export default function BottomNavigation({
               aria-selected={stockSubTab === id}
               aria-label={`${label} 탭`}
               aria-current={stockSubTab === id ? 'page' : undefined}
-              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 transition-colors"
+              className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 min-h-[56px] transition-colors"
             >
               <Icon size={20} strokeWidth={stockSubTab === id ? 2.5 : 1.8} className={`transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`} />
-              <span className={`text-[10px] font-bold transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`}>{label}</span>
+              <span className={`text-[11px] font-bold transition-colors duration-150 ${stockSubTab === id ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/60'}`}>{label}</span>
             </button>
           ))}
         </div>

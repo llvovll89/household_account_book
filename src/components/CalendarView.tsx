@@ -187,7 +187,8 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
             </div>
 
             {selectedTx.length === 0 ? (
-              <div className="py-10 text-center">
+              <div className="py-10 text-center flex flex-col items-center gap-2">
+                <span className="text-3xl">📅</span>
                 <p className="text-sm text-[#4E5968]">이 날은 내역이 없어요</p>
               </div>
             ) : (
@@ -226,12 +227,14 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                               closeModal()
                               onEdit(t)
                             }}
+                            aria-label={`${t.category} 내역 수정`}
                             className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
                           >
                             <Pencil size={12} />
                           </button>
                           <button
                             onClick={() => onDelete(t.id)}
+                            aria-label={`${t.category} 내역 삭제`}
                             className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
                           >
                             <Trash2 size={12} />

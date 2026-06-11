@@ -14,5 +14,5 @@ export type UIAction =
   | { type: 'TRIGGER_MEMO' }
   | { type: 'TRIGGER_SUB' }
   | { type: 'TRIGGER_GOAL' }
-  | { type: 'OPEN_CONFIRM'; message: string; onConfirm: () => void }
+  | { type: 'OPEN_CONFIRM'; message: string; onConfirm: () => void; confirmLabel?: string; confirmVariant?: 'danger' | 'primary' }
   | { type: 'CLOSE_CONFIRM' }

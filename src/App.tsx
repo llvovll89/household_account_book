@@ -11,7 +11,7 @@ import { usePWAInstall } from './hooks/usePWAInstall'
 import { useAuthSync } from './hooks/useAuthSync'
 import { useAppHandlers } from './hooks/useAppHandlers'
 import type { UIAction } from './hooks/useAppHandlers.types'
-import { registerToastHandler, showToast, type ToastVariant } from './lib/toast'
+import { registerToastHandler, showToast, type ToastVariant, type ToastAction } from './lib/toast'
 import BottomNavigation from './components/layout/BottomNavigation'
 import WorkspaceSkeleton from './components/layout/WorkspaceSkeleton'
 
@@ -128,7 +128,7 @@ interface UIState {
     memoAddTrigger: number
     subscriptionAddTrigger: number
     goalAddTrigger: number
-    confirmModal: { message: string; onConfirm: () => void } | null
+    confirmModal: { message: string; onConfirm: () => void; confirmLabel?: string; confirmVariant?: 'danger' | 'primary' } | null
 }
 
 interface FailedPersistTask {
@@ -177,7 +177,7 @@ function uiReducer(state: UIState, action: UIAction): UIState {
         case 'TRIGGER_MEMO': return { ...state, memoAddTrigger: state.memoAddTrigger + 1 }
         case 'TRIGGER_SUB': return { ...state, subscriptionAddTrigger: state.subscriptionAddTrigger + 1 }
         case 'TRIGGER_GOAL': return { ...state, goalAddTrigger: state.goalAddTrigger + 1 }
-        case 'OPEN_CONFIRM': return { ...state, confirmModal: { message: action.message, onConfirm: action.onConfirm } }
+        case 'OPEN_CONFIRM': return { ...state, confirmModal: { message: action.message, onConfirm: action.onConfirm, confirmLabel: action.confirmLabel, confirmVariant: action.confirmVariant } }
         case 'CLOSE_CONFIRM': return { ...state, confirmModal: null }
     }
 }
@@ -262,6 +262,7 @@ export default function App() {
 
     const [toastMsg, setToastMsg] = useState<string | null>(null)
     const [toastVariant, setToastVariant] = useState<ToastVariant>('success')
+    const [toastAction, setToastAction] = useState<ToastAction | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
@@ -284,11 +285,12 @@ export default function App() {
     }, [showUserMenu])
 
     useEffect(() => {
-        return registerToastHandler((msg, duration = 2500, variant = 'success') => {
+        return registerToastHandler((msg, duration = 2500, variant = 'success', action) => {
             setToastMsg(msg)
             setToastVariant(variant)
+            setToastAction(action ?? null)
             if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-            toastTimerRef.current = setTimeout(() => setToastMsg(null), duration)
+            toastTimerRef.current = setTimeout(() => { setToastMsg(null); setToastAction(null) }, duration)
         })
     }, [])
 
@@ -490,6 +492,7 @@ export default function App() {
         const predicted = likelyNext[nextTab]
         if (predicted) prefetchLedgerTab(predicted)
         setTab(nextTab)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [prefetchLedgerTab])
 
     const handleStockSubTabChange = useCallback((nextSubTab: StockSubTab) => {
@@ -924,8 +927,14 @@ export default function App() {
         setShowAutoApplyModal(true)
     }, [authReady, isSyncing, recurring, autoApplyMode, handleApplyRecurring])
 
-    const prevMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1)), [])
-    const nextMonth = useCallback(() => setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1)), [])
+    const prevMonth = useCallback(() => {
+        setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, [])
+    const nextMonth = useCallback(() => {
+        setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, [])
     const openTransactionsWithBilling = useCallback((billing: 'current' | 'next') => {
         localStorage.setItem(FILTER_TYPE_KEY, 'expense')
         localStorage.setItem(METHOD_FILTER_KEY, 'credit')
@@ -1092,7 +1101,10 @@ export default function App() {
                                                     </>
                                                 )}
                                                 <button
-                                                    onClick={() => { handleLogout(); setShowUserMenu(false) }}
+                                                    onClick={() => {
+                                                        setShowUserMenu(false)
+                                                        dispatchUI({ type: 'OPEN_CONFIRM', message: '로그아웃 하시겠어요?', onConfirm: handleLogout, confirmLabel: '로그아웃', confirmVariant: 'danger' })
+                                                    }}
                                                     className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#F25260] hover:bg-[#F25260]/10 transition-colors text-left"
                                                 >
                                                     <LogOut size={14} />
@@ -1379,13 +1391,21 @@ export default function App() {
             />
 
             {toastMsg && (
-                <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm pointer-events-none">
+                <div className={`fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm ${toastAction ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                     <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">
                         {toastVariant === 'success' && <CheckCircle2 size={16} className="text-[#2ACF6A] shrink-0" />}
                         {toastVariant === 'warning' && <AlertTriangle size={16} className="text-[#F5BE3A] shrink-0" />}
                         {toastVariant === 'error' && <AlertTriangle size={16} className="text-[#F25260] shrink-0" />}
                         {toastVariant === 'info' && <Info size={16} className="text-[#3D8EF8] shrink-0" />}
-                        <p className="text-sm font-semibold text-white whitespace-pre-line">{toastMsg}</p>
+                        <p className="text-sm font-semibold text-white whitespace-pre-line flex-1">{toastMsg}</p>
+                        {toastAction && (
+                            <button
+                                onClick={() => { toastAction.onClick(); setToastMsg(null); setToastAction(null) }}
+                                className="shrink-0 text-[13px] font-bold text-[#3D8EF8] hover:text-[#79B2FF] transition-colors px-2 py-1 rounded-lg hover:bg-[#3D8EF8]/10"
+                            >
+                                {toastAction.label}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -1610,9 +1630,9 @@ export default function App() {
                             {authBusy ? '처리 중...' : authMode === 'signup' ? '이메일 회원가입' : '이메일 로그인'}
                         </button>
 
-                        <button onClick={handleGoogleLogin} className="w-full py-2.5 rounded-xl bg-[#09f]/80 text-white text-sm font-bold flex items-center justify-center gap-2">
-                            <GoogleIcon />
-                            구글 로그인
+                        <button onClick={handleGoogleLogin} disabled={authBusy} className="w-full py-2.5 rounded-xl bg-[#09f]/80 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2">
+                            {authBusy ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <GoogleIcon />}
+                            {authBusy ? '처리 중...' : '구글 로그인'}
                         </button>
                     </div>
                 </div>
@@ -1629,8 +1649,8 @@ export default function App() {
                             >취소</button>
                             <button
                                 onClick={() => { confirmModal.onConfirm(); dispatchUI({ type: 'CLOSE_CONFIRM' }) }}
-                                className="flex-1 py-3 rounded-2xl bg-[#F25260]/20 text-[#F25260] font-bold text-sm"
-                            >삭제</button>
+                                className={`flex-1 py-3 rounded-2xl font-bold text-sm ${confirmModal.confirmVariant === 'primary' ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#F25260]/20 text-[#F25260]'}`}
+                            >{confirmModal.confirmLabel ?? '삭제'}</button>
                         </div>
                     </div>
                 </div>

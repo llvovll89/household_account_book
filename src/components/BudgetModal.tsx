@@ -89,6 +89,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
                       onClick={() => setCarryoverMap((prev) => ({ ...prev, [cat]: !prev[cat] }))}
                       className={`relative w-10 h-5 rounded-full transition-colors ${carryoverMap[cat] ? 'bg-[#3D8EF8]' : 'bg-[#3A3A3C]'}`}
                       aria-pressed={carryoverMap[cat]}
+                      aria-label={`${cat} 미사용 예산 이월 ${carryoverMap[cat] ? '끄기' : '켜기'}`}
                     >
                       <span
                         className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${carryoverMap[cat] ? 'translate-x-5' : 'translate-x-0.5'}`}

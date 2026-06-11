@@ -254,12 +254,14 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                       <>
                         <button
                           onClick={() => openEdit(sub)}
+                          aria-label={`${sub.name} 구독 수정`}
                           className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                         >
                           <Pencil size={11} />
                         </button>
                         <button
                           onClick={() => handleDelete(sub.id)}
+                          aria-label={`${sub.name} 구독 삭제`}
                           className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                         >
                           <Trash2 size={11} />

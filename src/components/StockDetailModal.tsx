@@ -44,6 +44,7 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
             onClick={onClose}
+            aria-label="뒤로 가기"
             className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center shrink-0"
           >
             <ChevronLeft size={18} className="text-[#8B95A1]" />
@@ -218,12 +219,14 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
                           <div className="hidden group-hover:flex items-center gap-1 ml-1">
                             <button
                               onClick={() => onEdit(t)}
+                              aria-label={`${t.date} ${ticker} 거래 수정`}
                               className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                             >
                               <Pencil size={11} />
                             </button>
                             <button
                               onClick={() => onDelete(t.id)}
+                              aria-label={`${t.date} ${ticker} 거래 삭제`}
                               className="w-6 h-6 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                             >
                               <Trash2 size={11} />

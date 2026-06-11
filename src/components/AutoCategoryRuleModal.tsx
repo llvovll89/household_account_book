@@ -148,13 +148,21 @@ export default function AutoCategoryRuleModal({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => toggleRule(rule.id)}>
+                  <button
+                    onClick={() => toggleRule(rule.id)}
+                    aria-label={rule.enabled ? `${rule.keyword} 규칙 비활성화` : `${rule.keyword} 규칙 활성화`}
+                    aria-pressed={rule.enabled}
+                  >
                     {rule.enabled
                       ? <ToggleRight size={22} className="text-[#3D8EF8]" />
                       : <ToggleLeft size={22} className="text-[#4E5968]" />
                     }
                   </button>
-                  <button onClick={() => deleteRule(rule.id)} className="text-[#4E5968] hover:text-[#F25260] transition-colors">
+                  <button
+                    onClick={() => deleteRule(rule.id)}
+                    aria-label={`${rule.keyword} 규칙 삭제`}
+                    className="text-[#4E5968] hover:text-[#F25260] transition-colors"
+                  >
                     <Trash2 size={16} />
                   </button>
                 </div>

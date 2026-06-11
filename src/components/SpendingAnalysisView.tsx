@@ -312,12 +312,14 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                   <div className="flex bg-[#2C2C2E] rounded-xl p-0.5">
                     <button
                       onClick={() => setShowCat('category')}
+                      aria-pressed={showCat === 'category'}
                       className={`px-3 py-1 rounded-[10px] text-[11px] font-bold transition-all ${
                         showCat === 'category' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968]'
                       }`}
                     >카테고리</button>
                     <button
                       onClick={() => setShowCat('tag')}
+                      aria-pressed={showCat === 'tag'}
                       className={`px-3 py-1 rounded-[10px] text-[11px] font-bold transition-all ${
                         showCat === 'tag' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968]'
                       }`}

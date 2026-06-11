@@ -3,6 +3,7 @@ import { Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight } from 'lucide-r
 import type { StockTrade } from '../types'
 import { calcHoldings, calcTotalRealizedPnL, calcTotalFee } from '../lib/stockCalc'
 import StockDetailModal from './StockDetailModal'
+import EmptyState from './ui/EmptyState'
 import { fmt, fmtQty, formatDate } from '../lib/format'
 
 interface Props {
@@ -47,10 +48,8 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
   if (trades.length === 0) {
     return (
       <div className="space-y-3 tab-content">
-        <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
-          <p className="text-5xl mb-4">📊</p>
-          <p className="font-bold text-white text-[15px]">거래 내역이 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">+ 버튼으로 첫 거래를 추가해보세요</p>
+        <div className="bg-[#1C1C1E] rounded-2xl">
+          <EmptyState emoji="📊" title="거래 내역이 없어요" description="+ 버튼으로 첫 거래를 추가해보세요" />
         </div>
       </div>
     )

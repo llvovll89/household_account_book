@@ -1,13 +1,14 @@
 import { doc, getDoc, runTransaction } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
+import { showToast } from './toast'
 
 function safeSave(key: string, value: unknown): void {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e) {
     if (e instanceof DOMException && (e.code === 22 || e.name === 'QuotaExceededError')) {
-      alert('저장 공간이 부족합니다. 오래된 내역을 삭제하거나 CSV로 내보낸 후 정리해주세요.')
+      showToast('저장 공간이 부족합니다. 오래된 내역을 삭제하거나 CSV로 내보낸 후 정리해주세요.', 5000, 'error')
     } else {
       throw e
     }

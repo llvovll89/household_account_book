@@ -139,6 +139,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         await saveSettings({ ...current, payday: 'last' })
       })()
       setEditingPayday(false)
+      showToast('월급날이 말일로 저장됐어요')
       return
     }
     const val = parseInt(paydayInput, 10)
@@ -153,6 +154,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       await saveSettings({ ...current, payday: val })
     })()
     setEditingPayday(false)
+    showToast(`월급날이 ${val}일로 저장됐어요`)
   }
 
   // 월급날까지 남은 일수 + 하루 가용 예산 계산
@@ -867,7 +869,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
             <button
               onClick={onOpenWidgetSettings}
               className="w-7 h-7 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] transition-colors"
-              title="위젯 설정"
+              aria-label="위젯 설정"
             >
               <SlidersHorizontal size={13} />
             </button>

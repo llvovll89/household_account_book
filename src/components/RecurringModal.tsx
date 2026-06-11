@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { X, Plus, Trash2, ChevronDown, RefreshCw } from 'lucide-react'
 import type { RecurringTransaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { generateId } from '../lib/format'
+import { showToast } from '../lib/toast'
 
 interface Props {
   recurring: RecurringTransaction[]
@@ -16,6 +17,7 @@ const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 export default function RecurringModal({ recurring, customExpenseCategories = [], onSave, onClose }: Props) {
   const [items, setItems] = useState<RecurringTransaction[]>(recurring)
   const [adding, setAdding] = useState(false)
+  const pendingDeleteTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // 새 항목 폼 상태
   const [newType, setNewType] = useState<TransactionType>('expense')
@@ -38,7 +40,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
       (i) => i.type === newType && i.category === newCategory && i.dayOfMonth === newDay && i.amount === amount
     )
     if (isDuplicate) {
-      alert('동일한 정기 항목이 이미 있어요.')
+      showToast('동일한 정기 항목이 이미 있어요.', 2500, 'warning')
       return
     }
     const item: RecurringTransaction = {
@@ -59,7 +61,20 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
   }
 
   function handleDelete(id: string) {
+    const snapshot = items.find((i) => i.id === id)
     setItems((prev) => prev.filter((i) => i.id !== id))
+    const timer = setTimeout(() => {
+      pendingDeleteTimers.current.delete(id)
+    }, 3500)
+    pendingDeleteTimers.current.set(id, timer)
+    showToast('정기 항목이 삭제됐어요', 3500, 'info', {
+      label: '실행 취소',
+      onClick: () => {
+        clearTimeout(pendingDeleteTimers.current.get(id))
+        pendingDeleteTimers.current.delete(id)
+        if (snapshot) setItems((prev) => [...prev, snapshot])
+      },
+    })
   }
 
   function handleSave() {
@@ -123,6 +138,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                 </span>
                 <button
                   onClick={() => handleDelete(item.id)}
+                  aria-label={`${item.category} 정기 항목 삭제`}
                   className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors shrink-0"
                 >
                   <Trash2 size={14} />

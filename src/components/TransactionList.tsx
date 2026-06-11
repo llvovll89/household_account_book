@@ -7,6 +7,7 @@ import ExportModal from './ExportModal'
 import FancyDatePicker from './FancyDatePicker'
 import TransactionDetailModal from './TransactionDetailModal'
 import { fmt, parseYmdLocal, toLocalDateStr } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 import { loadSettings, saveSettings } from '../lib/storage'
 import type { SwipeSensitivity } from '../lib/storage'
 import { getBillingStage, getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
@@ -107,6 +108,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const didHydrateSwipeRef = useRef(false)
+  const pendingDeleteTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set())
+  const [swipeHintSeen, setSwipeHintSeen] = useState(() => localStorage.getItem('hb_swipe_hint_seen') === '1')
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [editingBillingDay, setEditingBillingDay] = useState(false)
@@ -219,6 +223,25 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     }
   }
 
+  function handleDeleteWithUndo(id: string) {
+    setPendingDeleteIds((prev) => { const next = new Set(prev); next.add(id); return next })
+    setSwipedId(null)
+    const timer = setTimeout(() => {
+      onDelete(id)
+      setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next })
+      pendingDeleteTimers.current.delete(id)
+    }, 3500)
+    pendingDeleteTimers.current.set(id, timer)
+    showToast('내역이 삭제됐어요', 3500, 'info', {
+      label: '실행 취소',
+      onClick: () => {
+        clearTimeout(pendingDeleteTimers.current.get(id))
+        pendingDeleteTimers.current.delete(id)
+        setPendingDeleteIds((prev) => { const next = new Set(prev); next.delete(id); return next })
+      },
+    })
+  }
+
   const monthTx = useMemo(
     () => transactions.filter((t) => t.date.startsWith(yearMonth)),
     [transactions, yearMonth]
@@ -259,6 +282,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     () => {
       const normalizedSearch = debouncedSearch.replace(/^#/, '').toLowerCase()
       return monthTx
+        .filter((t) => !pendingDeleteIds.has(t.id))
         .filter((t) => {
           if (periodMode === 'day') return t.date === normalizedBaseDate
           if (periodMode === 'week') return t.date >= weekRange.start && t.date <= weekRange.end
@@ -593,6 +617,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         <div className="flex bg-[#1C1C1E] rounded-2xl p-1 gap-1">
           <button
             onClick={() => setViewMode('list')}
+            aria-pressed={viewMode === 'list'}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'list' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
               }`}
           >
@@ -600,6 +625,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </button>
           <button
             onClick={() => setViewMode('calendar')}
+            aria-pressed={viewMode === 'calendar'}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${viewMode === 'calendar' ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
               }`}
           >
@@ -661,7 +687,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           </div>
 
           {isFilterPanelOpen && (
-            <div id="transaction-filter-panel" className="space-y-3 px-3 pb-3">
+            <div id="transaction-filter-panel" className="space-y-4 px-3 pb-4">
+              <div>
+                <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">기간</p>
               <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
                 <div className="flex gap-1">
                   {([
@@ -704,7 +732,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   </div>
                 )}
               </div>
+              </div>
 
+              <div>
+                <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">빠른 필터</p>
               <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-3 gap-1">
                 {([
                   { key: 'all', label: '전체' },
@@ -728,7 +759,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   )
                 })}
               </div>
+              </div>
 
+              <div>
+                <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">제스처</p>
               <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs text-[#8B95A1] font-semibold">스와이프 민감도</span>
@@ -754,8 +788,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   ))}
                 </div>
               </div>
+              </div>
 
               {/* 검색 */}
+              <div>
+                <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">검색</p>
               <div role="search" className="relative">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]" />
                 <input
@@ -789,8 +826,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                   <span className="text-[#4E5968]">단축키: / 검색, Esc 초기화</span>
                 )}
               </p>
+              </div>
 
               {/* 필터 탭 */}
+              <div>
+                <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">유형 · 결제수단</p>
               <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
                 {(['all', 'income', 'expense'] as FilterType[]).map((f) => (
                   <button
@@ -932,6 +972,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                     {f.label}
                   </button>
                 ))}
+              </div>
               </div>
             </div>
           )}
@@ -1204,19 +1245,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         ) : null}
 
         {grouped.length === 0 ? (
-          <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center">
-            <p className="text-5xl mb-4">{search || activeTag ? '🔍' : '📋'}</p>
-            <p className="font-bold text-white text-[15px]">
-              {activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
-            </p>
-            {(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) && (
-              <button
-                onClick={resetAllFilters}
-                className="mt-4 text-xs font-bold px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-              >
-                필터 전체 초기화
-              </button>
-            )}
+          <div className="bg-[#1C1C1E] rounded-2xl">
+            <EmptyState
+              emoji={search || activeTag ? '🔍' : '📋'}
+              title={activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
+              description={!search && !activeTag && filter === 'all' && methodFilter === 'all' && billingFilter === 'all' && !statementMonthFilter ? '+ 버튼을 눌러 첫 내역을 추가해보세요' : undefined}
+              action={(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) ? { label: '필터 전체 초기화', onClick: resetAllFilters } : undefined}
+            />
           </div>
         ) : (
           visibleGrouped.map(({ date, list, income: dayIncome, expense: dayExpense, balance: dayBalance }) => {
@@ -1257,8 +1292,15 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                     const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                     const tags = t.tags ?? []
                     const isSwiped = swipedId === t.id
+                    const isFirstEverItem = !swipeHintSeen && idx === 0
                     return (
                       <div key={t.id} className={`relative overflow-hidden list-item-enter ${idx < visibleItems.length - 1 ? 'border-b border-[rgba(255,255,255,0.05)]' : ''}`} style={{ animationDelay: `${Math.min(idx, 9) * 30}ms`, borderLeft: t.type === 'expense' && maxExpenseAmount > 0 ? `3px solid rgba(242,82,96,${(0.25 + (t.amount / maxExpenseAmount) * 0.75).toFixed(2)})` : undefined }}>
+                        {/* 스와이프 힌트 (첫 방문 시) */}
+                        {isFirstEverItem && !isSwiped && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10 animate-pulse pointer-events-none">
+                            <span className="text-[10px] text-[#4E5968] font-semibold">← 스와이프</span>
+                          </div>
+                        )}
                         {/* 스와이프 액션 패널 */}
                         <div className={`absolute right-0 top-0 bottom-0 flex items-center gap-1 px-3 transition-all duration-200 ${isSwiped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                           <button
@@ -1268,7 +1310,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                             <Pencil size={14} />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(t.id); setSwipedId(null) }}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteWithUndo(t.id) }}
                             className="w-10 h-10 rounded-xl bg-[#F25260]/20 flex items-center justify-center text-[#F25260]"
                           >
                             <Trash2 size={14} />
@@ -1319,7 +1361,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                           if (absY > absX) return
                           if (absX < swipeThresholds.minHorizontal) return
 
-                          if (deltaX < -swipeThresholds.open) setSwipedId(t.id)
+                          if (deltaX < -swipeThresholds.open) {
+                            setSwipedId(t.id)
+                            if (!swipeHintSeen) { setSwipeHintSeen(true); localStorage.setItem('hb_swipe_hint_seen', '1') }
+                          }
                           else if (deltaX > swipeThresholds.close) setSwipedId(null)
                         }}
                         className="flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
@@ -1428,7 +1473,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                               <Pencil size={15} />
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); onDelete(t.id) }}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteWithUndo(t.id) }}
                               aria-label={`${t.category} 내역 삭제`}
                               className="p-2.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
                             >
@@ -1542,7 +1587,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
           transaction={detailTransaction}
           userPaymentMethods={userPaymentMethods}
           onEdit={(t) => { setDetailTransaction(null); onEdit(t) }}
-          onDelete={(id) => { setDetailTransaction(null); onDelete(id) }}
+          onDelete={(id) => { setDetailTransaction(null); handleDeleteWithUndo(id) }}
           onClose={() => setDetailTransaction(null)}
         />
       )}
