@@ -288,8 +288,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     setReceiptFile(file)
   }
 
-  const color = CATEGORY_COLOR[category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
-
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
