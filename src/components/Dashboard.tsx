@@ -938,7 +938,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                 <div key={cat} className="flex items-center gap-2">
                   <span className="text-[11px] shrink-0 w-16 truncate text-[#8B95A1]">{emoji} {cat}</span>
                   <div className="flex-1 h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color.text }} />
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, minWidth: pct > 0 ? '4px' : undefined, backgroundColor: color.text }} />
                   </div>
                   <span className="text-[10px] font-bold num text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
                 </div>

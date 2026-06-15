@@ -299,6 +299,43 @@ select option {
   color: #F1F3F6;
 }
 
+/* ── FAB Speed Dial ── */
+@keyframes speedDialIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.speed-dial-item {
+  animation: speedDialIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.bottom-fab-dial-1 {
+  bottom: calc(4.5rem + 4rem + 0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+.bottom-fab-dial-2 {
+  bottom: calc(4.5rem + 4rem + 0.75rem + 3rem + 0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── 에러 shake ── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+.shake {
+  animation: shake 0.38s ease-in-out;
+}
+
 /* ── Safe Area (iPhone 홈 인디케이터 영역 보호) ── */
 .pb-nav-safe {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
@@ -327,6 +364,7 @@ select:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #3D8EF8;
   outline-offset: 2px;
+  transition: outline-offset 0.1s ease;
 }
 
 /* ── 모션 감소 설정 사용자: 애니메이션 비활성화 ── */
@@ -335,7 +373,9 @@ textarea:focus-visible {
   .modal-backdrop,
   .modal-panel,
   .list-item-enter,
-  .card-enter {
+  .card-enter,
+  .speed-dial-item,
+  .shake {
     animation: none;
   }
 

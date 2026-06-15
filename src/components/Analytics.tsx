@@ -432,20 +432,30 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     budget: '예산',
   }
 
+  const TAB_ICONS: Record<ViewMode, string> = {
+    monthly: '📅',
+    yearly: '📊',
+    cashflow: '💸',
+    tags: '🏷️',
+    reduce: '✂️',
+    budget: '🎯',
+  }
+
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
-      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto scrollbar-none gap-0.5">
+      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto gap-0.5" style={{ scrollbarWidth: 'none' }}>
         {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce', 'budget'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
             aria-pressed={viewMode === m}
-            className={`flex-shrink-0 flex-1 min-w-[52px] py-2.5 rounded-xl text-[13px] font-bold transition-all ${
+            className={`flex-shrink-0 flex-1 min-w-[56px] py-2 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
           >
-            {TAB_LABELS[m]}
+            <span className="text-base leading-none">{TAB_ICONS[m]}</span>
+            <span className="text-[11px] font-bold">{TAB_LABELS[m]}</span>
           </button>
         ))}
       </div>

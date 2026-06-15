@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useModalClose } from '../hooks/useModalClose'
-import { X, ChevronDown, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
+import { X, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
 import type { AutoCategoryRule, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
@@ -23,6 +23,7 @@ interface Props {
   onSaveTemplates?: (templates: TransactionTemplate[]) => void
   onOpenPaymentMethodsModal?: () => void
   autoCategoryRules?: AutoCategoryRule[]
+  initialType?: TransactionType
 }
 
 type QueueItem = Omit<Transaction, 'id' | 'createdAt'>
@@ -38,12 +39,12 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal, autoCategoryRules = [] }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal, autoCategoryRules = [], initialType }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
   const categoryManuallySet = useRef(false)
-  const [type, setType] = useState<TransactionType>('expense')
+  const [type, setType] = useState<TransactionType>(transaction?.type ?? initialType ?? 'expense')
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
@@ -61,6 +62,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [creditBillingDayInput, setCreditBillingDayInput] = useState('25')
   const [showTemplates, setShowTemplates] = useState(false)
   const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
+  const [showReceipt, setShowReceipt] = useState(false)
 
   const isEditMode = !!transaction
   const { closing, handleClose } = useModalClose(onClose)
@@ -104,6 +106,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       if (transaction.receiptImageUrl) {
         setReceiptImageUrl(transaction.receiptImageUrl)
         setReceiptPreview(transaction.receiptImageUrl)
+        setShowReceipt(true)
       }
     }
   }, [transaction])
@@ -506,7 +509,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0"
                   required={queue.length === 0}
-                  className="flex-1 min-w-0 bg-transparent text-[34px] font-extrabold text-white focus:outline-none num text-right placeholder-[#1E2A3A]"
+                  className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
                 />
                 <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
               </div>
@@ -519,7 +522,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       const current = parseInt(amount.replace(/,/g, ''), 10) || 0
                       handleAmountChange(String(current + v))
                     }}
-                    className="flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] active:bg-[#3D8EF8]/20 active:text-[#79B2FF] transition-colors"
+                    className={`flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
                   >
                     +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
                   </button>
@@ -551,75 +554,56 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 </button>
               </div>
               {!showDateEnd ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                    <FancyDatePicker value={date} onChange={setDate} />
-                  </div>
-                  {/* 카테고리 */}
-                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
-                      {autoCategoryApplied && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
-                        style={{ backgroundColor: color.bg }}>
-                        {CATEGORY_EMOJI[category] ?? '📦'}
-                      </div>
-                      <div className="relative flex-1">
-                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setAutoCategoryApplied(false); setCategory(e.target.value) }}
-                          className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
-                          style={{ color: color.text }}>
-                          {categories.map((c) => (
-                            <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+                  <FancyDatePicker value={date} onChange={setDate} />
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                      <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
-                      <FancyDatePicker value={date} onChange={setDate} />
-                    </div>
-                    <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                      <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
-                      <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
-                    </div>
-                  </div>
-                  {/* 카테고리 (기간 모드일 때 별도 행) */}
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
-                      {autoCategoryApplied && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0"
-                        style={{ backgroundColor: color.bg }}>
-                        {CATEGORY_EMOJI[category] ?? '📦'}
-                      </div>
-                      <div className="relative flex-1">
-                        <select value={category} onChange={(e) => { categoryManuallySet.current = true; setAutoCategoryApplied(false); setCategory(e.target.value) }}
-                          className="w-full appearance-none bg-transparent text-[13px] font-bold focus:outline-none pr-4 truncate"
-                          style={{ color: color.text }}>
-                          {categories.map((c) => (
-                            <option key={c} value={c} className="bg-[#2C2C2E] text-white">{c}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
-                      </div>
-                    </div>
+                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
+                    <FancyDatePicker value={date} onChange={setDate} />
+                  </div>
+                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
+                    <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* 카테고리 그리드 */}
+            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
+                {autoCategoryApplied && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
+                )}
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {categories.map((c) => {
+                  const cColor = CATEGORY_COLOR[c] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                  const isSelected = category === c
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => { setCategory(c); categoryManuallySet.current = true; setAutoCategoryApplied(false) }}
+                      className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all border ${
+                        isSelected ? 'border-current' : 'border-transparent bg-[#1C1C1E] hover:bg-[#252527]'
+                      }`}
+                      style={isSelected ? { backgroundColor: cColor.bg, borderColor: `${cColor.text}50` } : {}}
+                    >
+                      <span className="text-[22px] leading-none">{CATEGORY_EMOJI[c] ?? '📦'}</span>
+                      <span
+                        className="text-[10px] font-bold leading-tight text-center w-full px-0.5 truncate"
+                        style={{ color: isSelected ? cColor.text : '#8B95A1' }}
+                      >
+                        {c}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {/* 메모 + 해시태그 */}
@@ -664,48 +648,61 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
-            {/* 영수증 첨부 */}
-            <div className="bg-[#2C2C2E] rounded-2xl p-4 space-y-3">
+            {/* 영수증 첨부 (접기/펼치기) */}
+            <div className="bg-[#2C2C2E] rounded-2xl overflow-hidden">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${uploading
-                    ? 'bg-[#4E5968] text-[#8B95A1] cursor-not-allowed'
-                    : 'bg-[#3D8EF8]/20 hover:bg-[#3D8EF8]/30 text-[#3D8EF8]'
-                  }`}
+                onClick={() => setShowReceipt((v) => !v)}
+                className="w-full flex items-center justify-between px-5 py-3.5 text-left"
               >
-                {uploading ? (
-                  <>⏳ 업로드 중...</>
-                ) : receiptPreview ? (
-                  <>✓ 영수증 선택됨</>
-                ) : (
-                  <>📷 영수증 첨부</>
-                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{receiptPreview ? '📷' : '🧾'}</span>
+                  <span className="text-[13px] font-bold text-[#8B95A1]">영수증 첨부</span>
+                  {receiptPreview && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">첨부됨</span>}
+                </div>
+                <span className={`text-[11px] font-bold transition-colors ${showReceipt ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>
+                  {showReceipt ? '접기' : '펼치기'}
+                </span>
               </button>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-
-              {receiptPreview && (
-                <div className="relative rounded-xl overflow-hidden border border-[#3D8EF8]/30">
-                  <img src={receiptPreview} alt="영수증 미리보기" className="w-full" />
+              {showReceipt && (
+                <div className="px-4 pb-4 space-y-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      setReceiptPreview(null)
-                      setReceiptFile(null)
-                      setReceiptImageUrl('')
-                    }}
-                    className="absolute top-2 right-2 bg-[#F25260]/80 hover:bg-[#F25260] rounded-full p-2 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all ${uploading
+                        ? 'bg-[#4E5968] text-[#8B95A1] cursor-not-allowed'
+                        : 'bg-[#3D8EF8]/20 hover:bg-[#3D8EF8]/30 text-[#3D8EF8]'
+                      }`}
                   >
-                    ✕
+                    {uploading ? <>⏳ 업로드 중...</> : receiptPreview ? <>✓ 다시 선택</> : <>📷 사진 선택</>}
                   </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+
+                  {receiptPreview && (
+                    <div className="relative rounded-xl overflow-hidden border border-[#3D8EF8]/30">
+                      <img src={receiptPreview} alt="영수증 미리보기" className="w-full" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReceiptPreview(null)
+                          setReceiptFile(null)
+                          setReceiptImageUrl('')
+                        }}
+                        className="absolute top-2 right-2 bg-[#F25260]/80 hover:bg-[#F25260] rounded-full p-2 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -713,7 +710,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             {/* 버튼 영역 */}
             {isEditMode ? (
               <button type="submit" disabled={uploading}
-                className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${type === 'income' ? 'bg-[#1A8C4E] hover:bg-[#1FA05A]' : 'bg-[#C0394A] hover:bg-[#D44257]'}`}>
                 {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {uploading ? '저장 중...' : '수정 완료'}
               </button>
@@ -730,9 +727,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     항목 추가
                   </button>
                   <button type="submit" disabled={uploading}
-                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]' : 'flex-1 py-3.5 bg-[#3D8EF8] hover:bg-[#5AA0FF]'}`}>
+                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5' : 'flex-1 py-3.5'} ${type === 'income' ? 'bg-[#1A8C4E] hover:bg-[#1FA05A]' : 'bg-[#C0394A] hover:bg-[#D44257]'}`}>
                     {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                    {uploading ? '저장 중...' : queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : '추가하기'}
+                    {uploading ? '저장 중...' : queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : type === 'income' ? '수입 추가' : '지출 추가'}
                   </button>
                 </div>
                 {onSaveTemplates && (

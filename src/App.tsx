@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, AlertTriangle, Info, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
-import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from './types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate, TransactionType } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
 import type { RemoteVersionKey } from './lib/storage'
@@ -231,6 +231,8 @@ export default function App() {
     const [showTagManagerModal, setShowTagManagerModal] = useState(false)
     const [showAutoCategoryRuleModal, setShowAutoCategoryRuleModal] = useState(false)
     const [showWidgetSettings, setShowWidgetSettings] = useState(false)
+    const [fabExpanded, setFabExpanded] = useState(false)
+    const [txInitialType, setTxInitialType] = useState<TransactionType>('expense')
 
     // UI 전용 상태: 11개 useState → useReducer 1개로 통합
     const [ui, dispatchUI] = useReducer(uiReducer, UI_INIT)
@@ -1322,32 +1324,74 @@ export default function App() {
                 )}
             </main>
 
+            {/* Speed Dial 백드롭 */}
+            {fabExpanded && (
+                <div
+                    className="fixed inset-0 z-[29] pointer-events-auto"
+                    onClick={() => setFabExpanded(false)}
+                />
+            )}
+
             <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none">
                 <div className="max-w-lg mx-auto relative h-0">
-                    {showFAB && (
-                        <button
-                            onMouseEnter={prefetchFabModal}
-                            onFocus={prefetchFabModal}
-                            onTouchStart={prefetchFabModal}
-                            onClick={() => {
-                                if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
-                                    dispatchUI({ type: 'OPEN_STOCK_MODAL' })
-                                } else if (activeTab === 'memos') {
-                                    dispatchUI({ type: 'TRIGGER_MEMO' })
-                                } else if (activeTab === 'subscriptions') {
-                                    dispatchUI({ type: 'TRIGGER_SUB' })
-                                } else if (activeTab === 'goals') {
-                                    dispatchUI({ type: 'TRIGGER_GOAL' })
-                                } else {
-                                    dispatchUI({ type: 'OPEN_TX_MODAL' })
-                                }
-                            }}
-                            aria-label="내역 추가"
-                            className="pointer-events-auto absolute right-5 bottom-fab-safe w-8 h-8 bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-95 text-white rounded-full shadow-2xl shadow-black/40 flex items-center justify-center transition-all"
-                        >
-                            <Plus size={20} />
-                        </button>
-                    )}
+                    {showFAB && (() => {
+                        const isSpeedDialTab = activeMode === 'ledger' && !(['memos', 'subscriptions', 'goals'] as Tab[]).includes(activeTab)
+                        return (
+                            <>
+                                {/* Speed Dial: 수입 버튼 */}
+                                {fabExpanded && isSpeedDialTab && (
+                                    <button
+                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-2 w-12 h-12 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[11px] text-white transition-all active:scale-95"
+                                        style={{ backgroundColor: '#1A8C4E', animationDelay: '0.07s', boxShadow: '0 4px 20px rgba(26,140,78,0.45)' }}
+                                        onClick={() => { setTxInitialType('income'); setFabExpanded(false); dispatchUI({ type: 'OPEN_TX_MODAL' }) }}
+                                        aria-label="수입 추가"
+                                    >
+                                        <span className="text-base leading-none">↑</span>
+                                        <span>수입</span>
+                                    </button>
+                                )}
+                                {/* Speed Dial: 지출 버튼 */}
+                                {fabExpanded && isSpeedDialTab && (
+                                    <button
+                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-1 w-12 h-12 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[11px] text-white transition-all active:scale-95"
+                                        style={{ backgroundColor: '#C0394A', animationDelay: '0s', boxShadow: '0 4px 20px rgba(192,57,74,0.45)' }}
+                                        onClick={() => { setTxInitialType('expense'); setFabExpanded(false); dispatchUI({ type: 'OPEN_TX_MODAL' }) }}
+                                        aria-label="지출 추가"
+                                    >
+                                        <span className="text-base leading-none">↓</span>
+                                        <span>지출</span>
+                                    </button>
+                                )}
+                                {/* 메인 FAB */}
+                                <button
+                                    onMouseEnter={prefetchFabModal}
+                                    onFocus={prefetchFabModal}
+                                    onTouchStart={prefetchFabModal}
+                                    onClick={() => {
+                                        if (activeTab === 'stocks' && (stockSubTab === 'portfolio' || stockSubTab === 'trades')) {
+                                            dispatchUI({ type: 'OPEN_STOCK_MODAL' })
+                                        } else if (activeTab === 'memos') {
+                                            dispatchUI({ type: 'TRIGGER_MEMO' })
+                                        } else if (activeTab === 'subscriptions') {
+                                            dispatchUI({ type: 'TRIGGER_SUB' })
+                                        } else if (activeTab === 'goals') {
+                                            dispatchUI({ type: 'TRIGGER_GOAL' })
+                                        } else if (isSpeedDialTab) {
+                                            setFabExpanded((v) => !v)
+                                        } else {
+                                            setTxInitialType('expense')
+                                            dispatchUI({ type: 'OPEN_TX_MODAL' })
+                                        }
+                                    }}
+                                    aria-label={fabExpanded ? '닫기' : '내역 추가'}
+                                    aria-expanded={fabExpanded}
+                                    className={`pointer-events-auto absolute right-5 bottom-fab-safe w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? 'bg-[#3A3A3C] shadow-black/40' : 'bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30'}`}
+                                >
+                                    <Plus size={24} className={`transition-transform duration-200 ${fabExpanded ? 'rotate-45' : ''}`} />
+                                </button>
+                            </>
+                        )
+                    })()}
 
                     <button
                         onClick={() => dispatchUI({ type: 'SET_HELP', value: true })}
@@ -1355,7 +1399,7 @@ export default function App() {
                         onFocus={prefetchHelp}
                         onTouchStart={prefetchHelp}
                         aria-label="사용 가이드"
-                        className="pointer-events-auto absolute left-5 bottom-fab-safe w-8 h-8 bg-[#F5F7F8] border border-white/10 hover:bg-[#252A3F] active:scale-95 text-[#4E5968] hover:text-[#8B95A1] rounded-full flex items-center justify-center transition-all text-sm font-bold"
+                        className="pointer-events-auto absolute left-5 bottom-fab-safe w-10 h-10 bg-[#1C1C1E] border border-white/10 hover:bg-[#2C2C2E] active:scale-95 text-[#8B95A1] hover:text-white rounded-full flex items-center justify-center transition-all text-sm font-bold"
                     >
                         ?
                     </button>
@@ -1438,7 +1482,7 @@ export default function App() {
                     <TransactionModal
                         transaction={editingTransaction}
                         onSave={handleSaveTransaction}
-                        onClose={() => dispatchUI({ type: 'CLOSE_TX_MODAL' })}
+                        onClose={() => { dispatchUI({ type: 'CLOSE_TX_MODAL' }); setFabExpanded(false) }}
                         customExpenseCategories={customExpenseCategories}
                         customIncomeCategories={customIncomeCategories}
                         userPaymentMethods={userPaymentMethods}
@@ -1446,6 +1490,7 @@ export default function App() {
                         onSaveTemplates={handleSaveTemplates}
                         onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
                         autoCategoryRules={autoCategoryRules}
+                        initialType={editingTransaction ? undefined : txInitialType}
                     />
                 </Suspense>
             )}

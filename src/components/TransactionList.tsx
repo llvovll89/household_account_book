@@ -1382,7 +1382,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <HighlightText text={t.category} query={debouncedSearch} className="text-[14px] font-semibold text-white leading-tight" />
+                          <HighlightText text={t.category} query={debouncedSearch} className="text-[14px] font-semibold text-white leading-tight block" />
                           {t.description && (
                             <HighlightText text={t.description} query={debouncedSearch} className="text-xs text-[#4E5968] truncate mt-0.5 block" />
                           )}
@@ -1448,7 +1448,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         <div className="flex items-center gap-1 shrink-0">
                           <span
                             className="text-[14px] font-bold num"
-                            style={{ color: t.type === 'income' ? '#2ACF6A' : '#F1F3F6' }}
+                            style={{ color: t.type === 'income' ? '#2ACF6A' : '#FF8D98' }}
                           >
                             {t.type === 'income' ? '+' : '-'}{fmt(t.amount)}원
                           </span>
