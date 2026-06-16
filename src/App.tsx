@@ -194,12 +194,16 @@ function GoogleIcon() {
 }
 
 export default function App() {
+    const swIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const {
         needRefresh: [needRefresh],
         updateServiceWorker,
     } = useRegisterSW({
         onNeedRefresh() { updateServiceWorker(true) },
-        onRegistered(r) { setInterval(() => r?.update(), 60 * 60 * 1000) },
+        onRegistered(r) {
+          if (swIntervalRef.current !== null) clearInterval(swIntervalRef.current)
+          swIntervalRef.current = setInterval(() => r?.update(), 60 * 60 * 1000)
+        },
     })
 
     const { showInstallBanner, isIosManualInstall, installGuideText, deferredPrompt, closeInstallBanner, handleInstallClick } = usePWAInstall()
@@ -494,6 +498,7 @@ export default function App() {
         const predicted = likelyNext[nextTab]
         if (predicted) prefetchLedgerTab(predicted)
         setTab(nextTab)
+        setFabExpanded(false)
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }, [prefetchLedgerTab])
 
@@ -1341,24 +1346,24 @@ export default function App() {
                                 {/* Speed Dial: 수입 버튼 */}
                                 {fabExpanded && isSpeedDialTab && (
                                     <button
-                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-2 w-12 h-12 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[11px] text-white transition-all active:scale-95"
-                                        style={{ backgroundColor: '#1A8C4E', animationDelay: '0.07s', boxShadow: '0 4px 20px rgba(26,140,78,0.45)' }}
+                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-2 w-10 h-10 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[10px] text-white transition-all active:scale-95"
+                                        style={{ backgroundColor: '#1A8C4E', animationDelay: '0.07s', boxShadow: '0 4px 16px rgba(26,140,78,0.45)' }}
                                         onClick={() => { setTxInitialType('income'); setFabExpanded(false); dispatchUI({ type: 'OPEN_TX_MODAL' }) }}
                                         aria-label="수입 추가"
                                     >
-                                        <span className="text-base leading-none">↑</span>
+                                        <span className="text-sm leading-none">↑</span>
                                         <span>수입</span>
                                     </button>
                                 )}
                                 {/* Speed Dial: 지출 버튼 */}
                                 {fabExpanded && isSpeedDialTab && (
                                     <button
-                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-1 w-12 h-12 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[11px] text-white transition-all active:scale-95"
-                                        style={{ backgroundColor: '#C0394A', animationDelay: '0s', boxShadow: '0 4px 20px rgba(192,57,74,0.45)' }}
+                                        className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-1 w-10 h-10 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[10px] text-white transition-all active:scale-95"
+                                        style={{ backgroundColor: '#C0394A', animationDelay: '0s', boxShadow: '0 4px 16px rgba(192,57,74,0.45)' }}
                                         onClick={() => { setTxInitialType('expense'); setFabExpanded(false); dispatchUI({ type: 'OPEN_TX_MODAL' }) }}
                                         aria-label="지출 추가"
                                     >
-                                        <span className="text-base leading-none">↓</span>
+                                        <span className="text-sm leading-none">↓</span>
                                         <span>지출</span>
                                     </button>
                                 )}
@@ -1385,9 +1390,9 @@ export default function App() {
                                     }}
                                     aria-label={fabExpanded ? '닫기' : '내역 추가'}
                                     aria-expanded={fabExpanded}
-                                    className={`pointer-events-auto absolute right-5 bottom-fab-safe w-14 h-14 text-white rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? 'bg-[#3A3A3C] shadow-black/40' : 'bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30'}`}
+                                    className={`pointer-events-auto absolute right-5 bottom-fab-safe w-12 h-12 text-white rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? 'bg-[#3A3A3C] shadow-black/40' : 'bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30'}`}
                                 >
-                                    <Plus size={24} className={`transition-transform duration-200 ${fabExpanded ? 'rotate-45' : ''}`} />
+                                    <Plus size={20} className={`transition-transform duration-200 ${fabExpanded ? 'rotate-45' : ''}`} />
                                 </button>
                             </>
                         )

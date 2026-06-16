@@ -54,9 +54,13 @@ function getInitialSectionOpen(storageKey: string) {
 }
 
 function HighlightText({ text, query, className }: { text: string; query: string; className?: string }) {
-  if (!query.trim()) return <span className={className}>{text}</span>
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const parts = text.split(new RegExp(`(${escaped})`, 'gi'))
+  const re = useMemo(() => {
+    if (!query.trim()) return null
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(`(${escaped})`, 'gi')
+  }, [query])
+  if (!re) return <span className={className}>{text}</span>
+  const parts = text.split(re)
   return (
     <span className={className}>
       {parts.map((p, i) =>

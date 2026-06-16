@@ -115,6 +115,8 @@ interface MergeResult {
     budgets: number
     recurring: number
     stockTrades: number
+    subscriptions: number
+    goals: number
   }
 }
 
@@ -260,6 +262,26 @@ function isStockTrade(v: unknown): v is StockTrade {
   )
 }
 
+function isSubscription(v: unknown): v is Subscription {
+  if (!isObj(v)) return false
+  return (
+    typeof v.id === 'string' &&
+    typeof v.name === 'string' &&
+    typeof v.amount === 'number' &&
+    typeof v.billingDay === 'number'
+  )
+}
+
+function isSavingsGoal(v: unknown): v is SavingsGoal {
+  if (!isObj(v)) return false
+  return (
+    typeof v.id === 'string' &&
+    typeof v.name === 'string' &&
+    typeof v.targetAmount === 'number' &&
+    typeof v.currentAmount === 'number'
+  )
+}
+
 function loadLocalTransactions(): Transaction[] {
   return parseValidArray(TRANSACTIONS_KEY, isTransaction)
 }
@@ -281,11 +303,11 @@ function loadLocalStockTrades(): StockTrade[] {
 }
 
 function loadLocalSubscriptions(): Subscription[] {
-  return parseJSON(localStorage.getItem(SUBSCRIPTIONS_KEY), [])
+  return parseValidArray(SUBSCRIPTIONS_KEY, isSubscription)
 }
 
 function loadLocalGoals(): SavingsGoal[] {
-  return parseJSON(localStorage.getItem(GOALS_KEY), [])
+  return parseValidArray(GOALS_KEY, isSavingsGoal)
 }
 
 function loadLocalSettings(): AppSettings {
@@ -537,6 +559,8 @@ export interface LocalDataCounts {
   budgets: number
   recurring: number
   stockTrades: number
+  subscriptions: number
+  goals: number
 }
 
 export function getLocalDataCounts(): LocalDataCounts {
@@ -547,6 +571,8 @@ export function getLocalDataCounts(): LocalDataCounts {
     budgets: snapshot.budgets.length,
     recurring: snapshot.recurring.length,
     stockTrades: snapshot.stockTrades.length,
+    subscriptions: snapshot.subscriptions.length,
+    goals: snapshot.goals.length,
   }
 }
 
@@ -561,6 +587,8 @@ export function hasLocalMigratableData(): boolean {
       || snapshot.budgets.length > 0
       || snapshot.recurring.length > 0
       || snapshot.stockTrades.length > 0
+      || snapshot.subscriptions.length > 0
+      || snapshot.goals.length > 0
       || hasValidPayday(snapshot.settings.payday)
       || hasValidBillingDay(snapshot.settings.cardBillingDay)
       || snapshot.settings.customExpenseCategories.length > 0
@@ -575,6 +603,8 @@ export function hasLocalMigratableData(): boolean {
     || snapshot.budgets.length > 0
     || snapshot.recurring.length > 0
     || snapshot.stockTrades.length > 0
+    || snapshot.subscriptions.length > 0
+    || snapshot.goals.length > 0
     || hasValidPayday(snapshot.settings.payday)
     || hasValidBillingDay(snapshot.settings.cardBillingDay)
     || snapshot.settings.customExpenseCategories.length > 0
@@ -592,7 +622,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     return {
       merged: false,
       message: '로그인 상태에서만 병합할 수 있습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0, subscriptions: 0, goals: 0 },
     }
   }
 
@@ -602,7 +632,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     return {
       merged: false,
       message: '로컬 데이터가 없어 병합을 건너뛰었습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0, subscriptions: 0, goals: 0 },
     }
   }
 
@@ -621,8 +651,8 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     budgets: mergeBudgets(remote.budgets, local.budgets),
     recurring: mergeRecurring(remote.recurring, local.recurring),
     stockTrades: mergeUniqueByKey(remote.stockTrades, local.stockTrades, stockKey),
-    subscriptions: local.subscriptions.length > 0 ? local.subscriptions : remote.subscriptions,
-    goals: local.goals.length > 0 ? local.goals : remote.goals,
+    subscriptions: mergeUniqueByKey(remote.subscriptions, local.subscriptions, (s) => s.id),
+    goals: mergeUniqueByKey(remote.goals, local.goals, (g) => g.id),
     settings: mergeSettings(remote.settings, local.settings),
   }
 
@@ -639,6 +669,8 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
       budgets: merged.budgets.length,
       recurring: merged.recurring.length,
       stockTrades: merged.stockTrades.length,
+      subscriptions: merged.subscriptions.length,
+      goals: merged.goals.length,
     },
   }
 }

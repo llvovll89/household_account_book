@@ -96,8 +96,12 @@ export function useAppHandlers({
   }, [persist, setTransactions, dispatchUI])
 
   const handleTransactionArchive = useCallback((cutoff: string) => {
-    setTransactions((prev) => prev.filter(t => t.date >= cutoff))
-  }, [setTransactions])
+    setTransactions((prev) => {
+      const next = prev.filter(t => t.date >= cutoff)
+      persist(next)
+      return next
+    })
+  }, [setTransactions, persist])
 
   const handleBulkEditTransactions = useCallback((ids: string[], category: string) => {
     const idSet = new Set(ids)

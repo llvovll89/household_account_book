@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { X, Plus, Trash2, ChevronDown, RefreshCw } from 'lucide-react'
 import type { RecurringTransaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
-import { generateId } from '../lib/format'
+import { fmt, generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
 
 interface Props {
@@ -134,7 +134,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                   )}
                 </div>
                 <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
-                  {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
+                  {item.type === 'income' ? '+' : '-'}{fmt(item.amount)}원
                 </span>
                 <button
                   onClick={() => handleDelete(item.id)}

@@ -94,13 +94,17 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
         {data.map((d) => {
           const pct = d.budget > 0 ? Math.min(Math.round((d.actual / d.budget) * 100), 200) : 0
           const displayPct = d.budget > 0 ? Math.round((d.actual / d.budget) * 100) : 0
+          const critical = displayPct >= 120
           return (
-            <div key={d.category} className="space-y-1">
+            <div key={d.category} className={`space-y-1 rounded-xl px-2 py-1.5 transition-colors ${d.over ? 'bg-[#F25260]/8' : ''}`}>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-[#8B95A1]">{CATEGORY_EMOJI[d.category]} {d.category}</span>
-                <span className={`text-xs font-bold num ${d.over ? 'text-[#F25260]' : 'text-[#2ACF6A]'}`}>
-                  {displayPct}%
-                </span>
+                <div className="flex items-center gap-1">
+                  {critical && <span className="text-[10px]">⚠️</span>}
+                  <span className={`text-xs font-bold num ${d.over ? 'text-[#F25260]' : 'text-[#2ACF6A]'}`}>
+                    {displayPct}%
+                  </span>
+                </div>
               </div>
               <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
                 <div

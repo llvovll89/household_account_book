@@ -168,7 +168,7 @@ export default function SyncConflictModal({
 
                 {conflictKeys.includes('settings') && conflictKeys.length > 1 && (
                     <p className="text-[10px] text-[#8B95A1] leading-relaxed">
-                        권장: 설정은 원격 우선으로 두고, 데이터 항목만 다시 저장하세요.
+                        권장: 설정은 로컬 값이 유효하면 로컬 우선으로 병합됩니다.
                     </p>
                 )}
 

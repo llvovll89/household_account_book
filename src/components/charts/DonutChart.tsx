@@ -41,7 +41,6 @@ export default function DonutChart({ data }: Props) {
               dataKey="amt"
               animationDuration={600}
               onMouseEnter={(_, index) => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(null)}
               onClick={(_, index) => setActiveIndex(activeIndex === index ? null : index)}
             >
               {data.map((item, i) => {

@@ -481,7 +481,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                   <button
                     key={pct}
                     onClick={() => setSimPct(pct)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all ${
                       simPct === pct ? 'bg-[#3D8EF8] text-white' : 'bg-[#2C2C2E] text-[#4E5968]'
                     }`}
                   >

@@ -9,7 +9,7 @@ import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
-import { generateId, toLocalDateStr } from '../lib/format'
+import { fmt, generateId, toLocalDateStr } from '../lib/format'
 import { applyAutoCategory } from '../lib/autoCategoryRules'
 
 interface Props {
@@ -113,8 +113,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
   useEffect(() => {
     if (!transaction) {
-      setCategory(categories[0])
-      categoryManuallySet.current = false
+      const newCats = type === 'income'
+        ? [...INCOME_CATEGORIES, ...customIncomeCategories]
+        : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
+      if (!categoryManuallySet.current || !newCats.includes(category)) {
+        setCategory(newCats[0])
+        categoryManuallySet.current = false
+      }
     }
   }, [type])
 
@@ -293,7 +298,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div className="bg-[#1A1E30] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -338,7 +343,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     <button type="button" onClick={() => applyTemplate(tmpl)} className="flex items-center gap-1.5">
                       <span className="text-sm">{CATEGORY_EMOJI[tmpl.category] ?? '📦'}</span>
                       <span className="text-[12px] font-semibold text-white">{tmpl.label}</span>
-                      <span className="text-[11px] text-[#4E5968] num">{tmpl.amount.toLocaleString()}원</span>
+                      <span className="text-[11px] text-[#4E5968] num">{fmt(tmpl.amount)}원</span>
                     </button>
                     <button type="button" onClick={() => deleteTemplate(tmpl.id)} className="w-4 h-4 rounded-full bg-[#F25260]/15 flex items-center justify-center ml-1">
                       <X size={8} className="text-[#F25260]" />
@@ -353,7 +358,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         <div className="overflow-y-auto flex-1">
           {/* 대기열 */}
           {queue.length > 0 && (
-            <div className="mx-6 mb-3 bg-[#2C2C2E] rounded-2xl overflow-hidden">
+            <div className="mx-6 mb-3 bg-[#252A3F] rounded-2xl overflow-hidden">
               {queue.map((item, idx) => {
                 const qColor = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                 const dateLabel = item.dateEnd
@@ -366,7 +371,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-[13px] font-bold" style={{ color: item.type === 'income' ? '#2ACF6A' : '#F25260' }}>
-                        {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
+                        {item.type === 'income' ? '+' : '-'}{fmt(item.amount)}원
                       </span>
                       <span className="text-[11px] text-[#4E5968] ml-1.5">{item.category}</span>
                       <span className="text-[11px] text-[#4E5968] ml-1">· {item.paymentMethod === 'cash' ? '현금' : item.paymentMethod === 'check' ? '체크카드' : '신용카드'}</span>
@@ -391,16 +396,16 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
-            <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
+            <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
               <button type="button" onClick={() => setType('income')}
                 aria-pressed={type === 'income'}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${type === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'text-[#4E5968]'
+                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'income' ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/50 text-[#2ACF6A]' : 'border-transparent text-[#4E5968]'
                   }`}>
                 수입
               </button>
               <button type="button" onClick={() => setType('expense')}
                 aria-pressed={type === 'expense'}
-                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${type === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'text-[#4E5968]'
+                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'expense' ? 'bg-[#F25260]/15 border-[#F25260]/50 text-[#F25260]' : 'border-transparent text-[#4E5968]'
                   }`}>
                 지출
               </button>
@@ -410,7 +415,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               <div
                 role="group"
                 aria-label="결제 수단"
-                className={`bg-[#2C2C2E] p-1 rounded-2xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
+                className={`bg-[#252A3F] p-1 rounded-xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
               >
                 {userPaymentMethods.map((m) => {
                   const isSelected = selectedMethodId === m.id
@@ -449,7 +454,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     </button>
                   )}
                 </div>
-                <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-2xl">
+                <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
                   {PAYMENT_METHODS.map((method) => (
                     <button
                       key={method.value}
@@ -497,7 +502,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             )}
 
             {/* 금액 */}
-            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
+            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
               <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
               <div className="flex items-baseline gap-2">
                 <input
@@ -520,7 +525,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       const current = parseInt(amount.replace(/,/g, ''), 10) || 0
                       handleAmountChange(String(current + v))
                     }}
-                    className={`flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
+                    className={`flex-1 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
                   >
                     +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
                   </button>
@@ -529,7 +534,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   <button
                     type="button"
                     onClick={() => handleAmountChange('')}
-                    className="px-3 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#4E5968] active:text-[#F25260] transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#4E5968] active:text-[#F25260] transition-colors"
                   >
                     C
                   </button>
@@ -552,16 +557,16 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 </button>
               </div>
               {!showDateEnd ? (
-                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+                <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
                   <FancyDatePicker value={date} onChange={setDate} />
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
                     <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
                     <FancyDatePicker value={date} onChange={setDate} />
                   </div>
-                  <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
                     <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
                     <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
                   </div>
@@ -570,7 +575,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 카테고리 그리드 */}
-            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-4">
+            <div className="bg-[#252A3F] rounded-2xl px-4 py-4">
               <div className="flex items-center gap-1.5 mb-3">
                 <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
                 {autoCategoryApplied && (
@@ -587,7 +592,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       type="button"
                       onClick={() => { setCategory(c); categoryManuallySet.current = true; setAutoCategoryApplied(false) }}
                       className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all border ${
-                        isSelected ? 'border-current' : 'border-transparent bg-[#1C1C1E] hover:bg-[#252527]'
+                        isSelected ? 'border-current' : 'border-transparent bg-[#1A1E30] hover:bg-[#1E2438]'
                       }`}
                       style={isSelected ? { backgroundColor: cColor.bg, borderColor: `${cColor.text}50` } : {}}
                     >
@@ -605,7 +610,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 메모 + 해시태그 */}
-            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
+            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
               <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
                 메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
               </p>
@@ -647,7 +652,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 영수증 첨부 (접기/펼치기) */}
-            <div className="bg-[#2C2C2E] rounded-2xl overflow-hidden">
+            <div className="bg-[#252A3F] rounded-2xl overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowReceipt((v) => !v)}

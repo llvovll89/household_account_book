@@ -238,10 +238,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
       .reduce((s, t) => s + t.amount, 0)
 
+    const hasCash = monthly.some((t) => (t.paymentMethod ?? 'cash') === 'cash')
+    const hasCheck = monthly.some((t) => (t.paymentMethod ?? 'cash') === 'check')
+    const hasCredit = monthly.some((t) => isCreditPaymentMethod(t.paymentMethod))
+
     return {
       cash: cashIncome - cashExpense,
       check: checkIncome - checkExpense,
       credit: creditIncome - creditExpense,
+      hasCash,
+      hasCheck,
+      hasCredit,
     }
   }, [monthly])
 
@@ -934,39 +941,55 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
               const emoji = CATEGORY_EMOJI[cat] ?? '💸'
               const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
+              const budget = budgets.find((b) => b.category === cat)
+              const budgetPct = budget && budget.limit > 0 ? Math.round((amt / budget.limit) * 100) : null
               return (
                 <div key={cat} className="flex items-center gap-2">
                   <span className="text-[11px] shrink-0 w-16 truncate text-[#8B95A1]">{emoji} {cat}</span>
                   <div className="flex-1 h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, minWidth: pct > 0 ? '4px' : undefined, backgroundColor: color.text }} />
                   </div>
-                  <span className="text-[10px] font-bold num text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
+                  {budgetPct !== null ? (
+                    <span className={`text-[10px] font-bold num shrink-0 px-1.5 py-0.5 rounded-md ${budgetPct > 100 ? 'bg-[#F25260]/15 text-[#F25260]' : 'bg-white/6 text-[#4E5968]'}`}>
+                      {budgetPct}%
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold num text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
+                  )}
                 </div>
               )
             })}
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
-            <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
-            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
-              {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
-            </p>
+        {(monthlyMethodBalance.hasCash || monthlyMethodBalance.hasCheck || monthlyMethodBalance.hasCredit) && (
+          <div className={`mt-4 grid gap-2 ${[monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 1 ? 'grid-cols-1' : [monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {monthlyMethodBalance.hasCash && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
+                </p>
+              </div>
+            )}
+            {monthlyMethodBalance.hasCheck && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
+                </p>
+              </div>
+            )}
+            {monthlyMethodBalance.hasCredit && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.credit >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.credit >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.credit)}
+                </p>
+              </div>
+            )}
           </div>
-          <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/14 to-[#2C2C2E]">
-            <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 잔액</p>
-            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
-              {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
-            </p>
-          </div>
-          <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/14 to-[#2C2C2E]">
-            <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 잔액</p>
-            <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.credit >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
-              {monthlyMethodBalance.credit >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.credit)}
-            </p>
-          </div>
-        </div>
+        )}
 
         {showCreditSection ? (
           <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
