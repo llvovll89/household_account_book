@@ -97,7 +97,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
   const [isSyncing, setIsSyncing] = useState(false)
   const [settingsVersion, setSettingsVersion] = useState(0)
   const [showMergeModal, setShowMergeModal] = useState(false)
-  const [localDataCounts, setLocalDataCounts] = useState<LocalDataCounts>({ transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 })
+  const [localDataCounts, setLocalDataCounts] = useState<LocalDataCounts>({ transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0, subscriptions: 0, goals: 0 })
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')

@@ -109,8 +109,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
     return base.filter((m) =>
       m.title.toLowerCase().includes(q) ||
       m.content.toLowerCase().includes(q) ||
-      (m.category ?? '').toLowerCase().includes(q) ||
-      (m.tags ?? []).some((tag) => tag.toLowerCase().includes(q.replace(/^#/, '')))
+      (m.category ?? '').toLowerCase().includes(q)
     )
   }, [memos, search])
 

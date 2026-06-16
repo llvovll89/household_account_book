@@ -98,7 +98,7 @@ export function useAppHandlers({
   const handleTransactionArchive = useCallback((cutoff: string) => {
     setTransactions((prev) => {
       const next = prev.filter(t => t.date >= cutoff)
-      persist(next)
+      persist(() => saveTransactions(next), '아카이브 저장에 실패했습니다.', 'transactions')
       return next
     })
   }, [setTransactions, persist])
