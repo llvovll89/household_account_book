@@ -39,6 +39,7 @@ const STATEMENT_MONTH_FILTER_KEY = 'hb_tx_statement_month_filter'
 const CONFLICT_SCOPE_PREF_KEY = 'hb_conflict_scope_pref'
 const CONFLICT_POLICY_REMEMBER_KEY = 'hb_conflict_policy_remember'
 const AUTO_APPLY_RECURRING_MODE_KEY = 'hb_recurring_auto_apply_mode'
+const LAST_SYNC_SUCCESS_AT_KEY = 'hb_last_sync_success_at'
 
 type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
 
@@ -102,6 +103,35 @@ function getRetryReasonTotals(reasonsByScope: Partial<Record<RemoteVersionKey, R
         if ((reasons ?? []).includes('save-failed')) saveFailed += 1
     }
     return { conflict, saveFailed }
+}
+
+function formatRelativeSyncTime(ts: number | null, now: number): string {
+    if (!ts) return '기록 없음'
+    const deltaMs = now - ts
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) return '방금 저장'
+    const minutes = Math.floor(deltaMs / (1000 * 60))
+    if (minutes < 1) return '방금 저장'
+    if (minutes < 60) return `${minutes}분 전 저장`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}시간 전 저장`
+    const days = Math.floor(hours / 24)
+    return `${days}일 전 저장`
+}
+
+function formatAbsoluteSyncTime(ts: number | null): string {
+    if (!ts) return '기록 없음'
+    try {
+        return new Date(ts).toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        })
+    } catch {
+        return '기록 없음'
+    }
 }
 
 
@@ -256,6 +286,13 @@ export default function App() {
     const [isRetryingPersist, setIsRetryingPersist] = useState(false)
     const [retryProgress, setRetryProgress] = useState<{ done: number; total: number } | null>(null)
     const [lastRetryResult, setLastRetryResult] = useState<RetryResultSummary | null>(null)
+    const [lastSyncSuccessAt, setLastSyncSuccessAt] = useState<number | null>(() => {
+        const raw = localStorage.getItem(LAST_SYNC_SUCCESS_AT_KEY)
+        if (!raw) return null
+        const parsed = Number(raw)
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+    })
+    const [showSyncStatusDetails, setShowSyncStatusDetails] = useState(false)
     const [showSyncConflictModal, setShowSyncConflictModal] = useState(false)
     const [showSyncRecoveryGuideModal, setShowSyncRecoveryGuideModal] = useState(false)
     const [conflictKeys, setConflictKeys] = useState<RemoteVersionKey[]>([])
@@ -270,6 +307,7 @@ export default function App() {
     const [toastVariant, setToastVariant] = useState<ToastVariant>('success')
     const [toastAction, setToastAction] = useState<ToastAction | null>(null)
     const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const [syncClock, setSyncClock] = useState(() => Date.now())
 
     const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
     const [showAutoApplyModal, setShowAutoApplyModal] = useState(false)
@@ -351,6 +389,16 @@ export default function App() {
     useEffect(() => {
         localStorage.setItem(AUTO_APPLY_RECURRING_MODE_KEY, autoApplyMode)
     }, [autoApplyMode])
+
+    useEffect(() => {
+        if (!lastSyncSuccessAt) return
+        localStorage.setItem(LAST_SYNC_SUCCESS_AT_KEY, String(lastSyncSuccessAt))
+    }, [lastSyncSuccessAt])
+
+    useEffect(() => {
+        const timer = setInterval(() => setSyncClock(Date.now()), 30000)
+        return () => clearInterval(timer)
+    }, [])
 
     const yearMonth = getYearMonth(currentDate)
     const hydrateData = useCallback(async () => {
@@ -607,7 +655,10 @@ export default function App() {
 
     const persist = useCallback((task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => {
         void task()
-            .then(() => setHasPendingSync(false))
+            .then(() => {
+                setHasPendingSync(false)
+                setLastSyncSuccessAt(Date.now())
+            })
             .catch((e) => {
                 console.error('[persist]', failMsg, e)
                 const message = isStorageConflictError(e)
@@ -759,6 +810,7 @@ export default function App() {
 
                 if (stillFailed.length === 0) {
                     setHasPendingSync(false)
+                    setLastSyncSuccessAt(Date.now())
                     const successLabels = Array.from(succeededScopes).map(scopeLabel)
                     const summary = successLabels.length > 0 ? ` (${successLabels.join(', ')})` : ''
                     showToast(`미동기화 변경사항을 저장했어요.${summary}`)
@@ -804,7 +856,10 @@ export default function App() {
         setLastRetryResult(null)
         setHasPendingSync(false)
         void hydrateData()
-            .then(() => showToast('원격 데이터로 동기화했어요.'))
+            .then(() => {
+                setLastSyncSuccessAt(Date.now())
+                showToast('원격 데이터로 동기화했어요.')
+            })
             .catch(() => showToast('원격 데이터를 불러오지 못했어요.'))
     }, [hydrateData])
 
@@ -994,6 +1049,77 @@ export default function App() {
         }
         return { title: '저장되지 않은 변경사항이 있어요', label: '미동기화' }
     }, [isOnline, hasPendingSync])
+    const pendingCount = failedPersistTasks.length
+    const failedScopeDetails = useMemo(() => {
+        const map = new Map<RemoteVersionKey, { count: number; maxAttempts: number; reasons: RetryReasonCode[] }>()
+        failedPersistTasks.forEach((task) => {
+            const prev = map.get(task.scope)
+            if (!prev) {
+                map.set(task.scope, {
+                    count: 1,
+                    maxAttempts: task.attempts,
+                    reasons: lastRetryReasons[task.scope] ?? [],
+                })
+                return
+            }
+            map.set(task.scope, {
+                count: prev.count + 1,
+                maxAttempts: Math.max(prev.maxAttempts, task.attempts),
+                reasons: lastRetryReasons[task.scope] ?? prev.reasons,
+            })
+        })
+        return Array.from(map.entries())
+            .map(([scope, detail]) => ({ scope, ...detail }))
+            .sort((a, b) => b.count - a.count)
+    }, [failedPersistTasks, lastRetryReasons])
+    const conflictRetryScopes = useMemo(() => getScopesByReasons(['conflict']), [getScopesByReasons])
+    const saveFailedRetryScopes = useMemo(() => getScopesByReasons(['save-failed']), [getScopesByReasons])
+    const retryRatio = retryProgress && retryProgress.total > 0
+        ? Math.min(100, Math.round((retryProgress.done / retryProgress.total) * 100))
+        : 0
+    const showSyncStatusBar = !isOnline || hasPendingSync || pendingCount > 0 || isRetryingPersist
+    const syncStatusBarMeta = useMemo(() => {
+        if (isRetryingPersist && retryProgress) {
+            return {
+                title: `동기화 재시도 중 ${retryProgress.done}/${retryProgress.total}`,
+                detail: pendingCount > 0 ? `남은 실패 ${pendingCount}건` : '실패 항목 복구 중',
+                toneClass: 'bg-[#203047] border-[#3D8EF8]/30',
+                iconClass: 'text-[#79B2FF]',
+            }
+        }
+
+        if (!isOnline) {
+            return {
+                title: hasPendingSync ? `오프라인 · 저장 대기 ${pendingCount}건` : '오프라인 상태',
+                detail: hasPendingSync ? '연결 복구 시 자동 재시도할 수 있어요' : '변경사항은 로컬에 임시 저장됩니다',
+                toneClass: 'bg-[#2B1E1E] border-[#F25260]/25',
+                iconClass: 'text-[#FF8A95]',
+            }
+        }
+
+        if (pendingCount > 0) {
+            return {
+                title: `저장 실패 ${pendingCount}건`,
+                detail: Object.keys(lastRetryReasons).length > 0
+                    ? `최근 원인: 충돌 ${retryReasonTotals.conflict}범위 · 저장오류 ${retryReasonTotals.saveFailed}범위`
+                    : '네트워크 복구 후 다시 저장해주세요',
+                toneClass: 'bg-[#2B1E1E] border-[#F25260]/25',
+                iconClass: 'text-[#FF8A95]',
+            }
+        }
+
+        return {
+            title: '동기화 대기 중',
+            detail: '저장 대기 항목이 있습니다',
+            toneClass: 'bg-[#1F2434] border-[#3D8EF8]/25',
+            iconClass: 'text-[#79B2FF]',
+        }
+    }, [hasPendingSync, isOnline, isRetryingPersist, lastRetryReasons, pendingCount, retryProgress, retryReasonTotals.conflict, retryReasonTotals.saveFailed])
+
+    useEffect(() => {
+        if (pendingCount > 0) return
+        setShowSyncStatusDetails(false)
+    }, [pendingCount])
 
     const showFAB = activeMode === 'stocks'
         ? stockSubTab === 'portfolio' || stockSubTab === 'trades'
@@ -1237,34 +1363,127 @@ export default function App() {
                         </div>
                     )}
 
-                    {failedPersistTasks.length > 0 && (
-                        <div className="mt-3 rounded-2xl bg-[#2B1E1E] border border-[#F25260]/25 px-3 py-2.5 flex items-center gap-3">
-                            <CloudOff size={14} className="text-[#F25260] shrink-0" />
+                    {showSyncStatusBar && (
+                        <div className={`mt-3 rounded-2xl border px-3 py-2.5 flex items-center gap-3 ${syncStatusBarMeta.toneClass}`}>
+                            {!isOnline ? (
+                                <WifiOff size={14} className={`${syncStatusBarMeta.iconClass} shrink-0`} />
+                            ) : isRetryingPersist ? (
+                                <RefreshCw size={14} className={`${syncStatusBarMeta.iconClass} shrink-0 animate-spin`} />
+                            ) : (
+                                <CloudOff size={14} className={`${syncStatusBarMeta.iconClass} shrink-0`} />
+                            )}
                             <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-bold text-[#FFD5D9]">저장 실패 {failedPersistTasks.length}건</p>
-                                <p className="text-[10px] text-[#F5AAB1] truncate">네트워크 복구 후 다시 저장해주세요.</p>
-                                {Object.keys(lastRetryReasons).length > 0 && (
-                                    <p className="text-[10px] text-[#F0B7BE] mt-0.5 truncate">
-                                        {`최근 원인: 충돌 ${retryReasonTotals.conflict}범위 · 저장오류 ${retryReasonTotals.saveFailed}범위`}
+                                <p className="text-[11px] font-bold text-[#E8EDF5]">{syncStatusBarMeta.title}</p>
+                                <p className="text-[10px] text-[#B6C0CE] truncate">{syncStatusBarMeta.detail}</p>
+                                {lastSyncSuccessAt && (
+                                    <p
+                                        title={`최근 저장 시각: ${formatAbsoluteSyncTime(lastSyncSuccessAt)}`}
+                                        className="text-[10px] text-[#8B95A1] mt-0.5 truncate"
+                                    >
+                                        마지막 저장: {formatRelativeSyncTime(lastSyncSuccessAt, syncClock)}
                                     </p>
                                 )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                {Object.keys(lastRetryReasons).length > 0 && (
-                                    <button
-                                        onClick={() => setShowSyncRecoveryGuideModal(true)}
-                                        className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
-                                    >
-                                        가이드
-                                    </button>
+                                {isRetryingPersist && retryProgress && (
+                                    <div className="mt-1.5 h-1.5 rounded-full bg-[#2C2C2E] overflow-hidden">
+                                        <div
+                                            className="h-full bg-[#3D8EF8] transition-all"
+                                            style={{ width: `${retryRatio}%` }}
+                                        />
+                                    </div>
                                 )}
-                                <button
-                                    onClick={() => retryFailedPersistTasks(undefined, 'all')}
-                                    disabled={isRetryingPersist}
-                                    className="px-2.5 py-1.5 rounded-lg bg-[#F25260] disabled:opacity-40 text-white text-[11px] font-bold hover:bg-[#FF6E7A] transition-colors"
-                                >
-                                    {isRetryingPersist ? '재시도 중...' : '전체 재시도'}
-                                </button>
+                                {showSyncStatusDetails && failedScopeDetails.length > 0 && (
+                                    <div className="mt-1.5 grid grid-cols-1 gap-1">
+                                        {failedScopeDetails.slice(0, 4).map((item) => (
+                                            <div key={item.scope} className="flex items-center justify-between px-2 py-1 rounded-lg bg-[#111827]/45 border border-white/5">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] text-[#C8D1DC] font-semibold">{scopeLabel(item.scope)}</span>
+                                                    {item.reasons.length > 0 && (
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            {item.reasons.includes('conflict') && (
+                                                                <span className="text-[9px] px-1 py-0.5 rounded bg-[#F25260]/15 text-[#FFD5D9]">충돌</span>
+                                                            )}
+                                                            {item.reasons.includes('save-failed') && (
+                                                                <span className="text-[9px] px-1 py-0.5 rounded bg-[#3D8EF8]/15 text-[#CFE2FF]">저장오류</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] text-[#8B95A1] num">{item.count}건 · 재시도 {item.maxAttempts}회</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1.5">
+                                <div className="flex items-center gap-1.5">
+                                    {pendingCount > 0 && (
+                                        <button
+                                            onClick={() => setShowSyncStatusDetails((v) => !v)}
+                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
+                                        >
+                                            {showSyncStatusDetails ? '상세 닫기' : '상세'}
+                                        </button>
+                                    )}
+                                    {conflictRetryScopes.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                if (conflictKeys.length > 0) {
+                                                    setShowSyncConflictModal(true)
+                                                    return
+                                                }
+                                                showToast('현재 충돌 항목이 없어요.')
+                                            }}
+                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#FFD5D9] text-[11px] font-bold border border-[#F25260]/30"
+                                        >
+                                            충돌 해결
+                                        </button>
+                                    )}
+                                    {Object.keys(lastRetryReasons).length > 0 && (
+                                        <button
+                                            onClick={() => setShowSyncRecoveryGuideModal(true)}
+                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
+                                        >
+                                            가이드
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => retryFailedPersistTasks(undefined, 'all')}
+                                        disabled={isRetryingPersist || pendingCount === 0}
+                                        className="px-2.5 py-1.5 rounded-lg bg-[#F25260] disabled:opacity-40 text-white text-[11px] font-bold hover:bg-[#FF6E7A] transition-colors"
+                                    >
+                                        {isRetryingPersist ? '재시도 중...' : '전체 재시도'}
+                                    </button>
+                                </div>
+                                {Object.keys(lastRetryReasons).length > 0 && (
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={() => {
+                                                if (conflictRetryScopes.length === 0) {
+                                                    showToast('충돌 항목이 없어요.')
+                                                    return
+                                                }
+                                                retryFailedPersistTasks(conflictRetryScopes, 'conflict-only')
+                                            }}
+                                            disabled={isRetryingPersist || conflictRetryScopes.length === 0}
+                                            className="px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#FFD5D9] text-[10px] font-bold border border-[#F25260]/30 disabled:opacity-40"
+                                        >
+                                            충돌만
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (saveFailedRetryScopes.length === 0) {
+                                                    showToast('저장오류 항목이 없어요.')
+                                                    return
+                                                }
+                                                retryFailedPersistTasks(saveFailedRetryScopes, 'save-failed-only')
+                                            }}
+                                            disabled={isRetryingPersist || saveFailedRetryScopes.length === 0}
+                                            className="px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#CFE2FF] text-[10px] font-bold border border-[#3D8EF8]/30 disabled:opacity-40"
+                                        >
+                                            저장오류만
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -1332,7 +1551,7 @@ export default function App() {
             {/* Speed Dial 백드롭 */}
             {fabExpanded && (
                 <div
-                    className="fixed inset-0 z-[29] pointer-events-auto"
+                    className="fixed inset-0 z-29 pointer-events-auto"
                     onClick={() => setFabExpanded(false)}
                 />
             )}
@@ -1493,6 +1712,7 @@ export default function App() {
                         userPaymentMethods={userPaymentMethods}
                         transactionTemplates={transactionTemplates}
                         onSaveTemplates={handleSaveTemplates}
+                        onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
                         onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
                         autoCategoryRules={autoCategoryRules}
                         initialType={editingTransaction ? undefined : txInitialType}
@@ -1560,6 +1780,7 @@ export default function App() {
                     <SyncConflictModal
                         conflictKeys={conflictKeys}
                         selectedKeys={selectedConflictKeys}
+                        recommendedKeys={getDefaultSelectedConflictKeys(conflictKeys, conflictPreferredScopes)}
                         versionDiffs={conflictVersionDiffs}
                         countDiffs={conflictCountDiffs}
                         remoteUpdatedAt={conflictRemoteUpdatedAt}

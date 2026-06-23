@@ -21,6 +21,7 @@ interface Props {
   userPaymentMethods?: UserPaymentMethod[]
   transactionTemplates?: TransactionTemplate[]
   onSaveTemplates?: (templates: TransactionTemplate[]) => void
+  onOpenCategoryModal?: () => void
   onOpenPaymentMethodsModal?: () => void
   autoCategoryRules?: AutoCategoryRule[]
   initialType?: TransactionType
@@ -39,7 +40,7 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenPaymentMethodsModal, autoCategoryRules = [], initialType }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], initialType }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
@@ -63,6 +64,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [showTemplates, setShowTemplates] = useState(false)
   const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(!!transaction)
 
   const isEditMode = !!transaction
   const { closing, handleClose } = useModalClose(onClose)
@@ -108,6 +110,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         setReceiptPreview(transaction.receiptImageUrl)
         setShowReceipt(true)
       }
+      setShowAdvanced(true)
+    } else {
+      setShowAdvanced(false)
     }
   }, [transaction])
 
@@ -157,6 +162,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       effectiveBillingDay,
     }
   }, [type, paymentMethod, date, cardBillingDay, creditBillingDayInput])
+
+  useEffect(() => {
+    if (showDateEnd || !!receiptPreview || !!description.trim()) {
+      setShowAdvanced(true)
+    }
+  }, [showDateEnd, receiptPreview, description])
 
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
@@ -411,12 +422,21 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </button>
             </div>
 
-            {userPaymentMethods.length > 0 ? (
-              <div
-                role="group"
-                aria-label="결제 수단"
-                className={`bg-[#252A3F] p-1 rounded-xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
-              >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">결제수단</span>
+                {onOpenPaymentMethodsModal && (
+                  <button type="button" onClick={onOpenPaymentMethodsModal} className="text-[11px] font-semibold text-[#3D8EF8]">
+                    관리하기 →
+                  </button>
+                )}
+              </div>
+              {userPaymentMethods.length > 0 ? (
+                <div
+                  role="group"
+                  aria-label="결제 수단"
+                  className={`bg-[#252A3F] p-1 rounded-xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
+                >
                 {userPaymentMethods.map((m) => {
                   const isSelected = selectedMethodId === m.id
                   const emoji = m.type === 'cash' ? '💵' : m.type === 'check' ? '💳' : '💎'
@@ -443,17 +463,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     </button>
                   )
                 })}
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between px-0.5 mb-1">
-                  <span className="text-[11px] text-[#4E5968]">결제수단 미설정</span>
-                  {onOpenPaymentMethodsModal && (
-                    <button type="button" onClick={onOpenPaymentMethodsModal} className="text-[11px] font-semibold text-[#3D8EF8]">
-                      설정하기 →
-                    </button>
-                  )}
                 </div>
+              ) : (
                 <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
                   {PAYMENT_METHODS.map((method) => (
                     <button
@@ -472,8 +483,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     </button>
                   ))}
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
             {billingPreview && (
               <div className={`rounded-2xl px-4 py-3 border ${billingPreview.stage === 'current'
@@ -542,44 +553,24 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </div>
             </div>
 
-            {/* 날짜 + 종료일 토글 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">날짜</p>
-                <button
-                  type="button"
-                  onClick={toggleDateEnd}
-                  className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
-                    }`}
-                >
-                  <CalendarRange size={11} />
-                  기간 설정
-                </button>
-              </div>
-              {!showDateEnd ? (
-                <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
-                  <FancyDatePicker value={date} onChange={setDate} />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
-                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
-                    <FancyDatePicker value={date} onChange={setDate} />
-                  </div>
-                  <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
-                    <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
-                    <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
-                  </div>
-                </div>
-              )}
+            <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+              <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">날짜</p>
+              <FancyDatePicker value={date} onChange={setDate} />
             </div>
 
             {/* 카테고리 그리드 */}
             <div className="bg-[#252A3F] rounded-2xl px-4 py-4">
-              <div className="flex items-center gap-1.5 mb-3">
-                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
-                {autoCategoryApplied && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
+                  {autoCategoryApplied && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">🤖 자동</span>
+                  )}
+                </div>
+                {onOpenCategoryModal && (
+                  <button type="button" onClick={onOpenCategoryModal} className="text-[11px] font-semibold text-[#3D8EF8] shrink-0">
+                    관리하기 →
+                  </button>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -609,7 +600,27 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </div>
             </div>
 
-            {/* 메모 + 해시태그 */}
+            <div className="bg-[#252A3F] rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((v) => !v)}
+                className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">⚙️</span>
+                  <span className="text-[13px] font-bold text-[#8B95A1]">상세 입력</span>
+                  {(showDateEnd || receiptPreview || tags.length > 0) && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">활성</span>
+                  )}
+                </div>
+                <span className={`text-[11px] font-bold transition-colors ${showAdvanced ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>
+                  {showAdvanced ? '접기' : '펼치기'}
+                </span>
+              </button>
+            </div>
+
+            {showAdvanced && (
+              <>
             <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
               <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
                 메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
@@ -631,7 +642,28 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               />
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  {tags.map((tag) => (
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">기간 설정 (선택)</p>
+                <button
+                  type="button"
+                  onClick={toggleDateEnd}
+                  className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
+                    }`}
+                >
+                  <CalendarRange size={11} />
+                  {showDateEnd ? '기간 사용 중' : '기간 설정'}
+                </button>
+              </div>
+              {showDateEnd && (
+                <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                  <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
+                  <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
+                </div>
+              )}
+            </div>
                     <span
                       key={tag}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
@@ -650,6 +682,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 </div>
               )}
             </div>
+              </>
+            )}
 
             {/* 영수증 첨부 (접기/펼치기) */}
             <div className="bg-[#252A3F] rounded-2xl overflow-hidden">

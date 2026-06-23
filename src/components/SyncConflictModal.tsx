@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCw, ShieldX } from 'lucide-react'
 interface Props {
     conflictKeys: string[]
     selectedKeys: string[]
+    recommendedKeys: string[]
     versionDiffs: Partial<Record<string, { expected: number; remote: number }>>
     countDiffs: Partial<Record<string, { localCount: number | null; remoteCount: number | null }>>
     remoteUpdatedAt: number | null
@@ -52,9 +53,23 @@ function formatUpdatedAt(ts: number | null): string {
     }
 }
 
+function formatRelativeTime(ts: number | null): string {
+    if (!ts) return '알 수 없음'
+    const deltaMs = Date.now() - ts
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) return '방금 전'
+    const minutes = Math.floor(deltaMs / (1000 * 60))
+    if (minutes < 1) return '방금 전'
+    if (minutes < 60) return `${minutes}분 전`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}시간 전`
+    const days = Math.floor(hours / 24)
+    return `${days}일 전`
+}
+
 export default function SyncConflictModal({
     conflictKeys,
     selectedKeys,
+    recommendedKeys,
     versionDiffs,
     countDiffs,
     remoteUpdatedAt,
@@ -68,6 +83,8 @@ export default function SyncConflictModal({
     onRetryMine,
     onClose,
 }: Props) {
+    const recommendedSet = new Set(recommendedKeys)
+
     return (
         <div
             className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
@@ -88,66 +105,76 @@ export default function SyncConflictModal({
 
                 {conflictKeys.length > 0 && (
                     <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 space-y-2">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                             <button
                                 type="button"
                                 onClick={onSelectRecommended}
                                 className="text-[10px] px-2 py-1 rounded-md bg-[#3D8EF8]/12 text-[#A9CCFF] border border-[#3D8EF8]/25"
                             >
-                                권장 선택
+                                권장 적용
                             </button>
                             <button
                                 type="button"
                                 onClick={onSelectAll}
                                 className="text-[10px] px-2 py-1 rounded-md bg-[#2C2C2E] text-[#C8D1DC] border border-white/10"
                             >
-                                전체 선택
+                                모두 내 변경 유지
                             </button>
                             <button
                                 type="button"
                                 onClick={onClearSelection}
                                 className="text-[10px] px-2 py-1 rounded-md bg-[#2C2C2E] text-[#8B95A1] border border-white/10"
                             >
-                                선택 해제
+                                모두 원격 유지
                             </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                            {conflictKeys.map((key) => (
-                                <button
-                                    key={key}
-                                    type="button"
-                                    onClick={() => onToggleKey(key)}
-                                    className={`text-xs px-2 py-1 rounded-lg transition-colors ${selectedKeys.includes(key)
-                                        ? 'bg-[#3D8EF8]/20 text-[#A9CCFF] border border-[#3D8EF8]/35'
-                                        : 'bg-[#2C2C2E] text-[#8B95A1] border border-white/5'
-                                        }`}
-                                >
-                                    {getLabel(key)}
-                                </button>
-                            ))}
+                        <div className="text-[10px] text-[#6E7782] leading-relaxed">
+                            권장 기준: 최근 충돌 이력과 선택 정책을 반영해 자동 제안됩니다.
                         </div>
 
-                        <div className="space-y-1">
-                            {conflictKeys.map((key) => {
+                        <div className="space-y-2">
+                            {conflictKeys.map((key) => (
                                 const diff = versionDiffs[key]
                                 const countDiff = countDiffs[key]
-                                if (!diff && !countDiff) return null
+                                const isMine = selectedKeys.includes(key)
+                                const isRecommended = recommendedSet.has(key)
                                 return (
-                                    <div key={`${key}_rev`} className="text-[10px] text-[#8B95A1] space-y-0.5">
+                                    <button
+                                        key={key}
+                                        type="button"
+                                        onClick={() => onToggleKey(key)}
+                                        className={`w-full text-left rounded-xl px-3 py-2.5 border transition-colors ${isMine
+                                            ? 'bg-[#3D8EF8]/12 border-[#3D8EF8]/35'
+                                            : 'bg-[#2C2C2E] border-white/10'
+                                            }`}
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className={`text-xs font-bold ${isMine ? 'text-[#A9CCFF]' : 'text-[#C8D1DC]'}`}>{getLabel(key)}</span>
+                                                {isRecommended && (
+                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/20 text-[#A9CCFF]">권장</span>
+                                                )}
+                                            </div>
+                                            <span className={`text-[10px] font-bold ${isMine ? 'text-[#A9CCFF]' : 'text-[#8B95A1]'}`}>
+                                                {isMine ? '내 변경 유지' : '원격 유지'}
+                                            </span>
+                                        </div>
+
+                                        {(countDiff && countDiff.localCount !== null && countDiff.remoteCount !== null) && (
+                                            <div className="mt-1.5 flex items-center justify-between text-[10px] text-[#8B95A1]">
+                                                <span>건수</span>
+                                                <span className="num">내 {countDiff.localCount} / 원격 {countDiff.remoteCount}</span>
+                                            </div>
+                                        )}
+
                                         {diff && (
-                                            <div className="flex items-center justify-between">
-                                                <span>{getLabel(key)}</span>
-                                                <span className="num">내 기준 rev {diff.expected} / 원격 rev {diff.remote} (Δ {revDeltaText(diff.expected, diff.remote)})</span>
+                                            <div className="mt-0.5 flex items-center justify-between text-[10px] text-[#6E7782]">
+                                                <span>버전 차이</span>
+                                                <span className="num">내 {diff.expected} / 원격 {diff.remote} (Δ {revDeltaText(diff.expected, diff.remote)})</span>
                                             </div>
                                         )}
-                                        {countDiff && countDiff.localCount !== null && countDiff.remoteCount !== null && (
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[#6E7782]">건수</span>
-                                                <span className="num text-[#6E7782]">내 {countDiff.localCount} / 원격 {countDiff.remoteCount}</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                    </button>
                                 )
                             })}
                         </div>
@@ -158,13 +185,14 @@ export default function SyncConflictModal({
                     원격 데이터를 먼저 동기화한 뒤, 선택한 항목만 다시 저장할 수 있습니다.
                 </p>
 
-                <p className="text-[10px] text-[#6E7782] leading-relaxed">
-                    현재 선택: {selectedKeys.length} / 전체 충돌: {conflictKeys.length}
-                </p>
-
-                <p className="text-[10px] text-[#6E7782] leading-relaxed">
-                    원격 마지막 수정: {formatUpdatedAt(remoteUpdatedAt)}
-                </p>
+                <div className="bg-[#12151E] border border-white/6 rounded-xl px-3 py-2">
+                    <p className="text-[10px] text-[#6E7782] leading-relaxed">
+                        현재 선택: {selectedKeys.length} / 전체 충돌: {conflictKeys.length}
+                    </p>
+                    <p className="text-[10px] text-[#6E7782] leading-relaxed mt-0.5">
+                        원격 마지막 수정: {formatRelativeTime(remoteUpdatedAt)} ({formatUpdatedAt(remoteUpdatedAt)})
+                    </p>
+                </div>
 
                 {conflictKeys.includes('settings') && conflictKeys.length > 1 && (
                     <p className="text-[10px] text-[#8B95A1] leading-relaxed">

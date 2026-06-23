@@ -75,9 +75,9 @@ export default function BottomNavigation({
                 aria-selected={isActive}
                 aria-label={`${label} 탭`}
                 aria-current={isActive ? 'page' : undefined}
-                className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 min-h-[56px] transition-colors"
+                className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-3.5 min-h-15 transition-colors"
               >
-                <div className={`flex items-center justify-center w-10 h-6 rounded-full transition-all duration-200 ${isActive ? 'bg-[#3D8EF8]/15' : ''}`}>
+                <div className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 ${isActive ? 'bg-[#3D8EF8]/15' : ''}`}>
                   <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} className={`transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/75'}`} />
                 </div>
                 <span className={`text-[11px] font-bold transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]/75'}`}>{label}</span>
@@ -98,9 +98,9 @@ export default function BottomNavigation({
                 aria-selected={isActive}
                 aria-label={`${label} 탭`}
                 aria-current={isActive ? 'page' : undefined}
-                className="flex-1 flex flex-col items-center gap-1 pt-3 pb-4 min-h-[56px] transition-colors"
+                className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-3.5 min-h-15 transition-colors"
               >
-                <div className={`flex items-center justify-center w-10 h-6 rounded-full transition-all duration-200 ${isActive ? 'bg-[#F5BE3A]/15' : ''}`}>
+                <div className={`flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 ${isActive ? 'bg-[#F5BE3A]/15' : ''}`}>
                   <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} className={`transition-colors duration-150 ${isActive ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/75'}`} />
                 </div>
                 <span className={`text-[11px] font-bold transition-colors duration-150 ${isActive ? 'text-[#F5BE3A]' : 'text-[#8B95A1]/75'}`}>{label}</span>

@@ -32,6 +32,11 @@ type MethodFilterType = 'all' | 'cash' | 'check' | 'credit' | string
 type BillingFilterType = 'all' | 'current' | 'next' | 'later'
 type PeriodMode = 'day' | 'week' | 'month'
 type QuickFilterPreset = 'all' | 'cash-expense' | 'check-expense' | 'credit-current' | 'credit-next'
+type CreditStatementMeta = {
+  statementYM: string
+  stage: 'current' | 'next' | 'later'
+  txBillingDay: number
+}
 
 const FILTER_TYPE_KEY = 'hb_tx_type_filter'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
@@ -42,15 +47,15 @@ const BALANCE_SECTION_OPEN_KEY = 'hb_tx_balance_section_open'
 const ACTIVE_FILTERS_SECTION_OPEN_KEY = 'hb_tx_active_filters_section_open'
 const INSIGHTS_SECTION_OPEN_KEY = 'hb_tx_insights_section_open'
 const SWIPE_SENSITIVITY_KEY = 'hb_tx_swipe_sensitivity'
+const SEARCH_SESSION_KEY = 'hb_tx_search'
 const GROUP_PAGE_SIZE = 12
 const ITEM_PAGE_SIZE = 20
 
-function getInitialSectionOpen(storageKey: string) {
+function getInitialSectionOpen(storageKey: string, defaultOpen = false) {
   const saved = localStorage.getItem(storageKey)
   if (saved === 'true') return true
   if (saved === 'false') return false
-  if (typeof window === 'undefined') return true
-  return window.innerWidth > 640
+  return defaultOpen
 }
 
 function HighlightText({ text, query, className }: { text: string; query: string; className?: string }) {
@@ -89,11 +94,21 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     if (saved === 'current' || saved === 'next' || saved === 'later' || saved === 'all') return saved
     return 'all'
   })
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem(SEARCH_SESSION_KEY) ?? ''
+  })
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    const trimmed = search.trim()
+    if (!trimmed) {
+      setDebouncedSearch('')
+      return
+    }
+
+    const delay = trimmed.length <= 2 ? 120 : trimmed.length <= 5 ? 220 : 320
+    const timer = setTimeout(() => setDebouncedSearch(search), delay)
     return () => clearTimeout(timer)
   }, [search])
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -143,6 +158,15 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   useEffect(() => {
     localStorage.setItem(BILLING_FILTER_KEY, billingFilter)
   }, [billingFilter])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!search.trim()) {
+      sessionStorage.removeItem(SEARCH_SESSION_KEY)
+      return
+    }
+    sessionStorage.setItem(SEARCH_SESSION_KEY, search)
+  }, [search])
 
   useEffect(() => {
     localStorage.setItem(FILTER_PANEL_OPEN_KEY, String(isFilterPanelOpen))
@@ -285,49 +309,69 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
   const monthly = useMemo(
     () => {
       const normalizedSearch = debouncedSearch.replace(/^#/, '').toLowerCase()
-      return monthTx
-        .filter((t) => !pendingDeleteIds.has(t.id))
-        .filter((t) => {
-          if (periodMode === 'day') return t.date === normalizedBaseDate
-          if (periodMode === 'week') return t.date >= weekRange.start && t.date <= weekRange.end
-          return true
-        })
-        .filter((t) => filter === 'all' || t.type === filter)
-        .filter((t) => {
-          if (methodFilter === 'all') return true
-          const isCardId = userPaymentMethods.some((m) => m.id === methodFilter)
-          if (isCardId) {
-            if (t.paymentMethodId) return t.paymentMethodId === methodFilter
-            const matchingCard = userPaymentMethods.find((m) => m.id === methodFilter)
-            if (!matchingCard) return false
-            if (matchingCard.type === 'credit') return isCreditPaymentMethod(t.paymentMethod)
-            return (t.paymentMethod ?? 'cash') === matchingCard.type
-          }
-          const method = t.paymentMethod ?? 'cash'
-          if (methodFilter === 'credit') return isCreditPaymentMethod(method)
-          return method === methodFilter
-        })
-        .filter((t) => {
-          if (statementMonthFilter) {
-            if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return false
-            const statementYM = getStatementYMForCardExpense(t.date, resolveCardBillingDay(t, userPaymentMethods, cardBillingDay))
-            if (statementYM !== statementMonthFilter) return false
-          }
+      const hasSearch = !!debouncedSearch
+      const selectedMethod = methodFilter !== 'all'
+        ? userPaymentMethods.find((m) => m.id === methodFilter)
+        : undefined
+      const methodFilterIsCardId = !!selectedMethod
+      const result: Transaction[] = []
 
-          if (billingFilter === 'all') return true
-          if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return false
-          const statementYM = getStatementYMForCardExpense(t.date, resolveCardBillingDay(t, userPaymentMethods, cardBillingDay))
-          const stage = getBillingStage(yearMonth, statementYM)
-          return stage === billingFilter
-        })
-        .filter((t) =>
-          !debouncedSearch ||
-          t.category.toLowerCase().includes(normalizedSearch) ||
-          t.description.toLowerCase().includes(normalizedSearch) ||
-          (t.tags ?? []).some((tag) => tag.toLowerCase().includes(normalizedSearch))
-        )
-        .filter((t) => !activeTag || (t.tags ?? []).includes(activeTag))
-        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+      for (const t of monthTx) {
+        if (pendingDeleteIds.has(t.id)) continue
+
+        if (periodMode === 'day' && t.date !== normalizedBaseDate) continue
+        if (periodMode === 'week' && (t.date < weekRange.start || t.date > weekRange.end)) continue
+
+        if (filter !== 'all' && t.type !== filter) continue
+
+        if (methodFilter !== 'all') {
+          if (methodFilterIsCardId) {
+            if (!selectedMethod) continue
+            if (t.paymentMethodId) {
+              if (t.paymentMethodId !== methodFilter) continue
+            } else if (selectedMethod.type === 'credit') {
+              if (!isCreditPaymentMethod(t.paymentMethod)) continue
+            } else if ((t.paymentMethod ?? 'cash') !== selectedMethod.type) {
+              continue
+            }
+          } else {
+            const method = t.paymentMethod ?? 'cash'
+            if (methodFilter === 'credit') {
+              if (!isCreditPaymentMethod(method)) continue
+            } else if (method !== methodFilter) {
+              continue
+            }
+          }
+        }
+
+        if (statementMonthFilter || billingFilter !== 'all') {
+          if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) continue
+          const statementYM = getStatementYMForCardExpense(
+            t.date,
+            resolveCardBillingDay(t, userPaymentMethods, cardBillingDay),
+          )
+          if (statementMonthFilter && statementYM !== statementMonthFilter) continue
+          if (billingFilter !== 'all') {
+            const stage = getBillingStage(yearMonth, statementYM)
+            if (stage !== billingFilter) continue
+          }
+        }
+
+        if (hasSearch) {
+          const matchesSearch =
+            t.category.toLowerCase().includes(normalizedSearch) ||
+            t.description.toLowerCase().includes(normalizedSearch) ||
+            (t.tags ?? []).some((tag) => tag.toLowerCase().includes(normalizedSearch))
+          if (!matchesSearch) continue
+        }
+
+        if (activeTag && !(t.tags ?? []).includes(activeTag)) continue
+
+        result.push(t)
+      }
+
+      result.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+      return result
     },
     [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, debouncedSearch, activeTag, cardBillingDay, yearMonth, userPaymentMethods]
   )
@@ -452,6 +496,12 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     (activeTag ? 1 : 0) +
     (search ? 1 : 0)
 
+  useEffect(() => {
+    if (isFiltered) {
+      setIsActiveFiltersSectionOpen(true)
+    }
+  }, [isFiltered])
+
   const methodSummary = useMemo(() => {
     const map: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
       cash: { income: 0, expense: 0 },
@@ -491,6 +541,18 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
     return { topCat, avgAmt, maxTx }
   }, [monthly])
+
+  const creditStatementMetaById = useMemo(() => {
+    const map = new Map<string, CreditStatementMeta>()
+    monthly.forEach((t) => {
+      if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return
+      const txBillingDay = resolveCardBillingDay(t, userPaymentMethods, cardBillingDay)
+      const statementYM = getStatementYMForCardExpense(t.date, txBillingDay)
+      const stage = getBillingStage(yearMonth, statementYM)
+      map.set(t.id, { statementYM, stage, txBillingDay })
+    })
+    return map
+  }, [monthly, userPaymentMethods, cardBillingDay, yearMonth])
 
   const insightHeaderText = useMemo(() => {
     if (isFiltered && monthly.length > 0) return `${monthly.length}건`
@@ -1253,7 +1315,11 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
             <EmptyState
               emoji={search || activeTag ? '🔍' : '📋'}
               title={activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
-              description={!search && !activeTag && filter === 'all' && methodFilter === 'all' && billingFilter === 'all' && !statementMonthFilter ? '+ 버튼을 눌러 첫 내역을 추가해보세요' : undefined}
+              description={
+                !search && !activeTag && filter === 'all' && methodFilter === 'all' && billingFilter === 'all' && !statementMonthFilter
+                  ? '+ 버튼을 눌러 첫 내역을 추가해보세요'
+                  : '조건을 바꾸거나 필터를 초기화해보세요'
+              }
               action={(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) ? { label: '필터 전체 초기화', onClick: resetAllFilters } : undefined}
             />
           </div>
@@ -1309,13 +1375,13 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                         <div className={`absolute right-0 top-0 bottom-0 flex items-center gap-1 px-3 transition-all duration-200 ${isSwiped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                           <button
                             onClick={(e) => { e.stopPropagation(); onEdit(t); setSwipedId(null) }}
-                            className="w-10 h-10 rounded-xl bg-[#3D8EF8]/20 flex items-center justify-center text-[#3D8EF8]"
+                            className="w-11 h-11 rounded-xl bg-[#3D8EF8]/20 flex items-center justify-center text-[#3D8EF8]"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteWithUndo(t.id) }}
-                            className="w-10 h-10 rounded-xl bg-[#F25260]/20 flex items-center justify-center text-[#F25260]"
+                            className="w-11 h-11 rounded-xl bg-[#F25260]/20 flex items-center justify-center text-[#F25260]"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1404,25 +1470,24 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                               </span>
                             )
                           })()}
-                          {t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod) && (() => {
-                            const txBillingDay = resolveCardBillingDay(t, userPaymentMethods, cardBillingDay)
-                            const statementYM = getStatementYMForCardExpense(t.date, txBillingDay)
-                            const stage = getBillingStage(yearMonth, statementYM)
+                          {(() => {
+                            const meta = creditStatementMetaById.get(t.id)
+                            if (!meta) return null
                             return (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 ml-1 font-bold ${stage === 'current'
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 ml-1 font-bold ${meta.stage === 'current'
                                 ? 'bg-[#F5BE3A]/20 text-[#F5BE3A]'
-                                : stage === 'next'
+                                : meta.stage === 'next'
                                   ? 'bg-[#3D8EF8]/20 text-[#79B2FF]'
                                   : 'bg-[#8B95A1]/20 text-[#B9C0C8]'
                                 }`}
-                                title={`결제일 ${txBillingDay}일 기준 · ${statementYM} 청구`}
+                                title={`결제일 ${meta.txBillingDay}일 기준 · ${meta.statementYM} 청구`}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  setStatementMonthFilter(statementYM)
+                                  setStatementMonthFilter(meta.statementYM)
                                   setMethodFilter('credit')
                                 }}
                               >
-                                {stage === 'current' ? '이번 청구' : stage === 'next' ? '다음 청구' : `${statementYM.slice(5)}월 청구`}
+                                {meta.stage === 'current' ? '이번 청구' : meta.stage === 'next' ? '다음 청구' : `${meta.statementYM.slice(5)}월 청구`}
                               </span>
                             )
                           })()}
