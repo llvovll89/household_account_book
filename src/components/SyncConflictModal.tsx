@@ -134,11 +134,12 @@ export default function SyncConflictModal({
                         </div>
 
                         <div className="space-y-2">
-                            {conflictKeys.map((key) => (
+                            {conflictKeys.map((key) => {
                                 const diff = versionDiffs[key]
                                 const countDiff = countDiffs[key]
                                 const isMine = selectedKeys.includes(key)
                                 const isRecommended = recommendedSet.has(key)
+
                                 return (
                                     <button
                                         key={key}

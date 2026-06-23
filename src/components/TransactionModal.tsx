@@ -621,67 +621,67 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
             {showAdvanced && (
               <>
-            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
-              <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
-                메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
-              </p>
-              <textarea
-                value={description}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setDescription(val)
-                  if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
-                    const matched = applyAutoCategory(val, type, autoCategoryRules)
-                    if (matched) { setCategory(matched); setAutoCategoryApplied(true) }
-                    else setAutoCategoryApplied(false)
-                  }
-                }}
-                placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
-                rows={3}
-                className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
-              />
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-            </div>
+                <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
+                  <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
+                    메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
+                  </p>
+                  <textarea
+                    value={description}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setDescription(val)
+                      if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
+                        const matched = applyAutoCategory(val, type, autoCategoryRules)
+                        if (matched) { setCategory(matched); setAutoCategoryApplied(true) }
+                        else setAutoCategoryApplied(false)
+                      }
+                    }}
+                    placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
+                    rows={3}
+                    className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
+                  />
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
+                        >
+                          #{tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            aria-label={`#${tag} 태그 삭제`}
+                            className="hover:text-white transition-colors"
+                          >
+                            <X size={10} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">기간 설정 (선택)</p>
-                <button
-                  type="button"
-                  onClick={toggleDateEnd}
-                  className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
-                    }`}
-                >
-                  <CalendarRange size={11} />
-                  {showDateEnd ? '기간 사용 중' : '기간 설정'}
-                </button>
-              </div>
-              {showDateEnd && (
-                <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
-                  <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
-                  <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
-                </div>
-              )}
-            </div>
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">기간 설정 (선택)</p>
+                    <button
+                      type="button"
+                      onClick={toggleDateEnd}
+                      className={`flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg transition-colors ${showDateEnd ? 'bg-[#3D8EF8]/20 text-[#3D8EF8]' : 'bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]'
+                        }`}
                     >
-                      #{tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        aria-label={`#${tag} 태그 삭제`}
-                        className="hover:text-white transition-colors"
-                      >
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))}
+                      <CalendarRange size={11} />
+                      {showDateEnd ? '기간 사용 중' : '기간 설정'}
+                    </button>
+                  </div>
+                  {showDateEnd && (
+                    <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
+                      <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
+                      <FancyDatePicker value={dateEnd || date} onChange={setDateEnd} min={date} />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
               </>
             )}
 

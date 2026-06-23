@@ -34,7 +34,7 @@ type PeriodMode = 'day' | 'week' | 'month'
 type QuickFilterPreset = 'all' | 'cash-expense' | 'check-expense' | 'credit-current' | 'credit-next'
 type CreditStatementMeta = {
   statementYM: string
-  stage: 'current' | 'next' | 'later'
+  stage: 'current' | 'next' | 'later' | 'past'
   txBillingDay: number
 }
 
