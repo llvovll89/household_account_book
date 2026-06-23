@@ -237,6 +237,7 @@ export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClos
                         max="31"
                         value={editBillingDay}
                         onChange={(e) => { setEditBillingDay(e.target.value); setEditError('') }}
+                        onFocus={e => e.target.select()}
                         className="w-16 bg-[#1C1C1E] text-white text-center rounded-xl px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                       />
                       <span className="text-xs text-[#8B95A1]">일</span>
@@ -296,6 +297,7 @@ export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClos
                       max="31"
                       value={addBillingDay}
                       onChange={(e) => { setAddBillingDay(e.target.value); setAddError('') }}
+                      onFocus={e => e.target.select()}
                       className="w-16 bg-[#1C1C1E] text-white text-center rounded-xl px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                     />
                     <span className="text-xs text-[#8B95A1]">일</span>

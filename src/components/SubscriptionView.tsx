@@ -404,6 +404,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                 max={31}
                 value={form.billingDay}
                 onChange={e => setForm(f => ({ ...f, billingDay: Math.min(31, Math.max(1, Number(e.target.value))) }))}
+                onFocus={e => e.target.select()}
                 className="mt-2 w-full bg-[#2C2C2E] rounded-xl px-3 py-2 text-sm text-white focus:outline-none num"
                 placeholder="직접 입력 (1-31)"
               />

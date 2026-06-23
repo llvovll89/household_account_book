@@ -935,6 +935,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                       max="31"
                       value={billingDayInput}
                       onChange={(e) => setBillingDayInput(e.target.value)}
+                      onFocus={e => e.target.select()}
                       className="w-12 bg-[#1C1C1E] text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                     />
                     <button onClick={() => { void handleSaveBillingDay() }} className="text-[11px] px-2 py-1 rounded-lg bg-[#3D8EF8] text-white font-bold">저장</button>

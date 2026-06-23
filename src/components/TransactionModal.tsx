@@ -505,6 +505,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     max="31"
                     value={creditBillingDayInput}
                     onChange={(e) => setCreditBillingDayInput(e.target.value)}
+                    onFocus={e => e.target.select()}
                     className="w-14 bg-[#2C2C2E] text-white text-center rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                   />
                   <span className="text-[11px] text-[#8B95A1]">일</span>
