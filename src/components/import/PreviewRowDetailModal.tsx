@@ -6,6 +6,8 @@ interface PreviewRow extends ParsedRow {
   category: string
   skip: boolean
   isDuplicate: boolean
+  needsReview: boolean
+  reviewReasons: string[]
 }
 
 interface Props {
@@ -19,7 +21,7 @@ export default function PreviewRowDetailModal({ row, onClose, onUpdate }: Props)
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-100" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/[0.06]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -47,6 +49,22 @@ export default function PreviewRowDetailModal({ row, onClose, onUpdate }: Props)
             <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
               <p className="text-[10px] font-semibold text-[#4E5968] mb-1">적요</p>
               <p className="text-sm text-white break-all">{row.description}</p>
+            </div>
+          )}
+
+          {row.needsReview && (
+            <div className="bg-[#F25260]/10 border border-[#F25260]/15 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-semibold text-[#F25260] mb-2">검토 필요 사유</p>
+              <div className="flex flex-wrap gap-1.5">
+                {row.reviewReasons.map((reason) => (
+                  <span
+                    key={reason}
+                    className="inline-flex items-center rounded-full border border-[#F25260]/25 bg-[#F25260]/12 px-2 py-0.5 text-[10px] font-semibold text-[#F25260]"
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 

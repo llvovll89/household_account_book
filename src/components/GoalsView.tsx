@@ -4,6 +4,7 @@ import type { SavingsGoal, Transaction } from '../types'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types'
 import { fmt, generateId, parseYmdLocal } from '../lib/format'
 import { showToast } from '../lib/toast'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   goals: SavingsGoal[]
@@ -215,7 +216,13 @@ export default function GoalsView({ goals, transactions = [], addTrigger, onChan
       <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-2">저축 목표 현황</p>
         {goals.length === 0 ? (
-          <p className="text-[#8B95A1] text-sm">목표를 추가해 저축을 시작해보세요</p>
+          <EmptyState
+            emoji="🎯"
+            title="목표를 추가해 저축을 시작해보세요"
+            description="여행, 비상금, 이사 비용처럼 목적이 있는 목표를 만들면 달성률을 한눈에 추적할 수 있어요."
+            action={{ label: '목표 추가', onClick: openAdd }}
+            className="py-6 px-2"
+          />
         ) : (
           <>
             <div className="flex items-end justify-between mb-3">
@@ -246,13 +253,13 @@ export default function GoalsView({ goals, transactions = [], addTrigger, onChan
 
       {/* 목표 목록 */}
       {goals.length === 0 ? (
-        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center">
-          <p className="text-4xl mb-3">🎯</p>
-          <p className="font-bold text-white text-[15px]">저축 목표가 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">여행, 비상금, 내 집 마련 등 목표를 세워보세요</p>
-          <button onClick={openAdd} className="mt-4 px-5 py-2 bg-[#3D8EF8] text-white text-sm font-bold rounded-xl">
-            목표 추가하기
-          </button>
+        <div className="bg-[#1C1C1E] rounded-2xl">
+          <EmptyState
+            emoji="🎯"
+            title="저축 목표가 없어요"
+            description="작은 목표 하나만 추가해도 자동 집계와 일일 필요 금액을 바로 확인할 수 있어요."
+            action={{ label: '목표 추가하기', onClick: openAdd }}
+          />
         </div>
       ) : (
         <div className="space-y-3">
@@ -337,7 +344,7 @@ export default function GoalsView({ goals, transactions = [], addTrigger, onChan
                       />
                     )
                   })}
-                  <div className="flex justify-between mt-1.5 px-[2px]">
+                  <div className="flex justify-between mt-1.5 px-0.5">
                     {[25, 50, 75, 100].map(ms => (
                       <span key={ms} className={`text-[8px] font-bold transition-colors ${pct >= ms ? 'text-[#8B95A1]' : 'text-[#3A3A3C]'}`}>{ms}%</span>
                     ))}

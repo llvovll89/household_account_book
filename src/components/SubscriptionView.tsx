@@ -4,6 +4,7 @@ import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
 import { fmt } from '../lib/format'
 import { generateId } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   subscriptions: Subscription[]
@@ -134,7 +135,13 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       <div className="bg-[#1C1C1E] rounded-2xl p-5">
         <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-1">월 구독 비용</p>
         {subscriptions.length === 0 ? (
-          <p className="text-[#8B95A1] text-sm">구독 서비스를 추가해보세요</p>
+          <EmptyState
+            emoji="💳"
+            title="구독 서비스를 추가해보세요"
+            description="넷플릭스, 유튜브 프리미엄 같은 고정비를 먼저 등록하면 월 지출을 더 정확히 볼 수 있어요."
+            action={{ label: '구독 추가', onClick: openAdd }}
+            className="py-6 px-2"
+          />
         ) : (
           <>
             <div className="flex items-end gap-3 flex-wrap mb-3">
@@ -187,16 +194,13 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
       {/* 구독 목록 */}
       {sorted.length === 0 ? (
-        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center">
-          <p className="text-4xl mb-3">💳</p>
-          <p className="font-bold text-white text-[15px]">구독 서비스가 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1">넷플릭스, 유튜브 프리미엄 등을 추가해보세요</p>
-          <button
-            onClick={openAdd}
-            className="mt-4 px-5 py-2 bg-[#3D8EF8] text-white text-sm font-bold rounded-xl"
-          >
-            추가하기
-          </button>
+        <div className="bg-[#1C1C1E] rounded-2xl">
+          <EmptyState
+            emoji="💳"
+            title="구독 서비스가 없어요"
+            description="월 고정비를 먼저 입력하면 청구일 알림과 절감 시뮬레이터를 바로 활용할 수 있어요."
+            action={{ label: '구독 추가하기', onClick: openAdd }}
+          />
         </div>
       ) : (
         <div className="space-y-2">

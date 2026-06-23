@@ -12,6 +12,7 @@ import {
   getPreviousPeriod,
   getPresetRange,
 } from '../lib/spendingRules'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   transactions: Transaction[]
@@ -210,7 +211,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
               value={startDate}
               max={endDate || undefined}
               onChange={(e) => handleStartChange(e.target.value)}
-              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
+              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/6 outline-none focus:border-[#3D8EF8]/60"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -221,7 +222,7 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
               value={endDate}
               min={startDate || undefined}
               onChange={(e) => handleEndChange(e.target.value)}
-              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/[0.06] outline-none focus:border-[#3D8EF8]/60"
+              className="w-full bg-[#2C2C2E] text-white text-sm rounded-xl px-3 py-2.5 border border-white/6 outline-none focus:border-[#3D8EF8]/60"
               style={{ colorScheme: 'dark' }}
             />
           </div>
@@ -238,6 +239,17 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
 
       {isValidRange && (
         <>
+          {periodTxs.length === 0 ? (
+            <div className="bg-[#1C1C1E] rounded-2xl">
+              <EmptyState
+                emoji="📭"
+                title="선택한 기간에 내역이 없어요"
+                description="기간을 바꾸거나 내역을 추가하면 지출 분석을 볼 수 있어요."
+                action={{ label: '이번 달 보기', onClick: () => handlePreset('this_month') }}
+              />
+            </div>
+          ) : (
+            <>
           {/* ── 요약 카드 ────────────────────────────────────── */}
           <div className="bg-[#1C1C1E] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
@@ -514,6 +526,8 @@ export default function SpendingAnalysisView({ transactions, budgets }: Props) {
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </>
       )}
