@@ -1,4 +1,5 @@
 import type { Transaction, Budget } from '../types'
+import { parseYmdLocal } from './format'
 
 export type PresetKey = 'this_month' | 'last_month' | 'last_30' | 'last_90'
 
@@ -18,14 +19,14 @@ function toYmd(d: Date): string {
 }
 
 function dateMinusDays(ymd: string, days: number): string {
-  const d = new Date(ymd + 'T00:00:00')
+  const d = parseYmdLocal(ymd)
   d.setDate(d.getDate() - days)
   return toYmd(d)
 }
 
 export function daysBetween(start: string, end: string): number {
-  const s = new Date(start + 'T00:00:00')
-  const e = new Date(end + 'T00:00:00')
+  const s = parseYmdLocal(start)
+  const e = parseYmdLocal(end)
   return Math.max(1, Math.round((e.getTime() - s.getTime()) / 86_400_000) + 1)
 }
 
@@ -210,7 +211,7 @@ export function generateSuggestions(
     const weekdayByDate: Record<string, number> = {}
 
     periodExpenses.forEach((t) => {
-      const dow = new Date(t.date + 'T00:00:00').getDay()
+      const dow = parseYmdLocal(t.date).getDay()
       if (dow === 0 || dow === 6) {
         weekendByDate[t.date] = (weekendByDate[t.date] || 0) + t.amount
       } else {

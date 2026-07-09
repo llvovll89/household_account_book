@@ -37,6 +37,7 @@ type CreditStatementMeta = {
   stage: 'current' | 'next' | 'later' | 'past'
   txBillingDay: number
 }
+type ResolvedPaymentMethod = ReturnType<typeof resolvePaymentMethod>
 
 const FILTER_TYPE_KEY = 'hb_tx_type_filter'
 const METHOD_FILTER_KEY = 'hb_tx_method_filter'
@@ -78,6 +79,8 @@ function HighlightText({ text, query, className }: { text: string; query: string
 }
 
 export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onBulkEdit, onArchiveDone, onOpenTagManager }: Props) {
+  const perfTier = transactions.length >= 10000 ? '10k+' : transactions.length >= 5000 ? '5k+' : null
+  const shouldLogPerf = import.meta.env.DEV && perfTier !== null
   const [filter, setFilter] = useState<FilterType>(() => {
     const saved = localStorage.getItem(FILTER_TYPE_KEY)
     if (saved === 'income' || saved === 'expense' || saved === 'all') return saved
@@ -194,7 +197,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         if (current.swipeSensitivity === swipeSensitivity) return
         await saveSettings({ ...current, swipeSensitivity })
       } catch {
-        // 설정 저장 실패 시에도 UX 동작은 로컬 상태로 유지
+        showToast('스와이프 감도 저장에 실패했어요. 설정을 다시 확인해주세요.')
       }
     })()
   }, [swipeSensitivity])
@@ -224,7 +227,9 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         didHydrateSwipeRef.current = true
 
         if (settings.swipeSensitivity !== nextSensitivity) {
-          void saveSettings({ ...settings, swipeSensitivity: nextSensitivity })
+          void saveSettings({ ...settings, swipeSensitivity: nextSensitivity }).catch(() => {
+            // 초기 마이그레이션 저장 실패는 다음 사용자 변경 시 재시도된다.
+          })
         }
       }
     })
@@ -242,7 +247,12 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     }
     try {
       const current = await loadSettings()
-      await saveSettings({ ...current, cardBillingDay: val })
+      const nextMethods = current.userPaymentMethods.map((method) =>
+        method.type === 'credit'
+          ? { ...method, billingDay: val }
+          : method
+      )
+      await saveSettings({ ...current, cardBillingDay: val, userPaymentMethods: nextMethods })
       setCardBillingDay(val)
       setEditingBillingDay(false)
       showToast(`카드 결제일이 ${val}일로 저장됐어요.`)
@@ -308,6 +318,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
 
   const monthly = useMemo(
     () => {
+      const perfStart = shouldLogPerf ? performance.now() : 0
       const normalizedSearch = debouncedSearch.replace(/^#/, '').toLowerCase()
       const hasSearch = !!debouncedSearch
       const selectedMethod = methodFilter !== 'all'
@@ -371,41 +382,138 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
       }
 
       result.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
+
+      if (shouldLogPerf) {
+        const elapsed = performance.now() - perfStart
+        console.info(`[perf][TransactionList][${perfTier}] monthly-filter ${elapsed.toFixed(1)}ms`, {
+          sourceCount: monthTx.length,
+          resultCount: result.length,
+          periodMode,
+          filter,
+          methodFilter,
+          billingFilter,
+          statementMonthFilter,
+          hasSearch,
+          hasTag: !!activeTag,
+        })
+      }
+
       return result
     },
-    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, debouncedSearch, activeTag, cardBillingDay, yearMonth, userPaymentMethods]
+    [monthTx, periodMode, normalizedBaseDate, weekRange, filter, methodFilter, billingFilter, statementMonthFilter, debouncedSearch, activeTag, cardBillingDay, yearMonth, userPaymentMethods, shouldLogPerf, perfTier]
   )
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, {
+  const monthlyDerived = useMemo(() => {
+    const perfStart = shouldLogPerf ? performance.now() : 0
+    const groupedMap = new Map<string, {
       date: string
       list: Transaction[]
       income: number
       expense: number
       balance: number
     }>()
+    const tagMap = new Map<string, { income: number; expense: number; count: number }>()
+    const monthlyExpenseCategoryMap: Record<string, number> = {}
+    const methodSummary: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
+      cash: { income: 0, expense: 0 },
+      check: { income: 0, expense: 0 },
+      credit: { income: 0, expense: 0 },
+    }
+    const creditStatementMetaById = new Map<string, CreditStatementMeta>()
+    const resolvedMethodById = new Map<string, ResolvedPaymentMethod>()
+
+    let filteredIncome = 0
+    let filteredExpense = 0
+    let maxExpenseAmount = 0
+    let totalAmount = 0
+    let maxExpenseTx: Transaction | null = null
+
     monthly.forEach((t) => {
-      const existing = map.get(t.date)
-      if (existing) {
-        existing.list.push(t)
-        if (t.type === 'income') existing.income += t.amount
-        else existing.expense += t.amount
-        existing.balance = existing.income - existing.expense
-        return
+      totalAmount += t.amount
+
+      const grouped = groupedMap.get(t.date)
+      if (grouped) {
+        grouped.list.push(t)
+        if (t.type === 'income') grouped.income += t.amount
+        else grouped.expense += t.amount
+        grouped.balance = grouped.income - grouped.expense
+      } else {
+        const income = t.type === 'income' ? t.amount : 0
+        const expense = t.type === 'expense' ? t.amount : 0
+        groupedMap.set(t.date, {
+          date: t.date,
+          list: [t],
+          income,
+          expense,
+          balance: income - expense,
+        })
       }
 
-      const income = t.type === 'income' ? t.amount : 0
-      const expense = t.type === 'expense' ? t.amount : 0
-      map.set(t.date, {
-        date: t.date,
-        list: [t],
-        income,
-        expense,
-        balance: income - expense,
+      if (t.type === 'income') {
+        filteredIncome += t.amount
+      } else {
+        filteredExpense += t.amount
+        monthlyExpenseCategoryMap[t.category] = (monthlyExpenseCategoryMap[t.category] || 0) + t.amount
+        if (t.amount > maxExpenseAmount) maxExpenseAmount = t.amount
+        if (!maxExpenseTx || t.amount > maxExpenseTx.amount) maxExpenseTx = t
+      }
+
+      const resolvedMethod = resolvePaymentMethod(t, userPaymentMethods)
+      resolvedMethodById.set(t.id, resolvedMethod)
+      if (t.type === 'income') methodSummary[resolvedMethod.type].income += t.amount
+      else methodSummary[resolvedMethod.type].expense += t.amount
+
+      const tags = t.tags ?? []
+      tags.forEach((tag) => {
+        const cur = tagMap.get(tag) ?? { income: 0, expense: 0, count: 0 }
+        if (t.type === 'income') cur.income += t.amount
+        else cur.expense += t.amount
+        cur.count += 1
+        tagMap.set(tag, cur)
       })
+
+      if (t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod)) {
+        const txBillingDay = resolveCardBillingDay(t, userPaymentMethods, cardBillingDay)
+        const statementYM = getStatementYMForCardExpense(t.date, txBillingDay)
+        const stage = getBillingStage(yearMonth, statementYM)
+        creditStatementMetaById.set(t.id, { statementYM, stage, txBillingDay })
+      }
     })
-    return Array.from(map.values())
-  }, [monthly])
+
+    let topExpenseCategory: [string, number] | null = null
+    Object.entries(monthlyExpenseCategoryMap).forEach(([category, amount]) => {
+      if (!topExpenseCategory || amount > topExpenseCategory[1]) {
+        topExpenseCategory = [category, amount]
+      }
+    })
+
+    const derived = {
+      grouped: Array.from(groupedMap.values()),
+      tagSummary: Array.from(tagMap.entries()).sort((a, b) => (b[1].income + b[1].expense) - (a[1].income + a[1].expense)),
+      filteredIncome,
+      filteredExpense,
+      maxExpenseAmount,
+      methodSummary,
+      creditStatementMetaById,
+      resolvedMethodById,
+      topExpenseCategory,
+      maxExpenseTx,
+      avgAmt: monthly.length > 0 ? Math.round(totalAmount / monthly.length) : 0,
+    }
+
+    if (shouldLogPerf) {
+      const elapsed = performance.now() - perfStart
+      console.info(`[perf][TransactionList][${perfTier}] monthly-derived ${elapsed.toFixed(1)}ms`, {
+        monthlyCount: monthly.length,
+        groupCount: derived.grouped.length,
+        tagCount: derived.tagSummary.length,
+      })
+    }
+
+    return derived
+  }, [monthly, userPaymentMethods, cardBillingDay, yearMonth, shouldLogPerf, perfTier])
+
+  const grouped = monthlyDerived.grouped
 
   const visibleGrouped = useMemo(
     () => grouped.slice(0, visibleGroupCount),
@@ -449,42 +557,10 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     }
   }, [grouped.length, visibleGroupCount])
 
-  // 태그별 합계 (현재 필터 기준)
-  const tagSummary = useMemo(() => {
-    const map = new Map<string, { income: number; expense: number; count: number }>()
-    monthly.forEach((t) => {
-      const tags = t.tags ?? []
-      tags.forEach((tag) => {
-        const cur = map.get(tag) ?? { income: 0, expense: 0, count: 0 }
-        if (t.type === 'income') cur.income += t.amount
-        else cur.expense += t.amount
-        cur.count += 1
-        map.set(tag, cur)
-      })
-    })
-    return Array.from(map.entries()).sort((a, b) => (b[1].income + b[1].expense) - (a[1].income + a[1].expense))
-  }, [monthly])
-
-  const { filteredIncome, filteredExpense, maxExpenseAmount } = useMemo(() => {
-    let income = 0
-    let expense = 0
-    let maxExpense = 0
-
-    monthly.forEach((t) => {
-      if (t.type === 'income') {
-        income += t.amount
-        return
-      }
-      expense += t.amount
-      if (t.amount > maxExpense) maxExpense = t.amount
-    })
-
-    return {
-      filteredIncome: income,
-      filteredExpense: expense,
-      maxExpenseAmount: maxExpense,
-    }
-  }, [monthly])
+  const tagSummary = monthlyDerived.tagSummary
+  const filteredIncome = monthlyDerived.filteredIncome
+  const filteredExpense = monthlyDerived.filteredExpense
+  const maxExpenseAmount = monthlyDerived.maxExpenseAmount
 
   const isFiltered = filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || !!statementMonthFilter || !!activeTag || !!search
 
@@ -502,21 +578,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     }
   }, [isFiltered])
 
-  const methodSummary = useMemo(() => {
-    const map: Record<'cash' | 'check' | 'credit', { income: number; expense: number }> = {
-      cash: { income: 0, expense: 0 },
-      check: { income: 0, expense: 0 },
-      credit: { income: 0, expense: 0 },
-    }
-
-    monthly.forEach((t) => {
-      const { type: method } = resolvePaymentMethod(t, userPaymentMethods)
-      if (t.type === 'income') map[method].income += t.amount
-      else map[method].expense += t.amount
-    })
-
-    return map
-  }, [monthly, userPaymentMethods])
+  const methodSummary = monthlyDerived.methodSummary
 
   const methodsNetTotal = useMemo(() => {
     return (['cash', 'check', 'credit'] as const).reduce(
@@ -525,34 +587,19 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
     )
   }, [methodSummary])
 
-  const insightSummary = useMemo(() => {
+  const insightSummary = useMemo<{ topCat: [string, number]; avgAmt: number; maxTx: Transaction } | null>(() => {
     if (monthly.length < 3) return null
-    const expenses = monthly.filter((t) => t.type === 'expense')
-    if (!expenses.length) return null
+    if (!monthlyDerived.maxExpenseTx || !monthlyDerived.topExpenseCategory) return null
 
-    const catMap: Record<string, number> = {}
-    expenses.forEach((t) => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount
-    })
+    return {
+      topCat: monthlyDerived.topExpenseCategory,
+      avgAmt: monthlyDerived.avgAmt,
+      maxTx: monthlyDerived.maxExpenseTx,
+    }
+  }, [monthly.length, monthlyDerived])
 
-    const topCat = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0]
-    const avgAmt = Math.round(monthly.reduce((s, t) => s + t.amount, 0) / monthly.length)
-    const maxTx = expenses.reduce((a, b) => (b.amount > a.amount ? b : a), expenses[0])
-
-    return { topCat, avgAmt, maxTx }
-  }, [monthly])
-
-  const creditStatementMetaById = useMemo(() => {
-    const map = new Map<string, CreditStatementMeta>()
-    monthly.forEach((t) => {
-      if (t.type !== 'expense' || !isCreditPaymentMethod(t.paymentMethod)) return
-      const txBillingDay = resolveCardBillingDay(t, userPaymentMethods, cardBillingDay)
-      const statementYM = getStatementYMForCardExpense(t.date, txBillingDay)
-      const stage = getBillingStage(yearMonth, statementYM)
-      map.set(t.id, { statementYM, stage, txBillingDay })
-    })
-    return map
-  }, [monthly, userPaymentMethods, cardBillingDay, yearMonth])
+  const creditStatementMetaById = monthlyDerived.creditStatementMetaById
+  const resolvedMethodById = monthlyDerived.resolvedMethodById
 
   const insightHeaderText = useMemo(() => {
     if (isFiltered && monthly.length > 0) return `${monthly.length}건`
@@ -884,7 +931,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                 {debouncedSearch ? (
                   <>
                     <span className="text-[#3D8EF8] font-bold">
-                      {grouped.reduce((s, g) => s + g.list.length, 0)}건
+                      {monthly.length}건
                     </span>
                     <span className="text-[#4E5968]"> 검색됨 · Esc 초기화</span>
                   </>
@@ -1458,7 +1505,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
                             <HighlightText text={t.description} query={debouncedSearch} className="text-xs text-[#4E5968] truncate mt-0.5 block" />
                           )}
                           {(() => {
-                            const resolved = resolvePaymentMethod(t, userPaymentMethods)
+                            const resolved = resolvedMethodById.get(t.id) ?? resolvePaymentMethod(t, userPaymentMethods)
                             const emoji = resolved.type === 'cash' ? '💵' : resolved.type === 'check' ? '💳' : '💎'
                             return (
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${resolved.type === 'credit'

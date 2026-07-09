@@ -116,7 +116,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
   const memoByDate = useMemo(() => {
     const map = new Map<string, Memo[]>()
     for (const memo of memos) {
-      const startKey = memo.date ?? new Date(memo.updatedAt).toISOString().slice(0, 10)
+      const startKey = memo.date ?? toLocalDateStr(new Date(memo.updatedAt))
       // 기간 메모는 시작일·종료일에만 표시 (중간 날짜 제외)
       const keys = memo.dateEnd ? [startKey, memo.dateEnd] : [startKey]
       for (const key of keys) {

@@ -4,6 +4,7 @@ import type { Transaction } from '../types'
 import { exportTransactionsCSV } from '../lib/exportCsv'
 import { archiveTransactionsBefore, getLocalStorageUsageBytes } from '../lib/storage'
 import { showToast } from '../lib/toast'
+import { parseYmdLocal, toLocalDateStr } from '../lib/format'
 import FancyDatePicker from './FancyDatePicker'
 
 interface Props {
@@ -81,14 +82,14 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
     switch (range) {
       case 'lastMonth': {
         const last = getYearMonth(-1)
-        const [y, m] = last.split('-').map(Number)
-        const nextMonth = new Date(y, m, 1)
-        return nextMonth.toISOString().slice(0, 10)
+        const d = parseYmdLocal(`${last}-01`)
+        d.setMonth(d.getMonth() + 1)
+        return toLocalDateStr(d)
       }
       case 'custom': {
-        const d = new Date(customTo)
+        const d = parseYmdLocal(customTo)
         d.setDate(d.getDate() + 1)
-        return d.toISOString().slice(0, 10)
+        return toLocalDateStr(d)
       }
       case 'thisYear': {
         const year = new Date().getFullYear()

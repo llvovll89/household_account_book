@@ -202,6 +202,7 @@ export interface AutoCategoryRule {
 }
 
 export type DashboardWidgetId =
+  | 'month-close-helper'
   | 'subscription-alert'
   | 'recurring-pending'
   | 'sparkline-summary'

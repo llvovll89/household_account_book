@@ -1,5 +1,6 @@
 import type { PaymentMethod, Transaction, UserPaymentMethod } from '../types'
 import { PAYMENT_METHOD_LABEL } from '../types'
+import { parseYmdLocal, toLocalDateStr } from './format'
 
 export interface CardBillingRange {
   start: string
@@ -44,9 +45,9 @@ function ymToMonthIndex(ym: string): number {
 }
 
 function addDays(ymd: string, days: number): string {
-  const d = new Date(`${ymd}T00:00:00`)
+  const d = parseYmdLocal(ymd)
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return toLocalDateStr(d)
 }
 
 export function getCardBillingRange(statementYM: string, billingDay: number): CardBillingRange {

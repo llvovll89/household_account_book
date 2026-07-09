@@ -10,7 +10,7 @@ import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
-import { fmt, fmtShort, toLocalDateStr } from '../lib/format'
+import { fmt, fmtShort, parseYmdLocal, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { calcHoldings } from '../lib/stockCalc'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
@@ -107,7 +107,9 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
   const [paydayError, setPaydayError] = useState('')
   const [budgetView, setBudgetView] = useState<'list' | 'gauge'>('list')
   const [showSpendingTop, setShowSpendingTop] = useState(false)
+  const [focusedExpenseCategory, setFocusedExpenseCategory] = useState<string | null>(null)
   const [progressMounted, setProgressMounted] = useState(false)
+  const spendingTopRef = useRef<HTMLDivElement | null>(null)
   const lastNotifiedMonthRef = useRef<string>('')
 
   useEffect(() => {
@@ -133,13 +135,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
   function handleSavePayday() {
     if (paydayInput === 'last') {
       setPaydayError('')
-      setPayday('last')
       void (async () => {
-        const current = await loadSettings()
-        await saveSettings({ ...current, payday: 'last' })
+        try {
+          const current = await loadSettings()
+          await saveSettings({ ...current, payday: 'last' })
+          setPayday('last')
+          setEditingPayday(false)
+          showToast('월급날이 말일로 저장됐어요')
+        } catch {
+          showToast('월급날 저장에 실패했어요. 다시 시도해주세요.', 3000, 'error')
+        }
       })()
-      setEditingPayday(false)
-      showToast('월급날이 말일로 저장됐어요')
       return
     }
     const val = parseInt(paydayInput, 10)
@@ -148,13 +154,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       return
     }
     setPaydayError('')
-    setPayday(val)
     void (async () => {
-      const current = await loadSettings()
-      await saveSettings({ ...current, payday: val })
+      try {
+        const current = await loadSettings()
+        await saveSettings({ ...current, payday: val })
+        setPayday(val)
+        setEditingPayday(false)
+        showToast(`월급날이 ${val}일로 저장됐어요`)
+      } catch {
+        showToast('월급날 저장에 실패했어요. 다시 시도해주세요.', 3000, 'error')
+      }
     })()
-    setEditingPayday(false)
-    showToast(`월급날이 ${val}일로 저장됐어요`)
   }
 
   // 월급날까지 남은 일수 + 하루 가용 예산 계산
@@ -199,13 +209,21 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     () => transactions.filter((t) => t.date.startsWith(yearMonth)),
     [transactions, yearMonth]
   )
-  const income = useMemo(
-    () => monthly.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+  const monthlyIncomeTx = useMemo(
+    () => monthly.filter((t) => t.type === 'income'),
     [monthly]
   )
-  const expense = useMemo(
-    () => monthly.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+  const monthlyExpenseTx = useMemo(
+    () => monthly.filter((t) => t.type === 'expense'),
     [monthly]
+  )
+  const income = useMemo(
+    () => monthlyIncomeTx.reduce((s, t) => s + t.amount, 0),
+    [monthlyIncomeTx]
+  )
+  const expense = useMemo(
+    () => monthlyExpenseTx.reduce((s, t) => s + t.amount, 0),
+    [monthlyExpenseTx]
   )
   const openingBalance = useMemo(
     () => calcNet(transactions.filter((t) => t.date < `${yearMonth}-01`)),
@@ -219,28 +237,41 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
   const animatedExpense = useCountUp(expense, 600)
 
   const monthlyMethodBalance = useMemo(() => {
-    const cashIncome = monthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'cash')
-      .reduce((s, t) => s + t.amount, 0)
-    const cashExpense = monthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'cash')
-      .reduce((s, t) => s + t.amount, 0)
-    const checkIncome = monthly
-      .filter((t) => t.type === 'income' && (t.paymentMethod ?? 'cash') === 'check')
-      .reduce((s, t) => s + t.amount, 0)
-    const checkExpense = monthly
-      .filter((t) => t.type === 'expense' && (t.paymentMethod ?? 'cash') === 'check')
-      .reduce((s, t) => s + t.amount, 0)
-    const creditIncome = monthly
-      .filter((t) => t.type === 'income' && isCreditPaymentMethod(t.paymentMethod))
-      .reduce((s, t) => s + t.amount, 0)
-    const creditExpense = monthly
-      .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
-      .reduce((s, t) => s + t.amount, 0)
+    let cashIncome = 0
+    let cashExpense = 0
+    let checkIncome = 0
+    let checkExpense = 0
+    let creditIncome = 0
+    let creditExpense = 0
+    let hasCash = false
+    let hasCheck = false
+    let hasCredit = false
 
-    const hasCash = monthly.some((t) => (t.paymentMethod ?? 'cash') === 'cash')
-    const hasCheck = monthly.some((t) => (t.paymentMethod ?? 'cash') === 'check')
-    const hasCredit = monthly.some((t) => isCreditPaymentMethod(t.paymentMethod))
+    for (const t of monthly) {
+      const method = t.paymentMethod ?? 'cash'
+      const isIncome = t.type === 'income'
+      const amount = t.amount
+
+      if (method === 'cash') {
+        hasCash = true
+        if (isIncome) cashIncome += amount
+        else cashExpense += amount
+        continue
+      }
+
+      if (method === 'check') {
+        hasCheck = true
+        if (isIncome) checkIncome += amount
+        else checkExpense += amount
+        continue
+      }
+
+      if (isCreditPaymentMethod(method)) {
+        hasCredit = true
+        if (isIncome) creditIncome += amount
+        else creditExpense += amount
+      }
+    }
 
     return {
       cash: cashIncome - cashExpense,
@@ -291,13 +322,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     return formatBillingRange(range)
   }, [nextStatementYM, effectiveBillingDay])
 
-  const expenseByCategory = useMemo(() => {
+  const monthlyExpenseCategoryMap = useMemo(() => {
     const map: Record<string, number> = {}
-    monthly.filter((t) => t.type === 'expense').forEach((t) => {
+    monthlyExpenseTx.forEach((t) => {
       map[t.category] = (map[t.category] || 0) + t.amount
     })
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6)
-  }, [monthly])
+    return map
+  }, [monthlyExpenseTx])
+
+  const expenseByCategory = useMemo(() => {
+    return Object.entries(monthlyExpenseCategoryMap).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  }, [monthlyExpenseCategoryMap])
 
   // 이번 달 미적용 정기 항목
   const pendingRecurring = useMemo(
@@ -333,21 +368,17 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
   // 예산 초과/경고 카테고리 (이월 포함 유효 한도 기준)
   const { overBudget, nearBudget } = useMemo(() => {
-    const map: Record<string, number> = {}
-    monthly.filter((t) => t.type === 'expense').forEach((t) => {
-      map[t.category] = (map[t.category] || 0) + t.amount
-    })
     const over = effectiveBudgets.filter((b) => {
       const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
-      return (map[b.category] || 0) > effectiveLimit
+      return (monthlyExpenseCategoryMap[b.category] || 0) > effectiveLimit
     })
     const near = effectiveBudgets.filter((b) => {
       const effectiveLimit = b.limit + (carryoverAmounts[b.category] ?? 0)
-      const pct = ((map[b.category] || 0) / effectiveLimit) * 100
+      const pct = ((monthlyExpenseCategoryMap[b.category] || 0) / effectiveLimit) * 100
       return pct >= 80 && pct <= 100
     })
     return { overBudget: over, nearBudget: near }
-  }, [monthly, effectiveBudgets, carryoverAmounts])
+  }, [effectiveBudgets, carryoverAmounts, monthlyExpenseCategoryMap])
 
   // 예산 초과 감지 및 알림
   useEffect(() => {
@@ -358,9 +389,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       lastNotifiedMonthRef.current = currentMonth
 
       overBudget.forEach((budget) => {
-        const spent = monthly
-          .filter((t) => t.type === 'expense' && t.category === budget.category)
-          .reduce((sum, t) => sum + t.amount, 0)
+        const spent = monthlyExpenseCategoryMap[budget.category] ?? 0
 
         showToast(
           `${budget.category} 예산을 초과했습니다\n지출: ${fmt(spent)} / 예산: ${fmt(budget.limit)}`,
@@ -369,7 +398,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         )
       })
     }
-  }, [yearMonth, overBudget, monthly])
+  }, [yearMonth, overBudget, monthlyExpenseCategoryMap])
 
   // 6개월 스파크라인 데이터
   const monthlyData = useMonthlyData(transactions)
@@ -415,7 +444,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const months = Array.from({ length: 6 }, (_, i) => {
       const offset = i - 5
       const d = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
-      return { label: `${d.getMonth() + 1}월`, endDate: d.toISOString().slice(0, 10) }
+      return { label: `${d.getMonth() + 1}월`, endDate: toLocalDateStr(d) }
     })
     // 거래를 날짜순 정렬 후 누적 합산 (O(n log n + n))
     const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
@@ -450,12 +479,8 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
   // 예산 게이지용 카테고리별 지출
   const spentByCategory = useMemo(() => {
-    const map: Record<string, number> = {}
-    monthly.filter((t) => t.type === 'expense').forEach((t) => {
-      map[t.category] = (map[t.category] || 0) + t.amount
-    })
-    return map
-  }, [monthly])
+    return monthlyExpenseCategoryMap
+  }, [monthlyExpenseCategoryMap])
 
   // 소비 페이스 (이번 달만)
   const spendingPace = useMemo(() => {
@@ -480,12 +505,12 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     if (!incomplete.length) return null
     let total = 0
     for (const g of incomplete) {
-      const target = new Date(g.deadline!)
+      const target = parseYmdLocal(g.deadline!)
       const days = Math.max(1, Math.ceil((target.getTime() - today.getTime()) / 86400000))
       total += Math.ceil((g.targetAmount - g.currentAmount) / days)
     }
-    const nearest = incomplete.reduce((a, b) => new Date(a.deadline!) < new Date(b.deadline!) ? a : b)
-    const nearestDays = Math.ceil((new Date(nearest.deadline!).getTime() - today.getTime()) / 86400000)
+    const nearest = incomplete.reduce((a, b) => parseYmdLocal(a.deadline!).getTime() < parseYmdLocal(b.deadline!).getTime() ? a : b)
+    const nearestDays = Math.ceil((parseYmdLocal(nearest.deadline!).getTime() - today.getTime()) / 86400000)
     return { total, count: incomplete.length, nearest, nearestDays }
   }, [goals])
 
@@ -495,16 +520,16 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const today = new Date()
     const isCurrentMonth = today.getFullYear() === y && today.getMonth() + 1 === m
     const daysElapsed = isCurrentMonth ? today.getDate() : new Date(y, m, 0).getDate()
-    const spendDates = new Set(monthly.filter(t => t.type === 'expense').map(t => t.date.slice(8, 10)))
+    const spendDates = new Set(monthlyExpenseTx.map(t => t.date.slice(8, 10)))
     return Math.max(0, daysElapsed - spendDates.size)
-  }, [monthly, yearMonth])
+  }, [monthlyExpenseTx, yearMonth])
 
   // 연속 무지출 스트릭 (오늘 포함 연속 일수)
   const noSpendStreak = useMemo(() => {
     const today = new Date()
     const [y, m] = yearMonth.split('-').map(Number)
     if (today.getFullYear() !== y || today.getMonth() + 1 !== m) return 0
-    const spendDates = new Set(monthly.filter(t => t.type === 'expense').map(t => t.date))
+    const spendDates = new Set(monthlyExpenseTx.map(t => t.date))
     let streak = 0
     const d = new Date(today)
     while (true) {
@@ -515,7 +540,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       d.setDate(d.getDate() - 1)
     }
     return streak
-  }, [monthly, yearMonth])
+  }, [monthlyExpenseTx, yearMonth])
 
   // 재정 건강도 스코어 (0-100)
   const healthScore = useMemo(() => {
@@ -544,13 +569,13 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       { label: '저녁', emoji: '🌆', hours: new Set([18,19,20,21]), amount: 0 },
       { label: '밤', emoji: '🌙', hours: new Set([22,23,0,1,2,3,4,5]), amount: 0 },
     ]
-    monthly.filter(t => t.type === 'expense').forEach(t => {
+    monthlyExpenseTx.forEach(t => {
       const h = new Date(t.createdAt).getHours()
       for (const slot of slots) { if (slot.hours.has(h)) { slot.amount += t.amount; break } }
     })
     const max = Math.max(...slots.map(s => s.amount), 1)
     return slots.map(s => ({ ...s, pct: Math.round((s.amount / max) * 100) }))
-  }, [monthly])
+  }, [monthlyExpenseTx])
 
   // 오늘 지출 요약
   const todaySpending = useMemo(() => {
@@ -560,19 +585,20 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
     const todayStr = toLocalDateStr(now)
     const yd = new Date(now); yd.setDate(now.getDate() - 1)
     const yesterdayStr = toLocalDateStr(yd)
-    const todayTx = monthly.filter(t => t.date === todayStr)
-    const yesterdayTx = monthly.filter(t => t.date === yesterdayStr)
-    const todayExpense = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    const yesterdayExpense = yesterdayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-    const todayIncome = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-    const recentTx = [...todayTx].filter(t => t.type === 'expense').sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)
+    const todayExpenseTx = monthlyExpenseTx.filter(t => t.date === todayStr)
+    const yesterdayExpenseTx = monthlyExpenseTx.filter(t => t.date === yesterdayStr)
+    const todayIncomeTx = monthlyIncomeTx.filter(t => t.date === todayStr)
+    const todayExpense = todayExpenseTx.reduce((s, t) => s + t.amount, 0)
+    const yesterdayExpense = yesterdayExpenseTx.reduce((s, t) => s + t.amount, 0)
+    const todayIncome = todayIncomeTx.reduce((s, t) => s + t.amount, 0)
+    const recentTx = [...todayExpenseTx].sort((a, b) => b.createdAt - a.createdAt).slice(0, 3)
     return { todayExpense, yesterdayExpense, todayIncome, recentTx }
-  }, [monthly, yearMonth])
+  }, [monthlyExpenseTx, monthlyIncomeTx, yearMonth])
 
   // 이달 최대 지출 거래 TOP3
   const top3Expenses = useMemo(() =>
-    [...monthly].filter(t => t.type === 'expense').sort((a, b) => b.amount - a.amount).slice(0, 3)
-  , [monthly])
+    [...monthlyExpenseTx].sort((a, b) => b.amount - a.amount).slice(0, 3)
+  , [monthlyExpenseTx])
 
   // 전월 카테고리별 지출 (예산 목록 비교용)
   const prevMonthCategorySpend = useMemo(() => {
@@ -672,6 +698,92 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
     return { thisWeek, lastWeek, diff: thisWeek - lastWeek, dayOfWeek, thisWeekDays, lastWeekDays }
   }, [transactions])
+
+  const monthCloseHelper = useMemo(() => {
+    if (monthly.length === 0) return null
+
+    const [y, m] = yearMonth.split('-').map(Number)
+    const now = new Date()
+    const isCurrentMonth = now.getFullYear() === y && now.getMonth() + 1 === m
+    const daysInMonth = new Date(y, m, 0).getDate()
+    const daysLeft = isCurrentMonth ? Math.max(0, daysInMonth - now.getDate()) : 0
+    const topExpense = expenseByCategory[0] ?? null
+    const topExpenses = expenseByCategory.slice(0, 3)
+    const net = income - expense
+    const cardDueTotal = monthlyCardDue + nextMonthlyCardDue
+    const overBudgetTopCategory = overBudget[0]?.category ?? null
+    const checklist = [
+      {
+        id: 'recurring',
+        label: pendingRecurring.length > 0 ? `정기 항목 ${pendingRecurring.length}건 미등록` : '정기 항목 등록 완료',
+        done: pendingRecurring.length === 0,
+        actionLabel: pendingRecurring.length > 0 ? `${pendingRecurring.length}건 등록` : null,
+      },
+      {
+        id: 'budget',
+        label: overBudget.length > 0
+          ? `예산 초과 ${overBudget.length}개 카테고리${overBudgetTopCategory ? ` · ${overBudgetTopCategory}` : ''}`
+          : '예산 초과 없음',
+        done: overBudget.length === 0,
+        actionLabel: overBudget.length > 0 ? '예산 점검' : null,
+      },
+      {
+        id: 'balance',
+        label: net >= 0 ? '월 순잔액 흑자 유지 중' : '월 순잔액 적자 상태',
+        done: net >= 0,
+        actionLabel: net < 0 ? '지출 조정' : null,
+      },
+    ]
+
+    return {
+      isCurrentMonth,
+      daysLeft,
+      topExpense,
+      topExpenses,
+      net,
+      cardDueTotal,
+      checklist,
+    }
+  }, [
+    monthly.length,
+    yearMonth,
+    expenseByCategory,
+    income,
+    expense,
+    monthlyCardDue,
+    nextMonthlyCardDue,
+    pendingRecurring.length,
+    overBudget,
+  ])
+
+  const focusedExpensePreview = useMemo(() => {
+    if (!focusedExpenseCategory) return []
+    return monthlyExpenseTx
+      .filter((t) => t.category === focusedExpenseCategory)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 3)
+  }, [focusedExpenseCategory, monthlyExpenseTx])
+
+  const focusedExpensePreviewTotal = useMemo(
+    () => focusedExpensePreview.reduce((sum, tx) => sum + tx.amount, 0),
+    [focusedExpensePreview]
+  )
+
+  function handleOpenSpendingFocus(category: string) {
+    setFocusedExpenseCategory(category)
+    if (budgets.length > 0) return
+    requestAnimationFrame(() => {
+      spendingTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
+  }
+
+  useEffect(() => {
+    if (!focusedExpenseCategory) return
+    const stillExists = monthlyExpenseTx.some((t) => t.category === focusedExpenseCategory)
+    if (!stillExists) {
+      setFocusedExpenseCategory(null)
+    }
+  }, [focusedExpenseCategory, monthlyExpenseTx])
 
   return (
     <div className="space-y-3 tab-content">
@@ -805,6 +917,160 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {!hide('month-close-helper') && monthCloseHelper && (
+        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5 border border-[rgba(61,142,248,0.18)]">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🧾</span>
+              <span className="text-sm font-bold text-white">월 마감 도우미</span>
+            </div>
+            <span className={`text-[11px] px-2 py-0.5 rounded-lg font-bold ${monthCloseHelper.isCurrentMonth ? 'bg-[#3D8EF8]/20 text-[#79B2FF]' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}>
+              {monthCloseHelper.isCurrentMonth ? `마감까지 ${monthCloseHelper.daysLeft}일` : '선택 월 요약'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] text-[#8B95A1]">월 수입/지출</p>
+              <p className="text-[11px] font-bold text-white num mt-0.5">+{fmt(income)} / -{fmt(expense)}</p>
+            </div>
+            <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] text-[#8B95A1]">순잔액</p>
+              <p className={`text-[11px] font-bold num mt-0.5 ${monthCloseHelper.net >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                {monthCloseHelper.net >= 0 ? '+' : ''}{fmt(monthCloseHelper.net)}
+              </p>
+            </div>
+            <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
+              <p className="text-[10px] text-[#8B95A1]">카드 예정</p>
+              <p className="text-[11px] font-bold text-[#F5BE3A] num mt-0.5">{fmt(monthCloseHelper.cardDueTotal)}</p>
+            </div>
+          </div>
+
+          {monthCloseHelper.topExpense && (
+            <div className="mt-2.5 px-3 py-2 rounded-xl bg-[#2C2C2E] flex items-center justify-between gap-2">
+              <span className="text-[11px] text-[#8B95A1]">최대 지출 카테고리</span>
+              <span className="text-[12px] font-bold text-white">
+                {CATEGORY_EMOJI[monthCloseHelper.topExpense[0]] ?? '📦'} {monthCloseHelper.topExpense[0]} · {fmt(monthCloseHelper.topExpense[1])}원
+              </span>
+            </div>
+          )}
+
+          <div className="mt-2.5 grid grid-cols-1 gap-1.5">
+            {monthCloseHelper.checklist.map((item) => (
+              <div key={item.id} className="px-3 py-2 rounded-xl bg-[#2C2C2E] flex items-center justify-between gap-2">
+                <span className={`text-[11px] font-semibold ${item.done ? 'text-[#8B95A1]' : 'text-[#F5F7FA]'}`}>
+                  {item.done ? '✅' : '⚠️'} {item.label}
+                </span>
+                {!item.done && item.id === 'recurring' && (
+                  <button
+                    onClick={() => onApplyRecurring(pendingRecurring)}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-[#3D8EF8]/20 text-[#79B2FF] font-bold"
+                  >
+                    {item.actionLabel}
+                  </button>
+                )}
+                {!item.done && item.id === 'budget' && (
+                  <button
+                    onClick={() => setShowBudget(true)}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-[#F25260]/20 text-[#FF8D98] font-bold"
+                  >
+                    {item.actionLabel}
+                  </button>
+                )}
+                {!item.done && item.id === 'balance' && (
+                  <button
+                    onClick={() => setShowBudget(true)}
+                    className="text-[10px] px-2 py-0.5 rounded-md bg-[#F5BE3A]/20 text-[#F5BE3A] font-bold"
+                  >
+                    {item.actionLabel}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {monthCloseHelper.net < 0 && monthCloseHelper.topExpenses.length > 0 && (
+            <div className="mt-2.5 px-3 py-2.5 rounded-xl bg-[#2C2C2E] border border-[#F25260]/20">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[11px] text-[#F5BE3A] font-bold">적자 원인 빠른 점검</span>
+                <span className="text-[10px] text-[#8B95A1]">지출 상위 3개</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {monthCloseHelper.topExpenses.map(([category, amount]) => (
+                  <button
+                    key={category}
+                    onClick={() => handleOpenSpendingFocus(category)}
+                    className="px-2.5 py-1 rounded-lg bg-[#F25260]/12 text-[#FF9AA4] hover:bg-[#F25260]/20 text-[10px] font-bold transition-colors"
+                  >
+                    {CATEGORY_EMOJI[category] ?? '📦'} {category} · {fmtShort(amount)}
+                  </button>
+                ))}
+              </div>
+
+              {focusedExpenseCategory && (
+                <div className="mt-2 rounded-xl bg-[#1C1C1E] border border-white/8 px-2.5 py-2">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[10px] text-[#9CC7FF] font-bold">
+                      {CATEGORY_EMOJI[focusedExpenseCategory] ?? '📦'} {focusedExpenseCategory} 최근 거래
+                    </span>
+                    <button
+                      onClick={() => setFocusedExpenseCategory(null)}
+                      className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#2C2C2E] text-[#8B95A1] font-bold"
+                    >
+                      닫기
+                    </button>
+                  </div>
+
+                  <div className="mb-2 flex items-center justify-between gap-2 text-[10px]">
+                    <span className="text-[#8B95A1]">최근 {focusedExpensePreview.length}건 합계</span>
+                    <span className="text-[#FF8D98] font-bold num">-{fmt(focusedExpensePreviewTotal)}원</span>
+                  </div>
+
+                  {focusedExpensePreview.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {focusedExpensePreview.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between gap-2 text-[10px]">
+                          <span className="text-[#8B95A1] truncate">{tx.description || tx.category}</span>
+                          <span className="text-[#4E5968] shrink-0">{tx.date.slice(5)}</span>
+                          <span className="text-[#FF8D98] font-bold num shrink-0">-{fmt(tx.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-[#8B95A1]">최근 거래가 없어요.</p>
+                  )}
+
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      onClick={() => setShowBudget(true)}
+                      className="flex-1 text-[10px] px-2 py-1 rounded-md bg-[#F25260]/20 text-[#FF9AA4] font-bold"
+                    >
+                      예산 점검
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (budgets.length > 0) {
+                          showToast('예산 점검 화면에서 카테고리별 한도를 먼저 확인해보세요.')
+                          setShowBudget(true)
+                          return
+                        }
+                        setShowSpendingTop(true)
+                        requestAnimationFrame(() => {
+                          spendingTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        })
+                      }}
+                      className="flex-1 text-[10px] px-2 py-1 rounded-md bg-[#3D8EF8]/20 text-[#79B2FF] font-bold"
+                    >
+                      지출 TOP 보기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1663,7 +1929,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
 
       {/* 카테고리별 지출 */}
       {expenseByCategory.length > 0 && budgets.length === 0 && (
-        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+        <div ref={spendingTopRef} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowSpendingTop(v => !v)}
             className="w-full flex items-center justify-between px-5 py-4"
@@ -1678,8 +1944,14 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                 const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
                 const prevAmt = prevMonthCategorySpend[cat] ?? 0
                 const trendPct = prevAmt > 0 ? Math.round(((amt - prevAmt) / prevAmt) * 100) : null
+                const isFocused = focusedExpenseCategory === cat
                 return (
-                  <div key={cat} className="flex items-center gap-3">
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFocusedExpenseCategory((prev) => (prev === cat ? null : cat))}
+                    className={`w-full flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors ${isFocused ? 'bg-[#3D8EF8]/12 ring-1 ring-[#3D8EF8]/30' : 'hover:bg-white/3'}`}
+                  >
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
                       style={{ backgroundColor: color.bg }}
@@ -1705,8 +1977,8 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
                         />
                       </div>
                     </div>
-                    <span className="text-xs text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
-                  </div>
+                    <span className={`text-xs w-7 text-right shrink-0 ${isFocused ? 'text-[#9CC7FF] font-bold' : 'text-[#4E5968]'}`}>{pct}%</span>
+                  </button>
                 )
               })}
             </div>

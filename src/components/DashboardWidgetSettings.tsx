@@ -9,6 +9,7 @@ interface WidgetDef {
 }
 
 const WIDGETS: WidgetDef[] = [
+  { id: 'month-close-helper', label: '월 마감 도우미', description: '이번 달 요약과 마감 전 체크 포인트' },
   { id: 'subscription-alert', label: '구독 청구 예고', description: '이번 주 구독 서비스 청구 알림' },
   { id: 'recurring-pending', label: '정기 지출 미적용', description: '이달 미등록 정기 내역 안내' },
   { id: 'sparkline-summary', label: '6개월 추이', description: '수입/지출/잔액 스파크라인' },
