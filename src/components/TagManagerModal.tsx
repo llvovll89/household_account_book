@@ -3,6 +3,7 @@ import { X, Pencil, Trash2, Check } from 'lucide-react'
 import { useModalClose } from '../hooks/useModalClose'
 import type { Transaction } from '../types'
 import { fmt } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 
 interface TagStat {
   name: string
@@ -19,7 +20,7 @@ interface Props {
 }
 
 export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag, onClose }: Props) {
-  const { closing, handleClose } = useModalClose(onClose)
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -53,7 +54,7 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[80vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-[17px] font-bold text-white">태그 관리</h2>
@@ -66,9 +67,12 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
 
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
           {tags.length === 0 ? (
-            <div className="text-center text-[#4E5968] text-[13px] py-12">
-              사용된 태그가 없습니다<br />내역 설명에 #태그 형식으로 추가해보세요
-            </div>
+            <EmptyState
+              emoji="#️⃣"
+              title="사용된 태그가 없습니다"
+              description="거래 설명에 #태그 형식으로 입력하면 자동으로 태그가 수집됩니다"
+              className="py-10 px-2"
+            />
           ) : (
             tags.map((tag) => (
               <div key={tag.name} className="bg-[#2C2C2E] rounded-xl px-4 py-3 flex items-center gap-3">

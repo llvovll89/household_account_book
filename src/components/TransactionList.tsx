@@ -17,6 +17,7 @@ interface Props {
   transactions: Transaction[]
   yearMonth: string
   userPaymentMethods?: UserPaymentMethod[]
+  onAddTransaction?: () => void
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
   onBulkDelete?: (ids: string[]) => void
@@ -78,7 +79,7 @@ function HighlightText({ text, query, className }: { text: string; query: string
   )
 }
 
-export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onEdit, onDelete, onBulkDelete, onBulkEdit, onArchiveDone, onOpenTagManager }: Props) {
+export default function TransactionList({ transactions, yearMonth, userPaymentMethods = [], onAddTransaction, onEdit, onDelete, onBulkDelete, onBulkEdit, onArchiveDone, onOpenTagManager }: Props) {
   const perfTier = transactions.length >= 10000 ? '10k+' : transactions.length >= 5000 ? '5k+' : null
   const shouldLogPerf = import.meta.env.DEV && perfTier !== null
   const [filter, setFilter] = useState<FilterType>(() => {
@@ -768,6 +769,7 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
         <CalendarView
           transactions={transactions}
           yearMonth={yearMonth}
+          onAddTransaction={onAddTransaction}
           onEdit={onEdit}
           onDelete={onDelete}
         />
@@ -1365,10 +1367,16 @@ export default function TransactionList({ transactions, yearMonth, userPaymentMe
               title={activeTag ? `#${activeTag} 태그 내역 없음` : search ? `"${search}" 검색 결과 없음` : '내역이 없어요'}
               description={
                 !search && !activeTag && filter === 'all' && methodFilter === 'all' && billingFilter === 'all' && !statementMonthFilter
-                  ? '+ 버튼을 눌러 첫 내역을 추가해보세요'
+                  ? '내역 추가 버튼으로 첫 내역을 입력해보세요'
                   : '조건을 바꾸거나 필터를 초기화해보세요'
               }
-              action={(filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search) ? { label: '필터 전체 초기화', onClick: resetAllFilters } : undefined}
+              action={
+                (filter !== 'all' || methodFilter !== 'all' || billingFilter !== 'all' || statementMonthFilter !== null || !!activeTag || !!search)
+                  ? { label: '필터 전체 초기화', onClick: resetAllFilters }
+                  : onAddTransaction
+                    ? { label: '내역 추가', onClick: onAddTransaction }
+                    : undefined
+              }
             />
           </div>
         ) : (

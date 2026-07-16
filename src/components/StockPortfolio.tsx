@@ -11,11 +11,12 @@ interface Props {
   prices?: Record<string, StockQuote>
   onEdit: (trade: StockTrade) => void
   onDelete: (id: string) => void
+  onAddTrade?: () => void
 }
 
 type SortKey = 'costDesc' | 'pnlDesc' | 'nameAsc'
 
-export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }: Props) {
+export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete, onAddTrade }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('costDesc')
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
 
@@ -70,7 +71,12 @@ export default function StockPortfolio({ trades, prices = {}, onEdit, onDelete }
     return (
       <div className="space-y-3 tab-content">
         <div className="bg-[#1C1C1E] rounded-2xl">
-          <EmptyState emoji="🧭" title="포트폴리오 데이터가 없어요" description="+ 버튼으로 거래를 추가하면 자동으로 구성돼요" />
+          <EmptyState
+            emoji="🧭"
+            title="포트폴리오 데이터가 없어요"
+            description="첫 거래를 추가하면 포트폴리오가 자동으로 구성돼요"
+            action={onAddTrade ? { label: '첫 거래 추가', onClick: onAddTrade } : undefined}
+          />
         </div>
       </div>
     )

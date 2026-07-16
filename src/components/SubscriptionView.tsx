@@ -199,7 +199,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
             emoji="💳"
             title="구독 서비스가 없어요"
             description="월 고정비를 먼저 입력하면 청구일 알림과 절감 시뮬레이터를 바로 활용할 수 있어요."
-            action={{ label: '구독 추가하기', onClick: openAdd }}
+            action={{ label: '구독 추가', onClick: openAdd }}
           />
         </div>
       ) : (

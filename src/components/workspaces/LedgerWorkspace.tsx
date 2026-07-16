@@ -40,6 +40,7 @@ interface Props {
   onGoalsChange: (items: SavingsGoal[]) => void
   onOpenCategoryModal: () => void
   onOpenPaymentMethodsModal: () => void
+  onTransactionAdd: () => void
   onTransactionEdit: (t: Transaction) => void
   onTransactionDelete: (id: string) => void
   onBulkDeleteTransactions?: (ids: string[]) => void
@@ -77,6 +78,7 @@ export default function LedgerWorkspace({
   onGoalsChange,
   onOpenCategoryModal,
   onOpenPaymentMethodsModal,
+  onTransactionAdd,
   onTransactionEdit,
   onTransactionDelete,
   onBulkDeleteTransactions,
@@ -112,6 +114,7 @@ export default function LedgerWorkspace({
               onApplyRecurring={onApplyRecurring}
               onOpenCategoryModal={onOpenCategoryModal}
               onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
+              onAddTransaction={onTransactionAdd}
               onOpenWidgetSettings={onOpenWidgetSettings}
             />
           </Suspense>
@@ -124,6 +127,7 @@ export default function LedgerWorkspace({
               transactions={transactions}
               yearMonth={yearMonth}
               userPaymentMethods={userPaymentMethods}
+              onAddTransaction={onTransactionAdd}
               onEdit={onTransactionEdit}
               onDelete={onTransactionDelete}
               onBulkDelete={onBulkDeleteTransactions}
@@ -137,7 +141,7 @@ export default function LedgerWorkspace({
       {activeTab === 'analytics' && (
         <div key="analytics" className="tab-content">
           <Suspense fallback={<TabFallback />}>
-            <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} />
+            <Analytics transactions={transactions} yearMonth={yearMonth} budgets={budgets} settingsVersion={settingsVersion} userPaymentMethods={userPaymentMethods} onAddTransaction={onTransactionAdd} />
           </Suspense>
         </div>
       )}

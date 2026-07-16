@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { X, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useModalClose } from '../hooks/useModalClose'
 import type { AutoCategoryRule, TransactionType } from '../types'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI } from '../types'
 import { generateId } from '../lib/format'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   rules: AutoCategoryRule[]
@@ -20,11 +21,12 @@ export default function AutoCategoryRuleModal({
   onSave,
   onClose,
 }: Props) {
-  const { closing, handleClose } = useModalClose(onClose)
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [list, setList] = useState<AutoCategoryRule[]>(rules)
   const [keyword, setKeyword] = useState('')
   const [ruleType, setRuleType] = useState<TransactionType>('expense')
   const [ruleCategory, setRuleCategory] = useState('')
+  const keywordInputRef = useRef<HTMLInputElement>(null)
 
   const expenseCategories = [...EXPENSE_CATEGORIES, ...customExpenseCategories]
   const incomeCategories = [...INCOME_CATEGORIES, ...customIncomeCategories]
@@ -61,7 +63,7 @@ export default function AutoCategoryRuleModal({
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -94,6 +96,7 @@ export default function AutoCategoryRuleModal({
           </div>
           {/* 키워드 입력 */}
           <input
+            ref={keywordInputRef}
             type="text"
             placeholder="키워드 (예: 스타벅스, 버스)"
             value={keyword}
@@ -127,9 +130,16 @@ export default function AutoCategoryRuleModal({
         {/* 규칙 목록 */}
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
           {list.length === 0 ? (
-            <div className="text-center text-[#4E5968] text-[13px] py-8">
-              아직 규칙이 없습니다<br />위에서 첫 번째 규칙을 추가해보세요
-            </div>
+            <EmptyState
+              emoji="🧠"
+              title="아직 규칙이 없습니다"
+              description="위 입력칸에 키워드와 카테고리를 지정해 첫 규칙을 추가해보세요"
+              action={{
+                label: '첫 규칙 추가',
+                onClick: () => keywordInputRef.current?.focus(),
+              }}
+              className="py-8 px-2"
+            />
           ) : (
             list.map((rule) => (
               <div key={rule.id} className={`flex items-center gap-3 bg-[#2C2C2E] rounded-xl px-4 py-3 ${!rule.enabled ? 'opacity-50' : ''}`}>

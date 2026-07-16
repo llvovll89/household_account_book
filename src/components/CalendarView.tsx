@@ -9,11 +9,12 @@ interface Props {
   yearMonth: string
   onEdit: (t: Transaction) => void
   onDelete: (id: string) => void
+  onAddTransaction?: () => void
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-export default function CalendarView({ transactions, yearMonth, onEdit, onDelete }: Props) {
+export default function CalendarView({ transactions, yearMonth, onEdit, onDelete, onAddTransaction }: Props) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const [year, month] = yearMonth.split('-').map(Number)
@@ -68,7 +69,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
     <div className="space-y-3">
       {/* 요일 헤더 */}
       <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-white/[0.05]">
+        <div className="grid grid-cols-7 border-b border-white/5">
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
@@ -94,10 +95,10 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                 key={idx}
                 onClick={() => handleCellClick(cell.date)}
                 disabled={!cell.date}
-                className={`relative flex flex-col items-center pt-2 pb-1.5 min-h-[56px] transition-colors border-b border-r border-white/[0.03] ${
+                className={`relative flex flex-col items-center pt-2 pb-1.5 min-h-14 transition-colors border-b border-r border-white/3 ${
                   isSelected
                     ? 'bg-[#3D8EF8]/15'
-                    : cell.date ? 'hover:bg-white/[0.03] active:bg-white/[0.05]' : ''
+                    : cell.date ? 'hover:bg-white/3 active:bg-white/5' : ''
                 } ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}`}
               >
                 {cell.date && (
@@ -152,7 +153,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
 
       {/* 선택된 날짜 내역 모달 */}
       {selectedDate && (
-        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-70 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <button
             onClick={closeModal}
             className="absolute inset-0 bg-black/60"
@@ -160,7 +161,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
           />
 
           <div className="relative w-full sm:max-w-lg max-h-[82vh] bg-[#1C1C1E] rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content">
-            <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] sticky top-0 bg-[#1C1C1E] z-10">
+            <div className="px-5 pt-4 pb-3 border-b border-white/5 sticky top-0 bg-[#1C1C1E] z-10">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
                 <div className="flex items-center gap-2">
@@ -177,7 +178,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                   )}
                   <button
                     onClick={closeModal}
-                    className="p-1.5 rounded-xl text-[#8B95A1] hover:text-white hover:bg-white/[0.06]"
+                    className="p-1.5 rounded-xl text-[#8B95A1] hover:text-white hover:bg-white/6"
                     aria-label="닫기"
                   >
                     <X size={14} />
@@ -190,6 +191,17 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
               <div className="py-10 text-center flex flex-col items-center gap-2">
                 <span className="text-3xl">📅</span>
                 <p className="text-sm text-[#4E5968]">이 날은 내역이 없어요</p>
+                {onAddTransaction && (
+                  <button
+                    onClick={() => {
+                      closeModal()
+                      onAddTransaction()
+                    }}
+                    className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                  >
+                    내역 추가
+                  </button>
+                )}
               </div>
             ) : (
               <div className="overflow-y-auto max-h-[calc(82vh-56px)]">
@@ -199,7 +211,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                     <div
                       key={t.id}
                       className={`flex items-center gap-3 px-5 py-3.5 group ${
-                        idx < selectedTx.length - 1 ? 'border-b border-white/[0.04]' : ''
+                        idx < selectedTx.length - 1 ? 'border-b border-white/4' : ''
                       }`}
                     >
                       <div

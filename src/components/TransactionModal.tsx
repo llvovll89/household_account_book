@@ -11,6 +11,7 @@ import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementY
 import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
 import { applyAutoCategory } from '../lib/autoCategoryRules'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   transaction?: Transaction | null
@@ -65,10 +66,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(!!transaction)
+  const [fieldErrors, setFieldErrors] = useState<{ amount?: string; category?: string; billingDay?: string }>({})
 
   const isEditMode = !!transaction
-  const { closing, handleClose } = useModalClose(onClose)
+  const { closing, handleClose, modalRef } = useModalClose(onClose, { initialFocusRef: amountInputRef })
   const tags = parseHashtags(description)
+  const errorTextClass = 'mt-2 text-xs font-semibold text-[#F25260]'
 
   const categories = type === 'income'
     ? [...INCOME_CATEGORIES, ...customIncomeCategories]
@@ -181,7 +184,30 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     return item
   }
 
+  function validateCurrent(requiredAmount = true) {
+    const nextErrors: { amount?: string; category?: string; billingDay?: string } = {}
+    const parsed = parseInt(amount.replace(/,/g, ''), 10)
+    const parsedBillingDay = parseInt(creditBillingDayInput, 10)
+
+    if (requiredAmount && (!parsed || parsed <= 0)) {
+      nextErrors.amount = '금액을 입력해주세요.'
+    }
+    if (!category) {
+      nextErrors.category = '카테고리를 선택해주세요.'
+    }
+    if (type === 'expense' && isCreditPaymentMethod(paymentMethod)) {
+      const isBillingDayValid = Number.isInteger(parsedBillingDay) && parsedBillingDay >= 1 && parsedBillingDay <= 31
+      if (!isBillingDayValid) {
+        nextErrors.billingDay = '결제일은 1~31 사이로 입력해주세요.'
+      }
+    }
+
+    setFieldErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
+  }
+
   function handleAddToQueue() {
+    if (!validateCurrent(true)) return
     const item = buildItem()
     if (!item) return
     setQueue((prev) => [...prev, item])
@@ -193,11 +219,20 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     setReceiptImageUrl('')
     setReceiptFile(null)
     setReceiptPreview(null)
+    setFieldErrors({})
     amountInputRef.current?.focus()
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    const hasCurrentDraft = !!amount.replace(/,/g, '').trim()
+    const mustHaveCurrent = isEditMode || queue.length === 0
+    if (mustHaveCurrent || hasCurrentDraft) {
+      if (!validateCurrent(true)) return
+    } else if (fieldErrors.amount || fieldErrors.category || fieldErrors.billingDay) {
+      setFieldErrors({})
+    }
 
     try {
       setUploading(true)
@@ -239,6 +274,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
     setAmount(digits ? Number(digits).toLocaleString() : '')
+    if (fieldErrors.amount) {
+      setFieldErrors((prev) => ({ ...prev, amount: undefined }))
+    }
   }
 
   function removeTag(tag: string) {
@@ -307,9 +345,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transaction-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1A1E30] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-[#1A1E30] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -318,7 +359,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-2 pb-3 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">
+            <h2 id="transaction-modal-title" className="text-[18px] font-bold text-white">
               {transaction ? '내역 수정' : '내역 추가'}
             </h2>
             {queue.length > 0 && (
@@ -346,7 +387,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         {showTemplates && (
           <div className="mx-6 mb-3">
             {transactionTemplates.length === 0 ? (
-              <p className="text-[12px] text-[#4E5968] text-center py-3">저장된 템플릿이 없어요</p>
+              <EmptyState
+                emoji="🔖"
+                title="저장된 템플릿이 없어요"
+                description="자주 쓰는 내역을 저장하면 다음 입력을 더 빠르게 할 수 있어요"
+                className="py-3 px-2"
+              />
             ) : (
               <div className="flex flex-wrap gap-2">
                 {transactionTemplates.map((tmpl) => (
@@ -426,8 +472,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               <div className="flex items-center justify-between px-0.5">
                 <span className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">결제수단</span>
                 {onOpenPaymentMethodsModal && (
-                  <button type="button" onClick={onOpenPaymentMethodsModal} className="text-[11px] font-semibold text-[#3D8EF8]">
-                    관리하기 →
+                  <button
+                    type="button"
+                    onClick={onOpenPaymentMethodsModal}
+                    className="px-2.5 py-1 rounded-lg bg-[#3D8EF8]/18 text-[11px] font-semibold text-[#79B2FF] border border-[#3D8EF8]/25 shrink-0 hover:bg-[#3D8EF8]/28 transition-colors"
+                  >
+                    결제수단 관리
                   </button>
                 )}
               </div>
@@ -487,7 +537,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {billingPreview && (
-              <div className={`rounded-2xl px-4 py-3 border ${billingPreview.stage === 'current'
+              <div className={`rounded-2xl px-4 py-3 border ${fieldErrors.billingDay
+                ? 'border-[#F25260]/40 bg-[#F25260]/8'
+                : billingPreview.stage === 'current'
                 ? 'bg-[#F5BE3A]/12 border-[#F5BE3A]/25'
                 : 'bg-[#3D8EF8]/12 border-[#3D8EF8]/25'
                 }`}>
@@ -504,17 +556,32 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     min="1"
                     max="31"
                     value={creditBillingDayInput}
-                    onChange={(e) => setCreditBillingDayInput(e.target.value)}
+                    onChange={(e) => {
+                      setCreditBillingDayInput(e.target.value)
+                      if (fieldErrors.billingDay) {
+                        setFieldErrors((prev) => ({ ...prev, billingDay: undefined }))
+                      }
+                    }}
+                    aria-invalid={!!fieldErrors.billingDay}
+                    aria-describedby={fieldErrors.billingDay ? 'transaction-billing-day-error' : undefined}
                     onFocus={e => e.target.select()}
                     className="w-14 bg-[#2C2C2E] text-white text-center rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
                   />
                   <span className="text-[11px] text-[#8B95A1]">일</span>
                 </div>
+                {fieldErrors.billingDay && (
+                  <p id="transaction-billing-day-error" role="alert" className={errorTextClass}>
+                    {fieldErrors.billingDay}
+                  </p>
+                )}
               </div>
             )}
 
             {/* 금액 */}
-            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text" onClick={() => amountInputRef.current?.focus()}>
+            <div
+              className={`bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text border ${fieldErrors.amount ? 'border-[#F25260]/40' : 'border-transparent'}`}
+              onClick={() => amountInputRef.current?.focus()}
+            >
               <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
               <div className="flex items-baseline gap-2">
                 <input
@@ -524,6 +591,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0"
                   required={queue.length === 0}
+                  aria-invalid={!!fieldErrors.amount}
+                  aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
                   className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
                 />
                 <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
@@ -552,6 +621,11 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   </button>
                 )}
               </div>
+              {fieldErrors.amount && (
+                <p id="transaction-amount-error" role="alert" className={errorTextClass}>
+                  {fieldErrors.amount}
+                </p>
+              )}
             </div>
 
             <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
@@ -560,7 +634,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {/* 카테고리 그리드 */}
-            <div className="bg-[#252A3F] rounded-2xl px-4 py-4">
+            <div
+              className={`bg-[#252A3F] rounded-2xl px-4 py-4 border ${fieldErrors.category ? 'border-[#F25260]/40' : 'border-transparent'}`}
+              role="group"
+              aria-label="카테고리 선택"
+              aria-invalid={!!fieldErrors.category}
+              aria-describedby={fieldErrors.category ? 'transaction-category-error' : undefined}
+            >
               <div className="flex items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">카테고리</p>
@@ -569,8 +649,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   )}
                 </div>
                 {onOpenCategoryModal && (
-                  <button type="button" onClick={onOpenCategoryModal} className="text-[11px] font-semibold text-[#3D8EF8] shrink-0">
-                    관리하기 →
+                  <button
+                    type="button"
+                    onClick={onOpenCategoryModal}
+                    className="px-2.5 py-1 rounded-lg bg-[#3D8EF8]/18 text-[11px] font-semibold text-[#79B2FF] border border-[#3D8EF8]/25 shrink-0 hover:bg-[#3D8EF8]/28 transition-colors"
+                  >
+                    카테고리 관리
                   </button>
                 )}
               </div>
@@ -582,7 +666,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     <button
                       key={c}
                       type="button"
-                      onClick={() => { setCategory(c); categoryManuallySet.current = true; setAutoCategoryApplied(false) }}
+                      onClick={() => {
+                        setCategory(c)
+                        categoryManuallySet.current = true
+                        setAutoCategoryApplied(false)
+                        if (fieldErrors.category) {
+                          setFieldErrors((prev) => ({ ...prev, category: undefined }))
+                        }
+                      }}
                       className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all border ${
                         isSelected ? 'border-current' : 'border-transparent bg-[#1A1E30] hover:bg-[#1E2438]'
                       }`}
@@ -599,6 +690,11 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   )
                 })}
               </div>
+              {fieldErrors.category && (
+                <p id="transaction-category-error" role="alert" className={errorTextClass}>
+                  {fieldErrors.category}
+                </p>
+              )}
             </div>
 
             <div className="bg-[#252A3F] rounded-2xl overflow-hidden">

@@ -23,6 +23,7 @@ interface Props {
   stockTrades: StockTrade[]
   stockWatchlist: string[]
   onStockSubTabChange: (tab: StockSubTab) => void
+  onTradeAdd: () => void
   onTradeEdit: (trade: StockTrade) => void
   onTradeDelete: (id: string) => void
   onWatchAdd: (ticker: string) => void
@@ -34,6 +35,7 @@ export default function StocksWorkspace({
   stockTrades,
   stockWatchlist,
   onStockSubTabChange,
+  onTradeAdd,
   onTradeEdit,
   onTradeDelete,
   onWatchAdd,
@@ -124,6 +126,7 @@ export default function StocksWorkspace({
             <StockPortfolio
               trades={stockTrades}
               prices={prices}
+              onAddTrade={onTradeAdd}
               onEdit={onTradeEdit}
               onDelete={onTradeDelete}
             />
@@ -148,6 +151,7 @@ export default function StocksWorkspace({
           <Suspense fallback={<SubTabFallback />}>
             <StockTradeList
               trades={stockTrades}
+              onAddTrade={onTradeAdd}
               onEdit={onTradeEdit}
               onDelete={onTradeDelete}
             />
@@ -157,7 +161,7 @@ export default function StocksWorkspace({
       {stockSubTab === 'performance' && (
         <div key="performance" className="tab-content">
           <Suspense fallback={<SubTabFallback />}>
-            <StockPerformance trades={stockTrades} />
+            <StockPerformance trades={stockTrades} onAddTrade={onTradeAdd} />
           </Suspense>
         </div>
       )}

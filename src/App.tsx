@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect, useCallback, useRef, useMemo, useR
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { ChevronLeft, ChevronRight, Plus, LayoutDashboard, List, BarChart2, StickyNote, FileDown, RefreshCw, CheckCircle2, AlertTriangle, Info, LogOut, Wallet, CreditCard, Target, WifiOff, CloudOff } from 'lucide-react'
 import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate, TransactionType } from './types'
+import { CATEGORY_EMOJI } from './types'
 import type { AppMode, StockSubTab, Tab } from './types/navigation'
 import { loadAllData, loadSettings } from './lib/storage'
 import type { RemoteVersionKey } from './lib/storage'
@@ -25,6 +26,7 @@ const LedgerWorkspace = lazy(() => import('./components/workspaces/LedgerWorkspa
 const StocksWorkspace = lazy(() => import('./components/workspaces/StocksWorkspace'))
 const MergeLocalDataModal = lazy(() => import('./components/MergeLocalDataModal'))
 const AutoApplyRecurringModal = lazy(() => import('./components/AutoApplyRecurringModal'))
+const AutoApplyResultModal = lazy(() => import('./components/AutoApplyResultModal'))
 const SyncConflictModal = lazy(() => import('./components/SyncConflictModal'))
 const SyncRecoveryGuideModal = lazy(() => import('./components/SyncRecoveryGuideModal'))
 const AutoCategoryRuleModal = lazy(() => import('./components/AutoCategoryRuleModal'))
@@ -45,6 +47,18 @@ type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
 
 function getYearMonth(date: Date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function formatRecurringToastSummary(items: RecurringTransaction[], limit = 3) {
+    const preview = items.slice(0, limit)
+        .map((item) => {
+            const sign = item.type === 'income' ? '+' : '-'
+            const emoji = CATEGORY_EMOJI[item.category] ?? '📦'
+            return `${emoji}${item.category} ${sign}${item.amount.toLocaleString()}원`
+        })
+        .join(', ')
+    const restCount = items.length - Math.min(items.length, limit)
+    return restCount > 0 ? `${preview} 외 ${restCount}건` : preview
 }
 
 function parseConflictScopePreference(): RemoteVersionKey[] {
@@ -311,6 +325,8 @@ export default function App() {
 
     const [autoApplyPending, setAutoApplyPending] = useState<RecurringTransaction[]>([])
     const [showAutoApplyModal, setShowAutoApplyModal] = useState(false)
+    const [autoApplyResultItems, setAutoApplyResultItems] = useState<RecurringTransaction[]>([])
+    const [showAutoApplyResultModal, setShowAutoApplyResultModal] = useState(false)
     const [autoApplyMode, setAutoApplyMode] = useState<AutoApplyRecurringMode>(() => parseAutoApplyRecurringMode())
     const autoApplyCheckedRef = useRef(false)
 
@@ -975,8 +991,13 @@ export default function App() {
         if (pending.length === 0) return
 
         if (autoApplyMode === 'always') {
+            const appliedItems = [...pending]
             void handleApplyRecurring(pending, todayYM)
-                .then(() => showToast(`정기 항목 ${pending.length}건이 자동 등록되었습니다.`))
+                .then(() => {
+                    showToast(`정기 항목 ${pending.length}건 자동 등록: ${formatRecurringToastSummary(pending)}`)
+                    setAutoApplyResultItems(appliedItems)
+                    setShowAutoApplyResultModal(true)
+                })
                 .catch(() => showToast('정기 항목 자동 등록에 실패했어요.'))
             return
         }
@@ -1518,6 +1539,10 @@ export default function App() {
                             onGoalsChange={handleGoalsChange}
                             onOpenCategoryModal={() => dispatchUI({ type: 'SET_CATEGORY', value: true })}
                             onOpenPaymentMethodsModal={() => dispatchUI({ type: 'SET_PAYMENT_METHODS', value: true })}
+                            onTransactionAdd={() => {
+                                setTxInitialType('expense')
+                                dispatchUI({ type: 'OPEN_TX_MODAL' })
+                            }}
                             onTransactionEdit={(t) => dispatchUI({ type: 'OPEN_TX_MODAL', editing: t })}
                             onTransactionDelete={handleDeleteTransaction}
                             onBulkDeleteTransactions={handleBulkDeleteTransactions}
@@ -1539,6 +1564,7 @@ export default function App() {
                             stockTrades={stockTrades}
                             stockWatchlist={stockWatchlist}
                             onStockSubTabChange={handleStockSubTabChange}
+                            onTradeAdd={() => dispatchUI({ type: 'OPEN_STOCK_MODAL' })}
                             onTradeEdit={(t) => dispatchUI({ type: 'OPEN_STOCK_MODAL', editing: t })}
                             onTradeDelete={handleDeleteStockTrade}
                             onWatchAdd={handleAddWatchTicker}
@@ -1860,11 +1886,26 @@ export default function App() {
                         onModeChange={setAutoApplyMode}
                         onConfirm={async () => {
                             const todayYM = getYearMonth(new Date())
+                            const appliedItems = [...autoApplyPending]
                             setShowAutoApplyModal(false)
                             await handleApplyRecurring(autoApplyPending, todayYM)
-                            showToast(`정기 항목 ${autoApplyPending.length}건이 등록되었습니다.`)
+                            showToast(`정기 항목 ${autoApplyPending.length}건 등록: ${formatRecurringToastSummary(autoApplyPending)}`)
+                            setAutoApplyResultItems(appliedItems)
+                            setShowAutoApplyResultModal(true)
                         }}
                         onDismiss={() => setShowAutoApplyModal(false)}
+                    />
+                </Suspense>
+            )}
+
+            {showAutoApplyResultModal && autoApplyResultItems.length > 0 && (
+                <Suspense fallback={null}>
+                    <AutoApplyResultModal
+                        applied={autoApplyResultItems}
+                        onClose={() => {
+                            setShowAutoApplyResultModal(false)
+                            setAutoApplyResultItems([])
+                        }}
                     />
                 </Suspense>
             )}

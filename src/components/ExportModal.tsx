@@ -6,6 +6,7 @@ import { archiveTransactionsBefore, getLocalStorageUsageBytes } from '../lib/sto
 import { showToast } from '../lib/toast'
 import { parseYmdLocal, toLocalDateStr } from '../lib/format'
 import FancyDatePicker from './FancyDatePicker'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   transactions: Transaction[]
@@ -33,6 +34,7 @@ function fmtBytes(bytes: number): string {
 }
 
 export default function ExportModal({ transactions, yearMonth, onClose, onArchiveDone }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [range, setRange] = useState<Range>('thisMonth')
   const [customFrom, setCustomFrom] = useState(`${yearMonth}-01`)
   const [customTo, setCustomTo] = useState(() => {
@@ -110,7 +112,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
     if (filtered.length === 0) return
     exportTransactionsCSV(filtered, getFilename())
     showToast(`${filtered.length}개 내역을 다운로드했어요`)
-    onClose()
+    handleClose()
   }
 
   async function handleArchive() {
@@ -123,7 +125,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
       const removed = await archiveTransactionsBefore(archiveCutoff)
       onArchiveDone(archiveCutoff)
       showToast(`${removed}개 내역을 내보내고 삭제했어요`)
-      onClose()
+      handleClose()
     } catch {
       showToast('아카이브 중 오류가 발생했어요')
     } finally {
@@ -146,9 +148,9 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
       role="dialog"
       aria-modal="true"
       aria-label="내역 내보내기"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -158,7 +160,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             <h2 className="text-[18px] font-bold text-white">내역 내보내기</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">CSV 파일로 다운로드 (Excel 호환)</p>
           </div>
-          <button aria-label="내역 내보내기 닫기" onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button aria-label="내역 내보내기 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>

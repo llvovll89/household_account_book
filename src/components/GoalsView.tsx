@@ -258,7 +258,7 @@ export default function GoalsView({ goals, transactions = [], addTrigger, onChan
             emoji="🎯"
             title="저축 목표가 없어요"
             description="작은 목표 하나만 추가해도 자동 집계와 일일 필요 금액을 바로 확인할 수 있어요."
-            action={{ label: '목표 추가하기', onClick: openAdd }}
+            action={{ label: '목표 추가', onClick: openAdd }}
           />
         </div>
       ) : (

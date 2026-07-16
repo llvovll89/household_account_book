@@ -10,11 +10,12 @@ interface Props {
   trades: StockTrade[]
   onEdit: (trade: StockTrade) => void
   onDelete: (id: string) => void
+  onAddTrade?: () => void
 }
 
 type Filter = 'all' | 'buy' | 'sell'
 
-export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
+export default function StockTradeList({ trades, onEdit, onDelete, onAddTrade }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null)
@@ -49,7 +50,12 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
     return (
       <div className="space-y-3 tab-content">
         <div className="bg-[#1C1C1E] rounded-2xl">
-          <EmptyState emoji="📊" title="거래 내역이 없어요" description="+ 버튼으로 첫 거래를 추가해보세요" />
+          <EmptyState
+            emoji="📊"
+            title="거래 내역이 없어요"
+            description="첫 거래를 추가해 투자 내역을 시작해보세요"
+            action={onAddTrade ? { label: '첫 거래 추가', onClick: onAddTrade } : undefined}
+          />
         </div>
       </div>
     )
@@ -155,13 +161,13 @@ export default function StockTradeList({ trades, onEdit, onDelete }: Props) {
           <div className="space-y-2">
             {grouped.map(([date, dayTrades], gIdx) => (
               <div key={date} className="bg-[#1C1C1E] rounded-2xl overflow-hidden list-item-enter" style={{ animationDelay: `${gIdx * 40}ms` }}>
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.04]">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/4">
                   <span className="text-xs font-semibold text-[#4E5968]">{formatDate(date)}</span>
                   <span className="text-xs font-semibold text-[#4E5968]">
                     {dayTrades.length}건
                   </span>
                 </div>
-                <div className="divide-y divide-white/[0.04]">
+                <div className="divide-y divide-white/4">
                   {dayTrades.map((t) => {
                     const isBuy = t.tradeType === 'buy'
                     const total = t.price * t.quantity + t.fee

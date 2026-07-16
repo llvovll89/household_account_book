@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import type { Budget } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   budgets: Budget[]
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function BudgetModal({ budgets, customExpenseCategories = [], onSave, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [values, setValues] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
     budgets.forEach((b) => { m[b.category] = b.limit.toLocaleString() })
@@ -34,24 +36,27 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
       if (limit > 0) result.push({ category, limit, carryover: carryoverMap[category] ?? false })
     }
     onSave(result)
-    onClose()
+    handleClose()
   }
 
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="budget-modal-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">예산 설정</h2>
+            <h2 id="budget-modal-title" className="text-[18px] font-bold text-white">예산 설정</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">카테고리별 월 예산을 입력하세요</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button aria-label="예산 설정 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -70,7 +75,9 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
                   </div>
                   <span className="text-sm font-semibold text-white flex-1">{cat}</span>
                   <div className="flex items-center gap-1.5">
+                    <label htmlFor={`budget-${cat}`} className="sr-only">{cat} 예산</label>
                     <input
+                      id={`budget-${cat}`}
                       type="text"
                       inputMode="numeric"
                       value={values[cat] ?? ''}

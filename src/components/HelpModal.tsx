@@ -1,4 +1,5 @@
 import { X, LayoutDashboard, List, BarChart2, StickyNote, Plus, FileDown, TrendingUp } from 'lucide-react'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   onClose: () => void
@@ -88,15 +89,17 @@ const sections = [
 ]
 
 export default function HelpModal({ onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
+
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="help-modal-title"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -110,7 +113,7 @@ export default function HelpModal({ onClose }: Props) {
           </div>
           <button
             aria-label="사용 가이드 닫기"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center"
           >
             <X size={16} className="text-[#8B95A1]" />

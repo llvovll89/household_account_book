@@ -1,6 +1,8 @@
 import { RefreshCw, X } from 'lucide-react'
+import { useRef } from 'react'
 import type { RecurringTransaction } from '../types'
 import { CATEGORY_COLOR, CATEGORY_EMOJI } from '../types'
+import { useModalClose } from '../hooks/useModalClose'
 
 type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
 
@@ -13,33 +15,35 @@ interface Props {
 }
 
 export default function AutoApplyRecurringModal({ pending, mode, onModeChange, onConfirm, onDismiss }: Props) {
+  const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  const { closing, handleClose, modalRef } = useModalClose(onDismiss, { initialFocusRef: confirmButtonRef })
   const total = pending.reduce((sum, r) => {
     return r.type === 'expense' ? sum - r.amount : sum + r.amount
   }, 0)
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="반복거래 자동 등록 설정"
-      onClick={(e) => e.target === e.currentTarget && onDismiss()}
+      aria-labelledby="auto-apply-recurring-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+      <div ref={modalRef} className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <span className="w-9 h-9 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/25 flex items-center justify-center shrink-0">
               <RefreshCw size={17} className="text-[#79B2FF]" />
             </span>
             <div>
-              <h3 className="text-white text-base font-bold">정기 항목 자동 등록</h3>
+              <h3 id="auto-apply-recurring-title" className="text-white text-base font-bold">정기 항목 자동 등록</h3>
               <p className="text-xs text-[#8B95A1] mt-1 leading-relaxed">
                 오늘 날짜 기준 등록할 정기 항목이 {pending.length}건 있어요.
               </p>
             </div>
           </div>
           <button
-            onClick={onDismiss}
+            onClick={handleClose}
             className="w-7 h-7 rounded-full bg-[#1C1C1E] text-[#8B95A1] flex items-center justify-center shrink-0"
             aria-label="닫기"
           >
@@ -113,12 +117,13 @@ export default function AutoApplyRecurringModal({ pending, mode, onModeChange, o
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={onDismiss}
+            onClick={handleClose}
             className="flex-1 py-2.5 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-sm font-bold"
           >
             나중에
           </button>
           <button
+            ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
             className="flex-1 py-2.5 rounded-xl bg-[#3D8EF8] text-white text-sm font-bold hover:bg-[#5AA0FF] transition-colors"

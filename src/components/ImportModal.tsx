@@ -10,6 +10,7 @@ import {
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
 import PreviewRowDetailModal from './import/PreviewRowDetailModal'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   existingTransactions: Transaction[]
@@ -97,6 +98,7 @@ function getPreviewReviewMeta(description: string, category: string): { needsRev
 }
 
 export default function ImportModal({ existingTransactions, onImport, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [step, setStep] = useState<Step>('upload')
   const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -195,7 +197,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
 
   function handleImport() {
     onImport(previewRows.filter((r) => !r.skip).map(({ type, amount, category, description, date }) => ({ type, amount, category, description, date })))
-    onClose()
+    handleClose()
   }
 
   const updateRow = useCallback((idx: number, patch: Partial<PreviewRow>) => {
@@ -304,8 +306,8 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
         role="dialog"
         aria-modal="true"
         aria-labelledby="import-modal-title"
-        onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel">
+        onClick={(e) => e.target === e.currentTarget && handleClose()}>
+        <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
 
           {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
@@ -318,7 +320,7 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
               <h2 id="import-modal-title" className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
               <p className="text-xs text-[#4E5968] mt-0.5">CSV · PDF · 농협 · 대구 · 국민 · 신한 · 우리 · 하나</p>
             </div>
-            <button aria-label="가져오기 모달 닫기" onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
+            <button aria-label="가져오기 모달 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
               <X size={16} className="text-[#8B95A1]" />
             </button>
           </div>
@@ -369,12 +371,12 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
               </div>
               {error && (
-                <div className="mt-3 flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
+                <div role="alert" className="mt-3 flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
                   <AlertCircle size={13} className="text-[#F25260] shrink-0" />
                   <p className="text-sm text-[#F25260] font-medium">{error}</p>
                 </div>
               )}
-              {loading && <div className="mt-6 text-center text-sm text-[#4E5968] font-medium animate-pulse">파일 분석 중...</div>}
+              {loading && <div role="status" aria-live="polite" className="mt-6 text-center text-sm text-[#4E5968] font-medium animate-pulse">파일 분석 중...</div>}
             </div>
           )}
 

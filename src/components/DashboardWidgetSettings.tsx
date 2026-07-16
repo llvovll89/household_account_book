@@ -33,7 +33,7 @@ interface Props {
 }
 
 export default function DashboardWidgetSettings({ hiddenWidgets, onSave, onClose }: Props) {
-  const { closing, handleClose } = useModalClose(onClose)
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
 
   function toggle(id: DashboardWidgetId) {
     const next = hiddenWidgets.includes(id)
@@ -45,7 +45,7 @@ export default function DashboardWidgetSettings({ hiddenWidgets, onSave, onClose
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-[17px] font-bold text-white">홈 위젯 설정</h2>

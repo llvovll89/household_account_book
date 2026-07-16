@@ -306,7 +306,7 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
           </button>
         </div>
         {viewMode === 'cards' && memos.length > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 bg-[#1C1C1E] rounded-xl px-2.5 py-1.5 min-w-0 max-w-[140px]">
+          <div className="ml-auto flex items-center gap-1.5 bg-[#1C1C1E] rounded-xl px-2.5 py-1.5 min-w-0 max-w-35">
             <Search size={11} className="text-[#4E5968] shrink-0" />
             <input
               value={search}
@@ -326,12 +326,24 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               <p className="text-4xl mb-3">🔍</p>
               <p className="font-bold text-white text-[15px]">검색 결과 없음</p>
               <p className="text-[#4E5968] text-sm mt-1">"{search}"에 해당하는 메모가 없어요</p>
+              <button
+                onClick={() => setSearch('')}
+                className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+              >
+                검색 초기화
+              </button>
             </>
           ) : (
             <>
               <p className="text-5xl mb-4">📝</p>
               <p className="font-bold text-white text-[15px]">메모가 없어요</p>
               <p className="text-[#4E5968] text-sm mt-1">예산 목표, 할 일 등을 기록해보세요</p>
+              <button
+                onClick={openNew}
+                className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+              >
+                메모 작성
+              </button>
             </>
           )}
         </div>
@@ -494,6 +506,15 @@ export default function MemoSection({ memos, onAdd, onUpdate, onDelete, onToggle
               <div className="py-10 text-center flex flex-col items-center gap-2">
                 <span className="text-3xl">📅</span>
                 <p className="text-sm text-[#4E5968]">이 날짜에는 메모가 없어요</p>
+                <button
+                  onClick={() => {
+                    setSelectedDate(null)
+                    openNew()
+                  }}
+                  className="mt-2 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                >
+                  메모 작성
+                </button>
               </div>
             ) : (
               <div className="overflow-y-auto">

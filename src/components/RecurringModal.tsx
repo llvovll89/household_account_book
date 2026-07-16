@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react'
-import { X, Plus, Trash2, ChevronDown, RefreshCw } from 'lucide-react'
+import { X, Plus, Trash2, ChevronDown } from 'lucide-react'
 import type { RecurringTransaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt, generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
+import { useModalClose } from '../hooks/useModalClose'
+import EmptyState from './ui/EmptyState'
 
 interface Props {
   recurring: RecurringTransaction[]
@@ -15,6 +17,7 @@ interface Props {
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
 export default function RecurringModal({ recurring, customExpenseCategories = [], onSave, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [items, setItems] = useState<RecurringTransaction[]>(recurring)
   const [adding, setAdding] = useState(false)
   const pendingDeleteTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -79,25 +82,28 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
   function handleSave() {
     onSave(items)
-    onClose()
+    handleClose()
   }
 
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="recurring-modal-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/[0.06] modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
 
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">정기 지출 관리</h2>
+            <h2 id="recurring-modal-title" className="text-[18px] font-bold text-white">정기 지출 관리</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">매달 반복되는 고정 수입/지출</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button aria-label="정기 지출 관리 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>
@@ -105,10 +111,14 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-3">
           {/* 등록된 항목 목록 */}
           {items.length === 0 && !adding && (
-            <div className="bg-[#2C2C2E] rounded-2xl p-8 text-center">
-              <RefreshCw size={28} className="text-[#4E5968] mx-auto mb-3" />
-              <p className="text-sm font-semibold text-[#8B95A1]">등록된 정기 항목이 없어요</p>
-              <p className="text-xs text-[#4E5968] mt-1">월세, 구독료, 보험 등을 추가해보세요</p>
+            <div className="bg-[#2C2C2E] rounded-2xl">
+              <EmptyState
+                emoji="🔁"
+                title="등록된 정기 항목이 없어요"
+                description="월세, 구독료, 보험 같은 고정 항목을 먼저 추가해보세요"
+                action={{ label: '정기 항목 추가', onClick: () => setAdding(true) }}
+                className="py-8 px-3"
+              />
             </div>
           )}
 
@@ -170,9 +180,10 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
               <div className="grid grid-cols-2 gap-2">
                 {/* 금액 */}
                 <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5 overflow-hidden">
-                  <p className="text-[10px] text-[#4E5968] font-semibold mb-1">금액</p>
+                  <label htmlFor="recurring-amount" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">금액</label>
                   <div className="flex items-baseline gap-1">
                     <input
+                      id="recurring-amount"
                       type="text" inputMode="numeric"
                       value={newAmount}
                       onChange={(e) => handleAmountChange(e.target.value)}
@@ -185,9 +196,10 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
                 {/* 날짜 */}
                 <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                  <p className="text-[10px] text-[#4E5968] font-semibold mb-1">매월 몇 일</p>
+                  <label htmlFor="recurring-day" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">매월 몇 일</label>
                   <div className="relative">
                     <select
+                      id="recurring-day"
                       value={newDay}
                       onChange={(e) => setNewDay(Number(e.target.value))}
                       className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
@@ -201,9 +213,10 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
               {/* 카테고리 */}
               <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <p className="text-[10px] text-[#4E5968] font-semibold mb-1">카테고리</p>
+                <label htmlFor="recurring-category" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">카테고리</label>
                 <div className="relative">
                   <select
+                    id="recurring-category"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
@@ -216,8 +229,9 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
               {/* 메모 */}
               <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <p className="text-[10px] text-[#4E5968] font-semibold mb-1">메모 (선택)</p>
+                <label htmlFor="recurring-note" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">메모 (선택)</label>
                 <textarea
+                  id="recurring-note"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="예: 넷플릭스, 월세"
@@ -250,7 +264,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
           )}
         </div>
 
-        <div className="px-6 pb-8 pt-3 border-t border-white/[0.05] shrink-0">
+        <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0">
           <button
             onClick={handleSave}
             className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"

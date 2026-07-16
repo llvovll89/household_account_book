@@ -6,9 +6,10 @@ import EmptyState from './ui/EmptyState'
 
 interface Props {
   trades: StockTrade[]
+  onAddTrade?: () => void
 }
 
-export default function StockPerformance({ trades }: Props) {
+export default function StockPerformance({ trades, onAddTrade }: Props) {
   const totalRealizedPnL = useMemo(() => calcTotalRealizedPnL(trades), [trades])
   const totalFee = useMemo(() => calcTotalFee(trades), [trades])
   const realizedByTicker = useMemo(() => calcRealizedPnLByTicker(trades), [trades])
@@ -42,7 +43,12 @@ export default function StockPerformance({ trades }: Props) {
     return (
       <div className="space-y-3 tab-content">
         <div className="bg-[#1C1C1E] rounded-2xl">
-          <EmptyState emoji="📈" title="성과 데이터가 없어요" description="거래가 쌓이면 성과분석이 표시돼요" />
+          <EmptyState
+            emoji="📈"
+            title="성과 데이터가 없어요"
+            description="거래가 쌓이면 성과분석이 표시돼요"
+            action={onAddTrade ? { label: '첫 거래 추가', onClick: onAddTrade } : undefined}
+          />
         </div>
       </div>
     )

@@ -32,6 +32,7 @@ interface Props {
   onApplyRecurring: (items: RecurringTransaction[]) => void
   onOpenCategoryModal: () => void
   onOpenPaymentMethodsModal: () => void
+  onAddTransaction?: () => void
   onOpenWidgetSettings?: () => void
 }
 
@@ -96,7 +97,7 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
   )
 }
 
-export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onOpenWidgetSettings }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings }: Props) {
   const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
@@ -2078,7 +2079,15 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
         <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center card-enter">
           <div className="text-5xl mb-4 animate-bounce" style={{ animationDuration: '2s' }}>💸</div>
           <p className="font-bold text-white text-[15px]">이번 달 내역이 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1.5">아래 + 버튼으로 첫 내역을 추가해보세요</p>
+          <p className="text-[#4E5968] text-sm mt-1.5">내역 추가 버튼으로 첫 내역을 입력해보세요</p>
+          {onAddTransaction && (
+            <button
+              onClick={onAddTransaction}
+              className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+            >
+              내역 추가
+            </button>
+          )}
           <div className="flex justify-center gap-3 mt-5">
             {['식비', '교통비', '급여'].map(cat => (
               <div key={cat} className="px-2.5 py-1.5 bg-[#2C2C2E] rounded-xl text-[11px] text-[#4E5968]">

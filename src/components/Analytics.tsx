@@ -22,6 +22,7 @@ interface Props {
   budgets: Budget[]
   settingsVersion: number
   userPaymentMethods?: UserPaymentMethod[]
+  onAddTransaction?: () => void
 }
 
 function getYM(year: number, month: number) {
@@ -32,7 +33,7 @@ const WEEKDAYS_SHORT = ['일', '월', '화', '수', '목', '금', '토']
 
 type ViewMode = 'monthly' | 'yearly' | 'cashflow' | 'tags' | 'reduce' | 'budget'
 
-export default function Analytics({ transactions, yearMonth, budgets, settingsVersion, userPaymentMethods = [] }: Props) {
+export default function Analytics({ transactions, yearMonth, budgets, settingsVersion, userPaymentMethods = [], onAddTransaction }: Props) {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly')
   const [pmTab, setPmTab] = useState<'balance' | 'compare' | 'trend' | 'billing'>('balance')
   const [showMonthlyDetail, setShowMonthlyDetail] = useState(false)
@@ -432,6 +433,15 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
     budget: '예산',
   }
 
+  const TAB_HINTS: Record<ViewMode, string> = {
+    monthly: '이번 달 중심 분석',
+    yearly: '연간 추이 요약',
+    cashflow: '현금흐름 흐름 분석',
+    tags: '태그별 소비 분석',
+    reduce: '절감 기회 찾기',
+    budget: '예산 대비 점검',
+  }
+
   const TAB_ICONS: Record<ViewMode, string> = {
     monthly: '📅',
     yearly: '📊',
@@ -444,13 +454,21 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
   return (
     <div className="space-y-3 tab-content">
       {/* 탭 토글 */}
-      <div className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto gap-0.5" style={{ scrollbarWidth: 'none' }}>
+      <div
+        className="bg-[#1C1C1E] rounded-2xl p-1 flex overflow-x-auto gap-0.5"
+        style={{ scrollbarWidth: 'none' }}
+        role="tablist"
+        aria-label="분석 모드 선택"
+      >
         {(['monthly', 'yearly', 'cashflow', 'tags', 'reduce', 'budget'] as ViewMode[]).map((m) => (
           <button
             key={m}
             onClick={() => setViewMode(m)}
+            role="tab"
+            aria-selected={viewMode === m}
             aria-pressed={viewMode === m}
-            className={`flex-shrink-0 flex-1 min-w-[56px] py-2 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
+            aria-label={`${TAB_LABELS[m]} 분석 보기`}
+            className={`shrink-0 flex-1 min-w-14 py-2 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
               viewMode === m ? 'bg-[#3D8EF8] text-white' : 'text-[#4E5968] hover:text-[#8B95A1]'
             }`}
           >
@@ -459,6 +477,9 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
           </button>
         ))}
       </div>
+      <p className="text-[11px] text-[#8B95A1] px-1" role="status" aria-live="polite">
+        현재 모드: <span className="font-semibold text-white">{TAB_LABELS[viewMode]}</span> · {TAB_HINTS[viewMode]}
+      </p>
 
       {/* ──── 월간 뷰 ──── */}
       {viewMode === 'monthly' && (
@@ -671,6 +692,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <div className="flex flex-col items-center py-6 gap-2">
                 <TrendingUp size={28} className="text-[#2C2C2E]" />
                 <p className="text-sm text-[#4E5968]">이번 달 내역이 없어요</p>
+                {onAddTransaction && (
+                  <button
+                    onClick={onAddTransaction}
+                    className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                  >
+                    내역 추가
+                  </button>
+                )}
               </div>
             ) : (
               <CumulativeLineChart transactions={transactions} yearMonth={yearMonth} />
@@ -685,6 +714,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <div className="flex flex-col items-center py-6 gap-2">
                 <TrendingDown size={28} className="text-[#2C2C2E]" />
                 <p className="text-sm text-[#4E5968]">이번 달 지출 내역이 없어요</p>
+                {onAddTransaction && (
+                  <button
+                    onClick={onAddTransaction}
+                    className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                  >
+                    내역 추가
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -1121,6 +1158,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <div className="bg-[#1C1C1E] rounded-2xl p-5 flex flex-col items-center gap-2 py-10">
                 <Minus size={28} className="text-[#2C2C2E]" />
                 <p className="text-sm text-[#4E5968]">{selectedYear}년 내역이 없어요</p>
+                {onAddTransaction && (
+                  <button
+                    onClick={onAddTransaction}
+                    className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                  >
+                    내역 추가
+                  </button>
+                )}
               </div>
             )
             const bestMonth = withData.reduce((a, b) => b.balance > a.balance ? b : a)
@@ -1174,6 +1219,14 @@ export default function Analytics({ transactions, yearMonth, budgets, settingsVe
               <Hash size={32} className="text-[#2C2C2E] mx-auto mb-3" />
               <p className="text-sm font-semibold text-[#4E5968]">이번 달 태그 내역이 없어요</p>
               <p className="text-xs text-[#4E5968]/50 mt-1">거래 내역에 태그를 추가하면 분석을 보여드려요</p>
+              {onAddTransaction && (
+                <button
+                  onClick={onAddTransaction}
+                  className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                >
+                  내역 추가
+                </button>
+              )}
             </div>
           ) : (
             <>
