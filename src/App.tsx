@@ -2748,7 +2748,6 @@ export default function App() {
                         onModeChange={setAutoApplyMode}
                         onConfirm={async () => {
                             const todayYM = getYearMonth(new Date());
-                            const appliedItems = [...autoApplyPending];
                             setShowAutoApplyModal(false);
                             await handleApplyRecurring(
                                 autoApplyPending,

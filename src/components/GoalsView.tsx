@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef, useMemo} from "react";
 import {Plus, Pencil, Trash2, X, Check, Minus, Link} from "lucide-react";
 import type {SavingsGoal, Transaction} from "../types";
-import {EXPENSE_CATEGORIES, INCOME_CATEGORIES} from "../types";
+import {EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI} from "../types";
 import {fmt, generateId, parseYmdLocal} from "../lib/format";
 import {showToast} from "../lib/toast";
 import EmptyState from "./ui/EmptyState";

@@ -804,7 +804,7 @@ export default function Analytics({
             </p>
 
             <div key={viewMode} className="space-y-3 tab-content">
-            {/* ──── 월간 뷰 ──── */}}
+            {/* ──── 월간 뷰 ──── */}
             {viewMode === "monthly" && (
                 <>
                     {/* 인사이트 */}
@@ -2793,6 +2793,7 @@ export default function Analytics({
                     )}
                 </>
             )}
+            </div>
         </div>
     );
 }
