@@ -95,7 +95,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                 key={idx}
                 onClick={() => handleCellClick(cell.date)}
                 disabled={!cell.date}
-                className={`relative flex flex-col items-center pt-2 pb-1.5 min-h-14 transition-colors border-b border-r border-white/3 ${
+                className={`relative flex flex-col items-center pt-2 pb-1.5 min-h-[60px] transition-colors border-b border-r border-white/3 ${
                   isSelected
                     ? 'bg-[#3D8EF8]/15'
                     : cell.date ? 'hover:bg-white/3 active:bg-white/5' : ''
@@ -124,12 +124,12 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                     {hasData && (
                       <div className="flex flex-col items-center gap-0.5 mt-0.5">
                         {cell.expense > 0 && (
-                          <span className="text-[9px] font-semibold text-[#F25260] leading-none num">
+                          <span className="text-[10px] font-semibold text-[#F25260] leading-none num">
                             -{cell.expense >= 10000 ? `${Math.round(cell.expense / 10000)}만` : fmt(cell.expense)}
                           </span>
                         )}
                         {cell.income > 0 && (
-                          <span className="text-[9px] font-semibold text-[#2ACF6A] leading-none num">
+                          <span className="text-[10px] font-semibold text-[#2ACF6A] leading-none num">
                             +{cell.income >= 10000 ? `${Math.round(cell.income / 10000)}만` : fmt(cell.income)}
                           </span>
                         )}

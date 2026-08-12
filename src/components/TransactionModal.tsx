@@ -113,7 +113,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         setReceiptPreview(transaction.receiptImageUrl)
         setShowReceipt(true)
       }
-      setShowAdvanced(true)
+      setShowAdvanced(!!(transaction.dateEnd || transaction.receiptImageUrl))
     } else {
       setShowAdvanced(false)
     }
@@ -167,10 +167,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }, [type, paymentMethod, date, cardBillingDay, creditBillingDayInput])
 
   useEffect(() => {
-    if (showDateEnd || !!receiptPreview || !!description.trim()) {
+    if (showDateEnd || !!receiptPreview) {
       setShowAdvanced(true)
     }
-  }, [showDateEnd, receiptPreview, description])
+  }, [showDateEnd, receiptPreview])
 
   function buildItem(): QueueItem | null {
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
@@ -697,6 +697,47 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
+            <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
+              <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
+                메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
+              </p>
+              <textarea
+                value={description}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setDescription(val)
+                  if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
+                    const matched = applyAutoCategory(val, type, autoCategoryRules)
+                    if (matched) { setCategory(matched); setAutoCategoryApplied(true) }
+                    else setAutoCategoryApplied(false)
+                  }
+                }}
+                placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
+                rows={3}
+                className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
+              />
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        aria-label={`#${tag} 태그 삭제`}
+                        className="hover:text-white transition-colors"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="bg-[#252A3F] rounded-2xl overflow-hidden">
               <button
                 type="button"
@@ -705,8 +746,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm">⚙️</span>
-                  <span className="text-[13px] font-bold text-[#8B95A1]">상세 입력</span>
-                  {(showDateEnd || receiptPreview || tags.length > 0) && (
+                  <span className="text-[13px] font-bold text-[#8B95A1]">고급 설정</span>
+                  {(showDateEnd || !!receiptPreview) && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#3D8EF8]/15 text-[#3D8EF8]">활성</span>
                   )}
                 </div>
@@ -717,49 +758,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {showAdvanced && (
-              <>
-                <div className="bg-[#252A3F] rounded-2xl px-5 py-4 space-y-2">
-                  <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
-                    메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
-                  </p>
-                  <textarea
-                    value={description}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setDescription(val)
-                      if (!categoryManuallySet.current && autoCategoryRules.length > 0) {
-                        const matched = applyAutoCategory(val, type, autoCategoryRules)
-                        if (matched) { setCategory(matched); setAutoCategoryApplied(true) }
-                        else setAutoCategoryApplied(false)
-                      }
-                    }}
-                    placeholder={"어디서 사용했나요?\n#태그도 함께 입력해보세요"}
-                    rows={3}
-                    className="w-full bg-transparent text-[14px] font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
-                  />
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]"
-                        >
-                          #{tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            aria-label={`#${tag} 태그 삭제`}
-                            className="hover:text-white transition-colors"
-                          >
-                            <X size={10} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
+              <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">기간 설정 (선택)</p>
                     <button
@@ -779,7 +778,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     </div>
                   )}
                 </div>
-              </>
             )}
 
             {/* 영수증 첨부 (접기/펼치기) */}
