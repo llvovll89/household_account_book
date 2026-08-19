@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
-import { fmt } from '../lib/format'
+import { fmt, fmtPrice } from '../lib/format'
 import { generateId } from '../lib/format'
 import EmptyState from './ui/EmptyState'
 
@@ -74,7 +74,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       memo: sub.memo,
     })
     setAmountStr(sub.amount > 0 ? String(sub.amount) : '')
-    const idx = SERVICE_COLORS.indexOf((sub as any).color ?? SERVICE_COLORS[0])
+    const idx = SERVICE_COLORS.indexOf(sub.color ?? SERVICE_COLORS[0])
     setColorIdx(idx >= 0 ? idx : 0)
     setErrors({})
     setShowSheet(true)
@@ -102,8 +102,8 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         id: generateId(),
         ...form,
         amount,
+        color,
         createdAt: Date.now(),
-        ...({ color } as any),
       }
       onChange([...subscriptions, next])
     }
@@ -205,7 +205,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       ) : (
         <div className="space-y-2">
           {sorted.map((sub, subIdx) => {
-            const color = (sub as any).color ?? SERVICE_COLORS[0]
+            const color = sub.color ?? SERVICE_COLORS[0]
             const days = daysUntilBilling(sub.billingDay)
             const catColor = CATEGORY_COLOR[sub.category]
             return (
@@ -244,7 +244,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-white num">
-                      {sub.currency === 'USD' ? `$${sub.amount.toFixed(2)}` : `${fmt(sub.amount)}원`}
+                      {fmtPrice(sub.amount, sub.currency)}
                     </p>
                   </div>
 
@@ -294,7 +294,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
               .sort((a, b) => b.amount - a.amount)
               .slice(0, 3)
               .map(sub => {
-                const color = (sub as any).color ?? SERVICE_COLORS[0]
+                const color = sub.color ?? SERVICE_COLORS[0]
                 const annual = sub.amount * 12
                 return (
                   <div key={sub.id} className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">

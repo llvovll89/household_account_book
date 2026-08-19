@@ -21,11 +21,6 @@ export function fmtShort(n: number): string {
   return n.toLocaleString()
 }
 
-/** 주식 수량 표기 (정수는 그대로, 소수는 최대 4자리) */
-export function fmtQty(q: number): string {
-  return q % 1 === 0 ? q.toFixed(0) : q.toFixed(4).replace(/\.?0+$/, '')
-}
-
 /** 날짜 문자열(YYYY-MM-DD)을 표시용 문자열로 변환 */
 export function formatDate(dateStr: string): string {
   const d = parseYmdLocal(dateStr)

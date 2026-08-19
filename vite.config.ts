@@ -68,7 +68,6 @@ export default defineConfig({
           '**/assets/vendor-xlsx-*.js',
           '**/assets/vendor-pdf-*.js',
           '**/assets/ImportModal-*.js',
-          '**/assets/TransactionModal-*.js',
           '**/assets/SyncConflictModal-*.js',
           '**/assets/SyncRecoveryGuideModal-*.js',
           '**/assets/MergeLocalDataModal-*.js',

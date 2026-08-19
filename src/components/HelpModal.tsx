@@ -58,16 +58,6 @@ const sections = [
     ],
   },
   {
-    icon: TrendingUp,
-    color: '#60A5FA',
-    title: '주식',
-    items: [
-      '주식 탭은 로그인한 경우에만 표시돼요.',
-      '매수/매도 거래를 기록하고 거래 내역을 관리할 수 있어요.',
-      '주식 데이터는 로그인 계정의 Firebase에 저장돼요.',
-    ],
-  },
-  {
     icon: FileDown,
     color: '#34D399',
     title: '가져오기',

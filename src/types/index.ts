@@ -138,6 +138,7 @@ export interface Subscription {
   billingDay: number    // 매월 결제일 (1-31)
   category: string      // EXPENSE_CATEGORIES 중 하나
   memo: string          // 선택 메모
+  color?: string        // 카드 아이콘/포인트 색상
   createdAt: number
 }
 

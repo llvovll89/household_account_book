@@ -10,7 +10,7 @@ import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
-import { fmt, fmtShort, parseYmdLocal, toLocalDateStr } from '../lib/format'
+import { fmt, fmtPrice, fmtShort, parseYmdLocal, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
 
@@ -830,7 +830,14 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               </span>
             </div>
             <span className="text-xs font-bold num text-[#F25260]">
-              -{fmt(upcomingSubscriptions.filter(s => s.currency !== 'USD').reduce((sum, s) => sum + s.amount, 0))}원
+              {(() => {
+                const krwSum = upcomingSubscriptions.filter(s => s.currency !== 'USD').reduce((sum, s) => sum + s.amount, 0)
+                const usdSum = upcomingSubscriptions.filter(s => s.currency === 'USD').reduce((sum, s) => sum + s.amount, 0)
+                const parts = []
+                if (krwSum > 0) parts.push(`-${fmt(krwSum)}원`)
+                if (usdSum > 0) parts.push(`-$${usdSum.toFixed(2)}`)
+                return parts.join(' · ')
+              })()}
             </span>
           </div>
           <div className="space-y-2">
@@ -844,7 +851,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                   {s.daysLeft === 0 ? '오늘' : `${s.daysLeft}일 후`}
                 </span>
                 <span className="text-sm font-bold num text-[#F25260]">
-                  -{s.currency === 'USD' ? `$${s.amount}` : `${s.amount.toLocaleString()}원`}
+                  -{fmtPrice(s.amount, s.currency)}
                 </span>
               </div>
             ))}
