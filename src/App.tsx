@@ -28,6 +28,7 @@ import {
     Target,
     WifiOff,
     CloudOff,
+    Trash2,
 } from "lucide-react";
 import type {
     AutoCategoryRule,
@@ -44,7 +45,7 @@ import type {
 } from "./types";
 import {CATEGORY_EMOJI} from "./types";
 import type {Tab} from "./types/navigation";
-import {loadAllData, loadSettings} from "./lib/storage";
+import {loadAllData, loadSettings, resetAllData} from "./lib/storage";
 import type {RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
 import {calculateCardDueAmount, shiftYM} from "./lib/cardBilling";
@@ -90,6 +91,9 @@ const AutoCategoryRuleModal = lazy(
 const TagManagerModal = lazy(() => import("./components/TagManagerModal"));
 const DashboardWidgetSettings = lazy(
     () => import("./components/DashboardWidgetSettings"),
+);
+const ResetAllDataModal = lazy(
+    () => import("./components/ResetAllDataModal"),
 );
 
 const DATA_LOAD_TIMEOUT_MS = 9000;
@@ -280,6 +284,7 @@ interface UIState {
     showHelp: boolean;
     showCategoryModal: boolean;
     showPaymentMethodsModal: boolean;
+    showResetModal: boolean;
     memoAddTrigger: number;
     subscriptionAddTrigger: number;
     goalAddTrigger: number;
@@ -328,6 +333,7 @@ const UI_INIT: UIState = {
     showHelp: false,
     showCategoryModal: false,
     showPaymentMethodsModal: false,
+    showResetModal: false,
     memoAddTrigger: 0,
     subscriptionAddTrigger: 0,
     goalAddTrigger: 0,
@@ -352,6 +358,8 @@ function uiReducer(state: UIState, action: UIAction): UIState {
             return {...state, showCategoryModal: action.value};
         case "SET_PAYMENT_METHODS":
             return {...state, showPaymentMethodsModal: action.value};
+        case "SET_RESET":
+            return {...state, showResetModal: action.value};
         case "TRIGGER_MEMO":
             return {...state, memoAddTrigger: state.memoAddTrigger + 1};
         case "TRIGGER_SUB":
@@ -484,6 +492,7 @@ export default function App() {
         showHelp,
         showCategoryModal,
         showPaymentMethodsModal,
+        showResetModal,
         memoAddTrigger,
         subscriptionAddTrigger,
         goalAddTrigger,
@@ -720,6 +729,18 @@ export default function App() {
         handleEmailAuth,
         handleLogout,
     } = useAuthSync({hydrateData});
+
+    const handleResetAllData = useCallback(async () => {
+        try {
+            await resetAllData();
+            await hydrateData();
+            showToast("모든 데이터를 초기화했어요.");
+        } catch (e) {
+            console.error("[handleResetAllData]", e);
+            showToast("초기화 중 오류가 발생했어요. 다시 시도해주세요.");
+            throw e;
+        }
+    }, [hydrateData]);
 
     const visibleTabs = LEDGER_TABS;
     const activeTab: Tab = tab;
@@ -1668,6 +1689,23 @@ export default function App() {
                                                     />
                                                     자동 분류 규칙
                                                 </button>
+                                                <div className="my-1 h-px bg-[rgba(255,255,255,0.06)]" />
+                                                <button
+                                                    onClick={() => {
+                                                        setShowUserMenu(false);
+                                                        dispatchUI({
+                                                            type: "SET_RESET",
+                                                            value: true,
+                                                        });
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#F25260] hover:bg-[#F25260]/10 transition-colors text-left"
+                                                >
+                                                    <Trash2
+                                                        size={14}
+                                                        className="text-[#F25260]"
+                                                    />
+                                                    전부 초기화
+                                                </button>
                                                 <button
                                                     onClick={() => {
                                                         setShowUserMenu(false);
@@ -1712,6 +1750,18 @@ export default function App() {
                                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
                                     >
                                         <FileDown size={12} />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            dispatchUI({
+                                                type: "SET_RESET",
+                                                value: true,
+                                            })
+                                        }
+                                        aria-label="전부 초기화"
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#F25260] bg-[#1C1C1E] hover:bg-[#F25260]/10 transition-colors border border-[rgba(255,255,255,0.06)]"
+                                    >
+                                        <Trash2 size={12} />
                                     </button>
                                     <button
                                         aria-label="로그인 모달 열기"
@@ -2383,6 +2433,17 @@ export default function App() {
                         customIncomeCategories={customIncomeCategories}
                         onSave={handleSaveAutoCategoryRules}
                         onClose={() => setShowAutoCategoryRuleModal(false)}
+                    />
+                </Suspense>
+            )}
+            {showResetModal && (
+                <Suspense fallback={null}>
+                    <ResetAllDataModal
+                        isLoggedIn={!!user}
+                        onConfirm={handleResetAllData}
+                        onClose={() =>
+                            dispatchUI({type: "SET_RESET", value: false})
+                        }
                     />
                 </Suspense>
             )}

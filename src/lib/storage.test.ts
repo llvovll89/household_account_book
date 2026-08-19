@@ -19,6 +19,7 @@ import {
   hasLocalMigratableData,
   loadSettings,
   mergeLocalIntoFirebase,
+  resetAllData,
   StorageConflictError,
   saveTransactions,
   setStorageContext,
@@ -160,7 +161,7 @@ describe('storage util', () => {
               memos: 0,
               budgets: 0,
               recurring: 0,
-                    subscriptions: 0,
+              subscriptions: 0,
               goals: 0,
               settings: 0,
             },
@@ -301,5 +302,83 @@ describe('storage util', () => {
     await expect(mergeLocalIntoFirebase()).rejects.toBe(conflict)
     expect(localStorage.getItem('hb_transactions')).not.toBeNull()
     expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+  })
+
+  it('resetAllData(로컬 모드)는 모든 키를 지우고 백업 키를 남기지 않는다', async () => {
+    localStorage.setItem('hb_transactions', JSON.stringify([TX]))
+    localStorage.setItem('hb_memos', JSON.stringify([MEMO]))
+    localStorage.setItem('hb_budgets', JSON.stringify([{ category: '식비', limit: 100000 }]))
+    localStorage.setItem('hb_recurring', JSON.stringify([]))
+    localStorage.setItem('hb_subscriptions', JSON.stringify([]))
+    localStorage.setItem('hb_goals', JSON.stringify([]))
+    writeDefaultSettings({ customExpenseCategories: ['간식'] })
+    localStorage.setItem('hb_firebase_cache', 'true')
+    localStorage.setItem('hb_pending_sync', 'true')
+
+    await resetAllData()
+
+    expect(localStorage.getItem('hb_transactions')).toBeNull()
+    expect(localStorage.getItem('hb_memos')).toBeNull()
+    expect(localStorage.getItem('hb_budgets')).toBeNull()
+    expect(localStorage.getItem('hb_recurring')).toBeNull()
+    expect(localStorage.getItem('hb_subscriptions')).toBeNull()
+    expect(localStorage.getItem('hb_goals')).toBeNull()
+    expect(localStorage.getItem('hb_settings')).toBeNull()
+    expect(localStorage.getItem('hb_firebase_cache')).toBeNull()
+    expect(localStorage.getItem('hb_pending_sync')).toBeNull()
+
+    const backupKeys = Object.keys(localStorage).filter((key) => key.startsWith('hb_backup_'))
+    expect(backupKeys).toHaveLength(0)
+
+    const settings = await loadSettings()
+    expect(settings.customExpenseCategories).toEqual([])
+  })
+
+  it('resetAllData(Firebase 모드)는 모든 필드를 빈 값으로 덮어쓰고 충돌 없이 커밋된다', async () => {
+    setStorageContext('firebase', 'uid-1')
+    localStorage.setItem('hb_transactions', JSON.stringify([TX]))
+    writeDefaultSettings({ customExpenseCategories: ['간식'] })
+
+    let committedPayload: Record<string, unknown> | null = null
+
+    vi.mocked(runTransaction).mockImplementation(async (_db, updateFn) => {
+      const tx = {
+        get: vi.fn().mockResolvedValue({
+          data: () => ({
+            transactions: [TX],
+            versions: {
+              transactions: 3,
+              memos: 1,
+              budgets: 0,
+              recurring: 0,
+              subscriptions: 0,
+              goals: 0,
+              settings: 2,
+            },
+          }),
+        }),
+        set: vi.fn((_ref, payload) => {
+          committedPayload = payload as Record<string, unknown>
+        }),
+      }
+
+      await updateFn(tx as never)
+    })
+
+    await expect(resetAllData()).resolves.toBeUndefined()
+
+    expect(committedPayload).not.toBeNull()
+    if (!committedPayload) throw new Error('committed payload should exist')
+    const payloadRecord = committedPayload as Record<string, unknown>
+    expect(payloadRecord['transactions']).toEqual([])
+    expect(payloadRecord['memos']).toEqual([])
+    expect(payloadRecord['budgets']).toEqual([])
+    expect(payloadRecord['recurring']).toEqual([])
+    expect(payloadRecord['subscriptions']).toEqual([])
+    expect(payloadRecord['goals']).toEqual([])
+    expect((payloadRecord['settings'] as Record<string, unknown>)['customExpenseCategories']).toEqual([])
+
+    expect(localStorage.getItem('hb_transactions')).toBeNull()
+    expect(localStorage.getItem('hb_settings')).toBeNull()
   })
 })

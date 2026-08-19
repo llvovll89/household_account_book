@@ -7,6 +7,7 @@ export type UIAction =
   | { type: 'SET_HELP'; value: boolean }
   | { type: 'SET_CATEGORY'; value: boolean }
   | { type: 'SET_PAYMENT_METHODS'; value: boolean }
+  | { type: 'SET_RESET'; value: boolean }
   | { type: 'TRIGGER_MEMO' }
   | { type: 'TRIGGER_SUB' }
   | { type: 'TRIGGER_GOAL' }

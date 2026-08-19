@@ -76,6 +76,7 @@ export default defineConfig({
           '**/assets/HelpModal-*.js',
           '**/assets/CategoryModal-*.js',
           '**/assets/PaymentMethodsModal-*.js',
+          '**/assets/ResetAllDataModal-*.js',
         ],
         clientsClaim: true,
         skipWaiting: true,

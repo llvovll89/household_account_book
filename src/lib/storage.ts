@@ -581,6 +581,34 @@ export function clearLocalData(): void {
   backupAndClearLocalData()
 }
 
+/**
+ * 로컬(및 로그인 상태라면 Firebase 원격) 데이터와 설정을 앱 최초 상태로 되돌린다.
+ * clearLocalData와 달리 hb_backup_* 백업을 남기지 않고 완전히 삭제한다.
+ */
+export async function resetAllData(): Promise<void> {
+  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
+  for (const key of keys) localStorage.removeItem(key)
+  localStorage.removeItem(FIREBASE_CACHE_KEY)
+  localStorage.removeItem(PENDING_SYNC_KEY)
+
+  if (storageMode === 'firebase') {
+    const uid = getStorageUid()
+    // 캐시된 버전을 지워 현재 원격 버전을 그대로 기준점으로 삼는다 → 충돌 없이 항상 덮어써진다
+    cachedRemoteVersions = null
+    await saveRemotePatch(uid, {
+      transactions: [],
+      memos: [],
+      budgets: [],
+      recurring: [],
+      subscriptions: [],
+      goals: [],
+      settings: { ...DEFAULT_SETTINGS },
+    })
+  }
+
+  emitSettingsUpdatedEvent()
+}
+
 export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
   if (storageMode !== 'firebase') {
     return {
