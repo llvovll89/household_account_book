@@ -19,7 +19,7 @@ export default function SparklineCard({ data, color, label, value, trend }: Prop
           {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
         </p>
       )}
-      <div className="mt-2">
+      <div className="mt-2" role="img" aria-label={`${label} 추이 스파크라인, 현재 ${value}`}>
         <ResponsiveContainer width="100%" height={40}>
           <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
             <defs>

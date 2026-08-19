@@ -72,6 +72,7 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
 
   return (
     <>
+    <div role="img" aria-label={`이번 달 누적 잔액 추이 선 차트${hasProjection ? ' (이후 예측 포함)' : ''}`}>
     <ResponsiveContainer width="100%" height={120}>
       <LineChart data={chartData} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
         <CartesianGrid {...GRID_PROPS} />
@@ -125,6 +126,7 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
         )}
       </LineChart>
     </ResponsiveContainer>
+    </div>
     {hasProjection && (
       <div className="flex items-center justify-end gap-4 mt-1 pr-3">
         <div className="flex items-center gap-1">

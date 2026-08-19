@@ -50,6 +50,7 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
 
   return (
     <div className="space-y-3">
+      <div role="img" aria-label="카테고리별 예산 대비 지출 비교 차트">
       <ResponsiveContainer width="100%" height={data.length * 52 + 20}>
         <BarChart data={data} layout="vertical" margin={{ left: 4, right: 12, top: 8, bottom: 8 }} barCategoryGap="28%">
           <XAxis type="number" hide />
@@ -72,6 +73,7 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
 
       {/* 범례 */}
       <div className="flex items-center gap-4 px-1">

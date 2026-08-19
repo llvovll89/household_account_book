@@ -52,6 +52,7 @@ interface Props {
   hiddenWidgets?: DashboardWidgetId[]
   onOpenTagManager?: () => void
   onOpenWidgetSettings?: () => void
+  onOpenHelp?: () => void
 }
 
 export default function LedgerWorkspace({
@@ -89,6 +90,7 @@ export default function LedgerWorkspace({
   hiddenWidgets = [],
   onOpenTagManager,
   onOpenWidgetSettings,
+  onOpenHelp,
 }: Props) {
   return (
     <>
@@ -113,6 +115,7 @@ export default function LedgerWorkspace({
               onOpenPaymentMethodsModal={onOpenPaymentMethodsModal}
               onAddTransaction={onTransactionAdd}
               onOpenWidgetSettings={onOpenWidgetSettings}
+              onOpenHelp={onOpenHelp}
             />
           </Suspense>
         </div>

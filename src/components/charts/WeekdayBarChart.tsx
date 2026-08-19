@@ -30,6 +30,7 @@ export default function WeekdayBarChart({ data }: Props) {
   }
 
   return (
+    <div role="img" aria-label={`요일별 지출 막대 그래프, ${data[topIdx]?.label ?? ''}요일 지출이 가장 많음`}>
     <ResponsiveContainer width="100%" height={100}>
       <BarChart data={data} margin={{ top: 4, right: 4, left: 4, bottom: 0 }} barCategoryGap="20%">
         <XAxis
@@ -83,5 +84,6 @@ export default function WeekdayBarChart({ data }: Props) {
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+    </div>
   )
 }

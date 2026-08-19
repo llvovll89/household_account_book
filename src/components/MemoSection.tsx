@@ -21,6 +21,7 @@ import {
     CATEGORY_COLOR,
 } from "../types";
 import FancyDatePicker from "./FancyDatePicker";
+import EmptyState from "./ui/EmptyState";
 import {parseYmdLocal, toLocalDateStr} from "../lib/format";
 import {showToast} from "../lib/toast";
 
@@ -439,39 +440,21 @@ export default function MemoSection({
             </div>
 
             {viewMode === "cards" && sorted.length === 0 && !showForm && (
-                <div className="bg-[#1C1C1E] rounded-2xl p-12 text-center tab-content">
+                <div className="bg-[#1C1C1E] rounded-2xl tab-content">
                     {search ? (
-                        <>
-                            <p className="text-4xl mb-3">🔍</p>
-                            <p className="font-bold text-white text-[15px]">
-                                검색 결과 없음
-                            </p>
-                            <p className="text-[#4E5968] text-sm mt-1">
-                                "{search}"에 해당하는 메모가 없어요
-                            </p>
-                            <button
-                                onClick={() => setSearch("")}
-                                className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                            >
-                                검색 초기화
-                            </button>
-                        </>
+                        <EmptyState
+                            emoji="🔍"
+                            title="검색 결과 없음"
+                            description={`"${search}"에 해당하는 메모가 없어요`}
+                            action={{ label: "검색 초기화", onClick: () => setSearch("") }}
+                        />
                     ) : (
-                        <>
-                            <p className="text-5xl mb-4">📝</p>
-                            <p className="font-bold text-white text-[15px]">
-                                메모가 없어요
-                            </p>
-                            <p className="text-[#4E5968] text-sm mt-1">
-                                예산 목표, 할 일 등을 기록해보세요
-                            </p>
-                            <button
-                                onClick={openNew}
-                                className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                            >
-                                메모 작성
-                            </button>
-                        </>
+                        <EmptyState
+                            emoji="📝"
+                            title="메모가 없어요"
+                            description="예산 목표, 할 일 등을 기록해보세요"
+                            action={{ label: "메모 작성", onClick: openNew }}
+                        />
                     )}
                 </div>
             )}

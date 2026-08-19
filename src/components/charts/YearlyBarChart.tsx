@@ -47,6 +47,7 @@ function YearlyTooltip({ active, payload, label }: YearlyTooltipProps) {
 
 export default function YearlyBarChart({ data, currentYM }: Props) {
   return (
+    <div role="img" aria-label="월별 수입/지출 비교 막대 그래프">
     <ResponsiveContainer width="100%" height={130}>
       <BarChart data={data} margin={{ top: 4, right: 12, left: -24, bottom: 0 }} barCategoryGap="18%" barGap={2}>
         <CartesianGrid {...GRID_PROPS} />
@@ -98,5 +99,6 @@ export default function YearlyBarChart({ data, currentYM }: Props) {
         </Bar>
       </BarChart>
     </ResponsiveContainer>
+    </div>
   )
 }

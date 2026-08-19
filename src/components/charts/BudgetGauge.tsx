@@ -22,7 +22,7 @@ export default function BudgetGauge({ category, emoji, spent, limit, color }: Pr
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div style={{ width: 80, height: 80, position: 'relative' }}>
+      <div role="img" aria-label={`${category} 예산 사용률 ${Math.round(pct)}%`} style={{ width: 80, height: 80, position: 'relative' }}>
         <ResponsiveContainer width="100%" height={80}>
           <RadialBarChart
             cx="50%"

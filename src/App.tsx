@@ -2133,6 +2133,9 @@ export default function App() {
                             onOpenWidgetSettings={() =>
                                 setShowWidgetSettings(true)
                             }
+                            onOpenHelp={() =>
+                                dispatchUI({type: "SET_HELP", value: true})
+                            }
                         />
                     </Suspense>
             </main>

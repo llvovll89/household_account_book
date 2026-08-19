@@ -56,6 +56,7 @@ type ViewMode = "list" | "calendar";
 type FilterType = "all" | "income" | "expense";
 type MethodFilterType = "all" | "cash" | "check" | "credit" | string;
 type BillingFilterType = "all" | "current" | "next" | "later";
+type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 type PeriodMode = "day" | "week" | "month";
 type QuickFilterPreset =
     | "all"
@@ -80,6 +81,7 @@ const ACTIVE_FILTERS_SECTION_OPEN_KEY = "hb_tx_active_filters_section_open";
 const INSIGHTS_SECTION_OPEN_KEY = "hb_tx_insights_section_open";
 const SWIPE_SENSITIVITY_KEY = "hb_tx_swipe_sensitivity";
 const SEARCH_SESSION_KEY = "hb_tx_search";
+const SORT_OPTION_KEY = "hb_tx_sort_option";
 const GROUP_PAGE_SIZE = 12;
 const ITEM_PAGE_SIZE = 20;
 
@@ -174,6 +176,19 @@ export default function TransactionList({
             return "all";
         },
     );
+    const [sortOption, setSortOption] = useState<SortOption>(() => {
+        const saved = localStorage.getItem(SORT_OPTION_KEY);
+        if (
+            saved === "date-desc" ||
+            saved === "date-asc" ||
+            saved === "amount-desc" ||
+            saved === "amount-asc"
+        )
+            return saved;
+        return "date-desc";
+    });
+    const [minAmountStr, setMinAmountStr] = useState("");
+    const [maxAmountStr, setMaxAmountStr] = useState("");
     const [search, setSearch] = useState(() => {
         if (typeof window === "undefined") return "";
         return sessionStorage.getItem(SEARCH_SESSION_KEY) ?? "";
@@ -260,6 +275,10 @@ export default function TransactionList({
     useEffect(() => {
         localStorage.setItem(BILLING_FILTER_KEY, billingFilter);
     }, [billingFilter]);
+
+    useEffect(() => {
+        localStorage.setItem(SORT_OPTION_KEY, sortOption);
+    }, [sortOption]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -469,6 +488,8 @@ export default function TransactionList({
                 ? userPaymentMethods.find((m) => m.id === methodFilter)
                 : undefined;
         const methodFilterIsCardId = !!selectedMethod;
+        const minAmount = minAmountStr ? Number(minAmountStr) : null;
+        const maxAmount = maxAmountStr ? Number(maxAmountStr) : null;
         const result: Transaction[] = [];
 
         for (const t of monthTx) {
@@ -542,12 +563,33 @@ export default function TransactionList({
 
             if (activeTag && !(t.tags ?? []).includes(activeTag)) continue;
 
+            if (minAmount !== null && t.amount < minAmount) continue;
+            if (maxAmount !== null && t.amount > maxAmount) continue;
+
             result.push(t);
         }
 
-        result.sort(
-            (a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt,
-        );
+        switch (sortOption) {
+            case "date-asc":
+                result.sort(
+                    (a, b) =>
+                        a.date.localeCompare(b.date) ||
+                        a.createdAt - b.createdAt,
+                );
+                break;
+            case "amount-desc":
+                result.sort((a, b) => b.amount - a.amount);
+                break;
+            case "amount-asc":
+                result.sort((a, b) => a.amount - b.amount);
+                break;
+            default:
+                result.sort(
+                    (a, b) =>
+                        b.date.localeCompare(a.date) ||
+                        b.createdAt - a.createdAt,
+                );
+        }
 
         if (shouldLogPerf) {
             const elapsed = performance.now() - perfStart;
@@ -582,6 +624,9 @@ export default function TransactionList({
         cardBillingDay,
         yearMonth,
         userPaymentMethods,
+        sortOption,
+        minAmountStr,
+        maxAmountStr,
         shouldLogPerf,
         perfTier,
     ]);
@@ -799,7 +844,9 @@ export default function TransactionList({
         billingFilter !== "all" ||
         !!statementMonthFilter ||
         !!activeTag ||
-        !!search;
+        !!search ||
+        !!minAmountStr ||
+        !!maxAmountStr;
 
     const activeFilterCount =
         (filter !== "all" ? 1 : 0) +
@@ -807,7 +854,8 @@ export default function TransactionList({
         (billingFilter !== "all" ? 1 : 0) +
         (statementMonthFilter ? 1 : 0) +
         (activeTag ? 1 : 0) +
-        (search ? 1 : 0);
+        (search ? 1 : 0) +
+        (minAmountStr || maxAmountStr ? 1 : 0);
 
     useEffect(() => {
         if (isFiltered) {
@@ -914,6 +962,8 @@ export default function TransactionList({
         setStatementMonthFilter(null);
         setActiveTag(null);
         setSearch("");
+        setMinAmountStr("");
+        setMaxAmountStr("");
     }
 
     function handleTagClick(tag: string) {
@@ -1243,6 +1293,92 @@ export default function TransactionList({
                                                     </button>
                                                 );
                                             })}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                            정렬
+                                        </p>
+                                        <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-2 gap-1">
+                                            {(
+                                                [
+                                                    {
+                                                        key: "date-desc",
+                                                        label: "최신순",
+                                                    },
+                                                    {
+                                                        key: "date-asc",
+                                                        label: "오래된순",
+                                                    },
+                                                    {
+                                                        key: "amount-desc",
+                                                        label: "금액 높은순",
+                                                    },
+                                                    {
+                                                        key: "amount-asc",
+                                                        label: "금액 낮은순",
+                                                    },
+                                                ] as {
+                                                    key: SortOption;
+                                                    label: string;
+                                                }[]
+                                            ).map((option) => (
+                                                <button
+                                                    key={option.key}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setSortOption(
+                                                            option.key,
+                                                        )
+                                                    }
+                                                    className={`py-2 rounded-xl text-[11px] font-bold transition-all ${
+                                                        sortOption ===
+                                                        option.key
+                                                            ? "bg-[#3D8EF8] text-white"
+                                                            : "text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]"
+                                                    }`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                            금액 범위
+                                        </p>
+                                        <div className="bg-[#2C2C2E] rounded-2xl p-2 flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                value={minAmountStr}
+                                                onChange={(e) =>
+                                                    setMinAmountStr(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="최소 금액"
+                                                aria-label="최소 금액"
+                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#4E5968] focus:outline-none num"
+                                            />
+                                            <span className="text-[#4E5968] text-xs shrink-0">
+                                                ~
+                                            </span>
+                                            <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                value={maxAmountStr}
+                                                onChange={(e) =>
+                                                    setMaxAmountStr(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="최대 금액"
+                                                aria-label="최대 금액"
+                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#4E5968] focus:outline-none num"
+                                            />
                                         </div>
                                     </div>
 

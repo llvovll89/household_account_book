@@ -28,7 +28,11 @@ export default function DonutChart({ data }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div style={{ width: '100%', height: 200, position: 'relative' }}>
+      <div
+        role="img"
+        aria-label={`카테고리별 지출 비율: ${data.map((d) => `${d.cat} ${d.pct}%`).join(', ')}`}
+        style={{ width: '100%', height: 200, position: 'relative' }}
+      >
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <Pie

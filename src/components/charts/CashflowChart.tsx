@@ -14,6 +14,7 @@ interface Props {
 export default function CashflowChart({ data }: Props) {
   return (
     <>
+    <div role="img" aria-label="월별 현금흐름(수입·지출·순잔액) 차트">
     <ResponsiveContainer width="100%" height={200}>
       <ComposedChart data={data} margin={{ top: 4, right: 12, left: -20, bottom: 0 }}>
         <defs>
@@ -81,6 +82,7 @@ export default function CashflowChart({ data }: Props) {
         />
       </ComposedChart>
     </ResponsiveContainer>
+    </div>
     <div className="flex items-center justify-center gap-5 mt-1">
       <div className="flex items-center gap-1.5">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CHART_COLORS.income }} />

@@ -21,6 +21,7 @@ import {
 import type {Budget, Transaction, UserPaymentMethod} from "../types";
 import {CATEGORY_EMOJI} from "../types";
 import SpendingAnalysisView from "./SpendingAnalysisView";
+import EmptyState from "./ui/EmptyState";
 import {useMonthlyData} from "../lib/useMonthlyData";
 import {fmt as fmtFull, fmtShort as fmt, parseYmdLocal} from "../lib/format";
 import TrendAreaChart from "./charts/TrendAreaChart";
@@ -110,6 +111,28 @@ export default function Analytics({
     const monthlyData = useMonthlyData(transactions);
     const current = monthlyData[5];
     const prev = monthlyData[4];
+
+    // ── 예산 준수율 6개월 트렌드 (현재 등록된 카테고리 예산 기준) ──
+    const budgetComplianceTrend = useMemo(() => {
+        const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+        if (totalBudget === 0) return [];
+        const budgetedCategories = new Set(budgets.map((b) => b.category));
+        return monthlyData.map((m) => {
+            const spent = transactions
+                .filter(
+                    (t) =>
+                        t.date.startsWith(m.ym) &&
+                        t.type === "expense" &&
+                        budgetedCategories.has(t.category),
+                )
+                .reduce((s, t) => s + t.amount, 0);
+            return {
+                ym: m.ym,
+                label: m.label,
+                rate: Math.round((spent / totalBudget) * 100),
+            };
+        });
+    }, [budgets, monthlyData, transactions]);
 
     const expenseDiff =
         prev.expense > 0
@@ -1230,23 +1253,12 @@ export default function Analytics({
                                     일별 누적 순잔액 변화
                                 </p>
                                 {currentMonthly.length === 0 ? (
-                                    <div className="flex flex-col items-center py-6 gap-2">
-                                        <TrendingUp
-                                            size={28}
-                                            className="text-[#2C2C2E]"
-                                        />
-                                        <p className="text-sm text-[#4E5968]">
-                                            이번 달 내역이 없어요
-                                        </p>
-                                        {onAddTransaction && (
-                                            <button
-                                                onClick={onAddTransaction}
-                                                className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                                            >
-                                                내역 추가
-                                            </button>
-                                        )}
-                                    </div>
+                                    <EmptyState
+                                        size="compact"
+                                        icon={TrendingUp}
+                                        title="이번 달 내역이 없어요"
+                                        action={onAddTransaction ? { label: "내역 추가", onClick: onAddTransaction } : undefined}
+                                    />
                                 ) : (
                                     <CumulativeLineChart
                                         transactions={transactions}
@@ -1264,23 +1276,12 @@ export default function Analytics({
                                     이번 달 요일별 총 지출
                                 </p>
                                 {weekdayData.every((d) => d.total === 0) ? (
-                                    <div className="flex flex-col items-center py-6 gap-2">
-                                        <TrendingDown
-                                            size={28}
-                                            className="text-[#2C2C2E]"
-                                        />
-                                        <p className="text-sm text-[#4E5968]">
-                                            이번 달 지출 내역이 없어요
-                                        </p>
-                                        {onAddTransaction && (
-                                            <button
-                                                onClick={onAddTransaction}
-                                                className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                                            >
-                                                내역 추가
-                                            </button>
-                                        )}
-                                    </div>
+                                    <EmptyState
+                                        size="compact"
+                                        icon={TrendingDown}
+                                        title="이번 달 지출 내역이 없어요"
+                                        action={onAddTransaction ? { label: "내역 추가", onClick: onAddTransaction } : undefined}
+                                    />
                                 ) : (
                                     <>
                                         <WeekdayBarChart data={weekdayData} />
@@ -2204,22 +2205,13 @@ export default function Analytics({
                         );
                         if (withData.length === 0)
                             return (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5 flex flex-col items-center gap-2 py-10">
-                                    <Minus
-                                        size={28}
-                                        className="text-[#2C2C2E]"
+                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                    <EmptyState
+                                        size="compact"
+                                        icon={Minus}
+                                        title={`${selectedYear}년 내역이 없어요`}
+                                        action={onAddTransaction ? { label: "내역 추가", onClick: onAddTransaction } : undefined}
                                     />
-                                    <p className="text-sm text-[#4E5968]">
-                                        {selectedYear}년 내역이 없어요
-                                    </p>
-                                    {onAddTransaction && (
-                                        <button
-                                            onClick={onAddTransaction}
-                                            className="mt-3 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                                        >
-                                            내역 추가
-                                        </button>
-                                    )}
                                 </div>
                             );
                         const bestMonth = withData.reduce((a, b) =>
@@ -2306,25 +2298,14 @@ export default function Analytics({
             {viewMode === "tags" && (
                 <>
                     {tagData.length === 0 ? (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
-                            <Hash
-                                size={32}
-                                className="text-[#2C2C2E] mx-auto mb-3"
+                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <EmptyState
+                                size="compact"
+                                icon={Hash}
+                                title="이번 달 태그 내역이 없어요"
+                                description="거래 내역에 태그를 추가하면 분석을 보여드려요"
+                                action={onAddTransaction ? { label: "내역 추가", onClick: onAddTransaction } : undefined}
                             />
-                            <p className="text-sm font-semibold text-[#4E5968]">
-                                이번 달 태그 내역이 없어요
-                            </p>
-                            <p className="text-xs text-[#4E5968]/50 mt-1">
-                                거래 내역에 태그를 추가하면 분석을 보여드려요
-                            </p>
-                            {onAddTransaction && (
-                                <button
-                                    onClick={onAddTransaction}
-                                    className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-                                >
-                                    내역 추가
-                                </button>
-                            )}
                         </div>
                     ) : (
                         <>
@@ -2642,20 +2623,82 @@ export default function Analytics({
 
             {/* ──── 예산 vs 실지출 뷰 ──── */}
             {viewMode === "budget" && (
-                <div className="bg-[#1C1C1E] rounded-2xl p-5">
-                    <p className="text-[15px] font-bold text-white mb-1">
-                        예산 vs 실지출
-                    </p>
-                    <p className="text-xs text-[#8B95A1] mb-4">
-                        {yearMonth.replace("-", "년 ")}월 카테고리별 예산 대비
-                        지출
-                    </p>
-                    <BudgetCompareChart
-                        transactions={transactions}
-                        budgets={budgets}
-                        yearMonth={yearMonth}
-                    />
-                </div>
+                <>
+                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <p className="text-[15px] font-bold text-white mb-1">
+                            예산 vs 실지출
+                        </p>
+                        <p className="text-xs text-[#8B95A1] mb-4">
+                            {yearMonth.replace("-", "년 ")}월 카테고리별 예산
+                            대비 지출
+                        </p>
+                        <BudgetCompareChart
+                            transactions={transactions}
+                            budgets={budgets}
+                            yearMonth={yearMonth}
+                        />
+                    </div>
+
+                    {budgetComplianceTrend.length > 0 && (
+                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <p className="text-[15px] font-bold text-white mb-4">
+                                예산 준수율 추이
+                            </p>
+                            <div
+                                role="img"
+                                aria-label={`최근 6개월 예산 준수율: ${budgetComplianceTrend.map((m) => `${m.label} ${m.rate}%`).join(", ")}`}
+                                className="flex items-end gap-1.5 h-20"
+                            >
+                                {budgetComplianceTrend.map((m) => {
+                                    const isCurrent = m.ym === yearMonth;
+                                    const barHeight = Math.min(
+                                        100,
+                                        Math.max(4, m.rate),
+                                    );
+                                    const color = isCurrent
+                                        ? "#3D8EF8"
+                                        : m.rate > 100
+                                          ? "#F25260"
+                                          : m.rate >= 80
+                                            ? "#F5BE3A"
+                                            : "#2ACF6A";
+                                    return (
+                                        <div
+                                            key={m.ym}
+                                            className="flex-1 flex flex-col items-center gap-1"
+                                        >
+                                            <div
+                                                className="w-full flex flex-col justify-end"
+                                                style={{height: 64}}
+                                            >
+                                                <div
+                                                    className="w-full rounded-t-md transition-all duration-700"
+                                                    style={{
+                                                        height: `${barHeight}%`,
+                                                        backgroundColor: color,
+                                                        opacity: isCurrent
+                                                            ? 1
+                                                            : 0.55,
+                                                    }}
+                                                />
+                                            </div>
+                                            <span
+                                                className={`text-[9px] font-bold ${isCurrent ? "text-[#3D8EF8]" : "text-[#4E5968]"}`}
+                                            >
+                                                {m.label}
+                                            </span>
+                                            <span
+                                                className={`text-[9px] num ${isCurrent ? "text-white" : "text-[#8B95A1]"}`}
+                                            >
+                                                {m.rate}%
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* ──── 캐시플로 뷰 ──── */}

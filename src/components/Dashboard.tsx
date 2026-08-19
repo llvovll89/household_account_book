@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
+import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react'
 import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
+import EmptyState from './ui/EmptyState'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -32,7 +33,10 @@ interface Props {
   onOpenPaymentMethodsModal: () => void
   onAddTransaction?: () => void
   onOpenWidgetSettings?: () => void
+  onOpenHelp?: () => void
 }
+
+const ONBOARDED_KEY = 'hb_onboarded'
 
 function calcNet(items: Transaction[]) {
   return items.reduce((sum, tx) => sum + (tx.type === 'income' ? tx.amount : -tx.amount), 0)
@@ -95,8 +99,9 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
   )
 }
 
-export default function Dashboard({ transactions, budgets, recurring, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings, onOpenHelp }: Props) {
   const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
+  const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== 'true')
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
@@ -130,6 +135,15 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     const id = requestAnimationFrame(() => setProgressMounted(true))
     return () => cancelAnimationFrame(id)
   }, [])
+
+  useEffect(() => {
+    if (transactions.length > 0) localStorage.setItem(ONBOARDED_KEY, 'true')
+  }, [transactions.length])
+
+  function dismissOnboarding() {
+    localStorage.setItem(ONBOARDED_KEY, 'true')
+    setShowOnboarding(false)
+  }
 
   function handleSavePayday() {
     if (paydayInput === 'last') {
@@ -778,6 +792,46 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
 
   return (
     <div className="space-y-3 tab-content">
+      {/* 온보딩 안내 */}
+      {showOnboarding && transactions.length === 0 && (
+        <div className="bg-gradient-to-br from-[#3D8EF8]/15 to-[#3D8EF8]/5 border border-[#3D8EF8]/25 rounded-2xl px-4 py-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">👋</span>
+              <p className="text-sm font-bold text-white">잔고플랜에 오신 걸 환영해요</p>
+            </div>
+            <button
+              onClick={dismissOnboarding}
+              aria-label="시작 안내 닫기"
+              className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[#8B95A1] hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <p className="text-xs text-[#8B95A1] mt-1.5 leading-relaxed">
+            내역을 추가하면 예산, 분석, 저축 목표 같은 기능이 바로 살아나요. 사용법이 궁금하면 도움말을 확인해보세요.
+          </p>
+          <div className="flex gap-2 mt-3">
+            {onAddTransaction && (
+              <button
+                onClick={onAddTransaction}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#3D8EF8] text-white hover:bg-[#5AA0FF] transition-colors"
+              >
+                내역 추가
+              </button>
+            )}
+            {onOpenHelp && (
+              <button
+                onClick={onOpenHelp}
+                className="flex-1 py-2 rounded-xl text-xs font-bold bg-white/5 text-[#8B95A1] hover:text-white hover:bg-white/10 transition-colors"
+              >
+                도움말 보기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 예산 초과 알림 */}
       {overBudget.length > 0 && (
         <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/20">
@@ -2063,25 +2117,21 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       )}
 
       {monthly.length === 0 && (
-        <div className="bg-[#1C1C1E] rounded-2xl p-10 text-center card-enter">
-          <div className="text-5xl mb-4 animate-bounce" style={{ animationDuration: '2s' }}>💸</div>
-          <p className="font-bold text-white text-[15px]">이번 달 내역이 없어요</p>
-          <p className="text-[#4E5968] text-sm mt-1.5">내역 추가 버튼으로 첫 내역을 입력해보세요</p>
-          {onAddTransaction && (
-            <button
-              onClick={onAddTransaction}
-              className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
-            >
-              내역 추가
-            </button>
-          )}
-          <div className="flex justify-center gap-3 mt-5">
-            {['식비', '교통비', '급여'].map(cat => (
-              <div key={cat} className="px-2.5 py-1.5 bg-[#2C2C2E] rounded-xl text-[11px] text-[#4E5968]">
-                {CATEGORY_EMOJI[cat]} {cat}
-              </div>
-            ))}
-          </div>
+        <div className="bg-[#1C1C1E] rounded-2xl card-enter">
+          <EmptyState
+            emoji="💸"
+            title="이번 달 내역이 없어요"
+            description="내역 추가 버튼으로 첫 내역을 입력해보세요"
+            action={onAddTransaction ? { label: '내역 추가', onClick: onAddTransaction } : undefined}
+          >
+            <div className="flex justify-center gap-3 mt-5">
+              {['식비', '교통비', '급여'].map(cat => (
+                <div key={cat} className="px-2.5 py-1.5 bg-[#2C2C2E] rounded-xl text-[11px] text-[#4E5968]">
+                  {CATEGORY_EMOJI[cat]} {cat}
+                </div>
+              ))}
+            </div>
+          </EmptyState>
         </div>
       )}
 
