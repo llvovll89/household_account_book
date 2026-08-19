@@ -3,6 +3,7 @@ import { CheckCircle2, X } from 'lucide-react'
 import type { RecurringTransaction } from '../types'
 import { CATEGORY_COLOR, CATEGORY_EMOJI } from '../types'
 import { useModalClose } from '../hooks/useModalClose'
+import { formatRecurringSchedule } from '../lib/recurringSchedule'
 
 interface Props {
   applied: RecurringTransaction[]
@@ -64,7 +65,7 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
                     <span className="text-xs text-[#4E5968] truncate block">{item.description}</span>
                   )}
                 </div>
-                <span className="text-xs text-[#4E5968] shrink-0">매월 {item.dayOfMonth}일</span>
+                <span className="text-xs text-[#4E5968] shrink-0">{formatRecurringSchedule(item)}</span>
                 <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
                   {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
                 </span>

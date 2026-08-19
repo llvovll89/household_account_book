@@ -4,15 +4,24 @@ import type { Budget } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { useModalClose } from '../hooks/useModalClose'
 
+type BudgetScope = 'base' | 'thisMonth'
+
 interface Props {
   budgets: Budget[]
   customExpenseCategories?: string[]
-  onSave: (budgets: Budget[]) => void
+  yearMonth: string
+  onSave: (budgets: Budget[], scope: BudgetScope) => void
   onClose: () => void
 }
 
-export default function BudgetModal({ budgets, customExpenseCategories = [], onSave, onClose }: Props) {
+function formatYearMonthLabel(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number)
+  return `${y}년 ${m}월`
+}
+
+export default function BudgetModal({ budgets, customExpenseCategories = [], yearMonth, onSave, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
+  const [scope, setScope] = useState<BudgetScope>('base')
   const [values, setValues] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
     budgets.forEach((b) => { m[b.category] = b.limit.toLocaleString() })
@@ -33,9 +42,16 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
     const result: Budget[] = []
     for (const [category, raw] of Object.entries(values)) {
       const limit = parseInt(raw.replace(/,/g, ''), 10)
-      if (limit > 0) result.push({ category, limit, carryover: carryoverMap[category] ?? false })
+      if (limit > 0) {
+        result.push({
+          category,
+          limit,
+          carryover: carryoverMap[category] ?? false,
+          ...(scope === 'thisMonth' ? { yearMonth } : {}),
+        })
+      }
     }
-    onSave(result)
+    onSave(result, scope)
     handleClose()
   }
 
@@ -59,6 +75,32 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
           <button aria-label="예산 설정 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
+        </div>
+
+        <div className="px-6 pb-3 shrink-0">
+          <div className="flex items-center gap-2 rounded-2xl bg-[#2C2C2E] p-1">
+            <button
+              type="button"
+              onClick={() => setScope('base')}
+              aria-pressed={scope === 'base'}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'base' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
+            >
+              전체 (기본값)
+            </button>
+            <button
+              type="button"
+              onClick={() => setScope('thisMonth')}
+              aria-pressed={scope === 'thisMonth'}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'thisMonth' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
+            >
+              {formatYearMonthLabel(yearMonth)}만
+            </button>
+          </div>
+          <p className="text-[10px] text-[#4E5968] mt-1.5 px-1">
+            {scope === 'thisMonth'
+              ? `${formatYearMonthLabel(yearMonth)}에만 적용되고, 다른 달의 기본 예산은 그대로 유지돼요.`
+              : '매달 반복 적용되는 기본 예산이에요.'}
+          </p>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
@@ -88,7 +130,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], onS
                     <span className="text-xs text-[#4E5968]">원</span>
                   </div>
                 </div>
-                {(values[cat] ?? '') !== '' && (
+                {(values[cat] ?? '') !== '' && scope === 'base' && (
                   <div className="flex items-center justify-between pl-13">
                     <span className="text-xs text-[#4E5968]">미사용 예산 다음 달로 이월</span>
                     <button

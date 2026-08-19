@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import type { RecurringTransaction } from '../types'
 import { CATEGORY_COLOR, CATEGORY_EMOJI } from '../types'
 import { useModalClose } from '../hooks/useModalClose'
+import { formatRecurringSchedule } from '../lib/recurringSchedule'
 
 type AutoApplyRecurringMode = 'ask' | 'always' | 'never'
 
@@ -68,7 +69,7 @@ export default function AutoApplyRecurringModal({ pending, mode, onModeChange, o
                     <span className="text-xs text-[#4E5968] truncate block">{r.description}</span>
                   )}
                 </div>
-                <span className="text-xs text-[#4E5968] shrink-0">매월 {r.dayOfMonth}일</span>
+                <span className="text-xs text-[#4E5968] shrink-0">{formatRecurringSchedule(r)}</span>
                 <span className={`text-sm font-bold num shrink-0 ${r.type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
                   {r.type === 'income' ? '+' : '-'}{r.amount.toLocaleString()}원
                 </span>

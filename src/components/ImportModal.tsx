@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Upload, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react'
-import type { Transaction } from '../types'
+import type { AutoCategoryRule, Transaction } from '../types'
 import { CATEGORY_EMOJI, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types'
 import {
   parseTabularFile, applyMapping, detectColumns, guessCategory,
   extractPDFText, parsePDFText, type ColumnMapping, type ParsedRow,
 } from '../lib/bankParser'
+import { applyAutoCategory } from '../lib/autoCategoryRules'
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
 import PreviewRowDetailModal from './import/PreviewRowDetailModal'
@@ -14,6 +15,7 @@ import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   existingTransactions: Transaction[]
+  autoCategoryRules?: AutoCategoryRule[]
   onImport: (transactions: Omit<Transaction, 'id' | 'createdAt'>[]) => void
   onClose: () => void
 }
@@ -97,7 +99,7 @@ function getPreviewReviewMeta(description: string, category: string): { needsRev
   return { needsReview: reasons.length > 0, reviewReasons: reasons }
 }
 
-export default function ImportModal({ existingTransactions, onImport, onClose }: Props) {
+export default function ImportModal({ existingTransactions, autoCategoryRules = [], onImport, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [step, setStep] = useState<Step>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -173,7 +175,9 @@ export default function ImportModal({ existingTransactions, onImport, onClose }:
     setVisibleCount(PAGE_SIZE)
     setPreviewRows(parsed.map((p) => {
       const isDuplicate = existingSet.has(`${p.date}|${p.amount}|${p.type}`)
-      const category = guessCategory(p.description, p.type)
+      const category =
+        applyAutoCategory(p.description, p.type, autoCategoryRules) ??
+        guessCategory(p.description, p.type)
       const reviewMeta = getPreviewReviewMeta(p.description, category)
       return {
         ...p,

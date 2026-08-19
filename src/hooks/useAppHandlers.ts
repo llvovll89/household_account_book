@@ -3,7 +3,7 @@ import type { Dispatch } from 'react'
 import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, TransactionType, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
-import { generateId } from '../lib/format'
+import { generateId, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
 import { deleteReceiptImage } from '../lib/receiptStorage'
@@ -155,6 +155,7 @@ export function useAppHandlers({
 
   const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
     const ym = targetYM ?? yearMonth
+    const todayStr = toLocalDateStr()
     const newTx: Transaction[] = pending.map((r) => ({
       id: generateId(),
       type: r.type,
@@ -162,7 +163,9 @@ export function useAppHandlers({
       paymentMethod: 'cash',
       category: r.category,
       description: r.description,
-      date: `${ym}-${String(r.dayOfMonth).padStart(2, '0')}`,
+      date: (r.frequency === 'weekly' || r.frequency === 'biweekly')
+        ? todayStr
+        : `${ym}-${String(r.dayOfMonth).padStart(2, '0')}`,
       createdAt: Date.now(),
     }))
     const newTxIds = new Set(newTx.map((t) => t.id))
@@ -178,7 +181,12 @@ export function useAppHandlers({
     }
     setRecurring((prev) => {
       const ids = new Set(pending.map((r) => r.id))
-      const next = prev.map((r) => ids.has(r.id) ? { ...r, lastAppliedMonth: ym } : r)
+      const next = prev.map((r) => {
+        if (!ids.has(r.id)) return r
+        return (r.frequency === 'weekly' || r.frequency === 'biweekly')
+          ? { ...r, lastAppliedDate: todayStr }
+          : { ...r, lastAppliedMonth: ym }
+      })
       persist(() => saveRecurring(next), '정기내역 상태 저장에 실패했습니다.', 'recurring')
       return next
     })

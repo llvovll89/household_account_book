@@ -58,14 +58,19 @@ export interface Budget {
   yearMonth?: string // YYYY-MM, 설정 시 해당 월에만 적용 (없으면 전체 월 기본값)
 }
 
+export type RecurringFrequency = 'monthly' | 'weekly' | 'biweekly'
+
 export interface RecurringTransaction {
   id: string
   type: TransactionType
   amount: number
   category: string
   description: string
-  dayOfMonth: number       // 매월 몇 일 (1-31)
-  lastAppliedMonth: string // 마지막으로 등록된 월 YYYY-MM ('' = 미등록)
+  frequency?: RecurringFrequency // 없으면 'monthly'로 취급 (하위 호환)
+  dayOfMonth: number       // frequency가 monthly(또는 미지정)일 때 사용, 매월 몇 일 (1-31)
+  weekday?: number         // frequency가 weekly/biweekly일 때 사용, 0=일 ~ 6=토
+  lastAppliedMonth: string // 월간 반복의 마지막 적용 월 YYYY-MM ('' = 미등록)
+  lastAppliedDate?: string // 주/격주 반복의 마지막 적용 날짜 YYYY-MM-DD ('' = 미등록)
   createdAt: number
 }
 

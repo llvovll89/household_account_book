@@ -7,6 +7,7 @@ import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
+import { formatRecurringSchedule } from '../lib/recurringSchedule'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -347,9 +348,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     return Object.entries(monthlyExpenseCategoryMap).sort((a, b) => b[1] - a[1]).slice(0, 6)
   }, [monthlyExpenseCategoryMap])
 
-  // 이번 달 미적용 정기 항목
+  // 이번 달 미적용 정기 항목 (월간 반복만 — 주/격주 반복은 자동 감지로만 적용됨)
   const pendingRecurring = useMemo(
-    () => recurring.filter((r) => r.lastAppliedMonth !== yearMonth),
+    () => recurring.filter((r) => (r.frequency ?? 'monthly') === 'monthly' && r.lastAppliedMonth !== yearMonth),
     [recurring, yearMonth]
   )
 
@@ -1153,7 +1154,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                     {CATEGORY_EMOJI[r.category] ?? '📦'}
                   </div>
                   <span className="text-sm text-[#8B95A1] flex-1">{r.category}</span>
-                  <span className="text-xs text-[#4E5968]">매월 {r.dayOfMonth}일</span>
+                  <span className="text-xs text-[#4E5968]">{formatRecurringSchedule(r)}</span>
                   <span className={`text-sm font-bold num ${r.type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F1F3F6]'}`}>
                     {r.type === 'income' ? '+' : '-'}{r.amount.toLocaleString()}원
                   </span>
@@ -2139,10 +2140,17 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         <BudgetModal
           budgets={effectiveBudgets.map((b) => ({ ...b, yearMonth: undefined }))}
           customExpenseCategories={customExpenseCategories}
-          onSave={(newBudgets) => {
-            // 다른 월 특화 예산은 보존, 전체 기본 예산만 교체
-            const otherMonthSpecific = budgets.filter((b) => b.yearMonth && b.yearMonth !== yearMonth)
-            onBudgetsChange([...otherMonthSpecific, ...newBudgets])
+          yearMonth={yearMonth}
+          onSave={(newBudgets, scope) => {
+            if (scope === 'thisMonth') {
+              // 이번 달 전용 예산만 교체, 기본 예산과 다른 달의 전용 예산은 그대로 둔다
+              const others = budgets.filter((b) => b.yearMonth !== yearMonth)
+              onBudgetsChange([...others, ...newBudgets])
+            } else {
+              // 다른 월 특화 예산은 보존, 전체 기본 예산만 교체
+              const otherMonthSpecific = budgets.filter((b) => b.yearMonth && b.yearMonth !== yearMonth)
+              onBudgetsChange([...otherMonthSpecific, ...newBudgets])
+            }
           }}
           onClose={() => setShowBudget(false)}
         />

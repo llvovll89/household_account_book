@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { X, Plus, Trash2, ChevronDown } from 'lucide-react'
-import type { RecurringTransaction, TransactionType } from '../types'
+import type { RecurringFrequency, RecurringTransaction, TransactionType } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt, generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { useModalClose } from '../hooks/useModalClose'
+import { formatRecurringSchedule } from '../lib/recurringSchedule'
 import EmptyState from './ui/EmptyState'
 
 interface Props {
@@ -15,6 +16,12 @@ interface Props {
 }
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+const FREQUENCIES: { key: RecurringFrequency; label: string }[] = [
+  { key: 'monthly', label: '매월' },
+  { key: 'weekly', label: '매주' },
+  { key: 'biweekly', label: '격주' },
+]
 
 export default function RecurringModal({ recurring, customExpenseCategories = [], onSave, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
@@ -28,6 +35,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
   const [newCategory, setNewCategory] = useState('식비')
   const [newDesc, setNewDesc] = useState('')
   const [newDay, setNewDay] = useState(1)
+  const [newFrequency, setNewFrequency] = useState<RecurringFrequency>('monthly')
+  const [newWeekday, setNewWeekday] = useState(1)
 
   const categories = newType === 'income' ? INCOME_CATEGORIES : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
 
@@ -40,7 +49,12 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
     const amount = parseInt(newAmount.replace(/,/g, ''), 10)
     if (!amount || amount <= 0) return
     const isDuplicate = items.some(
-      (i) => i.type === newType && i.category === newCategory && i.dayOfMonth === newDay && i.amount === amount
+      (i) =>
+        i.type === newType &&
+        i.category === newCategory &&
+        i.amount === amount &&
+        (i.frequency ?? 'monthly') === newFrequency &&
+        (newFrequency === 'monthly' ? i.dayOfMonth === newDay : i.weekday === newWeekday)
     )
     if (isDuplicate) {
       showToast('동일한 정기 항목이 이미 있어요.', 2500, 'warning')
@@ -52,8 +66,11 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
       amount,
       category: newCategory,
       description: newDesc,
+      frequency: newFrequency,
       dayOfMonth: newDay,
+      weekday: newWeekday,
       lastAppliedMonth: '',
+      lastAppliedDate: '',
       createdAt: Date.now(),
     }
     setItems((prev) => [...prev, item])
@@ -61,6 +78,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
     setNewAmount('')
     setNewDesc('')
     setNewDay(1)
+    setNewFrequency('monthly')
+    setNewWeekday(1)
   }
 
   function handleDelete(id: string) {
@@ -136,7 +155,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">{item.category}</span>
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/5 text-[#8B95A1]">
-                      매월 {item.dayOfMonth}일
+                      {formatRecurringSchedule(item)}
                     </span>
                   </div>
                   {item.description && (
@@ -177,6 +196,27 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                 ))}
               </div>
 
+              {/* 반복 주기 */}
+              <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
+                <label className="text-[10px] text-[#4E5968] font-semibold mb-1.5 block">반복 주기</label>
+                <div className="flex gap-1.5">
+                  {FREQUENCIES.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setNewFrequency(key)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                        newFrequency === key
+                          ? 'bg-[#3D8EF8] text-white'
+                          : 'bg-[#2C2C2E] text-[#8B95A1]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 {/* 금액 */}
                 <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5 overflow-hidden">
@@ -194,21 +234,38 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                   </div>
                 </div>
 
-                {/* 날짜 */}
-                <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                  <label htmlFor="recurring-day" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">매월 몇 일</label>
-                  <div className="relative">
-                    <select
-                      id="recurring-day"
-                      value={newDay}
-                      onChange={(e) => setNewDay(Number(e.target.value))}
-                      className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
-                    >
-                      {DAYS.map((d) => <option key={d} value={d} className="bg-[#1C1C1E]">{d}일</option>)}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                {/* 날짜/요일 */}
+                {newFrequency === 'monthly' ? (
+                  <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
+                    <label htmlFor="recurring-day" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">매월 몇 일</label>
+                    <div className="relative">
+                      <select
+                        id="recurring-day"
+                        value={newDay}
+                        onChange={(e) => setNewDay(Number(e.target.value))}
+                        className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
+                      >
+                        {DAYS.map((d) => <option key={d} value={d} className="bg-[#1C1C1E]">{d}일</option>)}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
+                    <label htmlFor="recurring-weekday" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">무슨 요일</label>
+                    <div className="relative">
+                      <select
+                        id="recurring-weekday"
+                        value={newWeekday}
+                        onChange={(e) => setNewWeekday(Number(e.target.value))}
+                        className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
+                      >
+                        {WEEKDAYS.map((w, i) => <option key={w} value={i} className="bg-[#1C1C1E]">{w}요일</option>)}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 카테고리 */}

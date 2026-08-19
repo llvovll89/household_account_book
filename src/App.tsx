@@ -46,6 +46,7 @@ import type {
 import {CATEGORY_EMOJI} from "./types";
 import type {Tab} from "./types/navigation";
 import {loadAllData, loadSettings, resetAllData} from "./lib/storage";
+import {isRecurringDueToday} from "./lib/recurringSchedule";
 import type {RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
 import {calculateCardDueAmount, shiftYM} from "./lib/cardBilling";
@@ -1291,11 +1292,10 @@ export default function App() {
         autoApplyCheckedRef.current = true;
 
         const today = new Date();
-        const todayDay = today.getDate();
         const todayYM = getYearMonth(today);
 
-        const pending = recurring.filter(
-            (r) => r.lastAppliedMonth !== todayYM && r.dayOfMonth <= todayDay,
+        const pending = recurring.filter((r) =>
+            isRecurringDueToday(r, today, todayYM),
         );
         if (pending.length === 0) return;
 
@@ -2365,6 +2365,7 @@ export default function App() {
                 <Suspense fallback={null}>
                     <ImportModal
                         existingTransactions={transactions}
+                        autoCategoryRules={autoCategoryRules}
                         onImport={handleBulkImport}
                         onClose={() =>
                             dispatchUI({type: "SET_IMPORT", value: false})

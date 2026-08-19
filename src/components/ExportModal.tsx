@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
-import { X, Download, FileText, Archive, AlertTriangle } from 'lucide-react'
+import { X, Download, FileText, Archive, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import type { Transaction } from '../types'
-import { exportTransactionsCSV } from '../lib/exportCsv'
+import { exportTransactionsCSV, exportTransactionsXLSX } from '../lib/exportCsv'
 import { archiveTransactionsBefore, getLocalStorageUsageBytes } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { parseYmdLocal, toLocalDateStr } from '../lib/format'
@@ -44,6 +44,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
   })
   const [archiving, setArchiving] = useState(false)
   const [archiveConfirm, setArchiveConfirm] = useState(false)
+  const [exportingXlsx, setExportingXlsx] = useState(false)
 
   const storageUsed = useMemo(() => getLocalStorageUsageBytes(), [])
   const usagePct = Math.min((storageUsed / LOCAL_STORAGE_MAX_BYTES) * 100, 100)
@@ -68,14 +69,14 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
     }
   }
 
-  function getFilename(): string {
+  function getFilename(ext: 'csv' | 'xlsx' = 'csv'): string {
     const now = new Date()
     switch (range) {
-      case 'thisMonth': return `잔고플랜_${yearMonth}.csv`
-      case 'lastMonth': return `잔고플랜_${getYearMonth(-1)}.csv`
-      case 'thisYear': return `잔고플랜_${now.getFullYear()}년.csv`
-      case 'custom': return `잔고플랜_${customFrom}_${customTo}.csv`
-      default: return `잔고플랜_전체.csv`
+      case 'thisMonth': return `잔고플랜_${yearMonth}.${ext}`
+      case 'lastMonth': return `잔고플랜_${getYearMonth(-1)}.${ext}`
+      case 'thisYear': return `잔고플랜_${now.getFullYear()}년.${ext}`
+      case 'custom': return `잔고플랜_${customFrom}_${customTo}.${ext}`
+      default: return `잔고플랜_전체.${ext}`
     }
   }
 
@@ -110,9 +111,23 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
 
   function handleExport() {
     if (filtered.length === 0) return
-    exportTransactionsCSV(filtered, getFilename())
+    exportTransactionsCSV(filtered, getFilename('csv'))
     showToast(`${filtered.length}개 내역을 다운로드했어요`)
     handleClose()
+  }
+
+  async function handleExportXlsx() {
+    if (filtered.length === 0) return
+    setExportingXlsx(true)
+    try {
+      await exportTransactionsXLSX(filtered, getFilename('xlsx'))
+      showToast(`${filtered.length}개 내역을 엑셀로 다운로드했어요`)
+      handleClose()
+    } catch {
+      showToast('엑셀 다운로드 중 오류가 발생했어요')
+    } finally {
+      setExportingXlsx(false)
+    }
   }
 
   async function handleArchive() {
@@ -158,7 +173,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
         <div className="flex items-center justify-between px-6 pt-2 pb-5">
           <div>
             <h2 className="text-[18px] font-bold text-white">내역 내보내기</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">CSV 파일로 다운로드 (Excel 호환)</p>
+            <p className="text-xs text-[#4E5968] mt-0.5">CSV 또는 엑셀 파일로 다운로드</p>
           </div>
           <button aria-label="내역 내보내기 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
@@ -254,14 +269,27 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             </div>
           )}
 
-          <button
-            onClick={handleExport}
-            disabled={filtered.length === 0}
-            className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-          >
-            <Download size={18} />
-            {filtered.length}개 내역 다운로드
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              className="flex-1 py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <Download size={18} />
+              CSV
+            </button>
+            <button
+              onClick={handleExportXlsx}
+              disabled={filtered.length === 0 || exportingXlsx}
+              className="flex-1 py-4 rounded-2xl font-bold text-white text-[15px] bg-[#2ACF6A] hover:bg-[#34D97A] disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <FileSpreadsheet size={18} />
+              {exportingXlsx ? '변환 중...' : '엑셀'}
+            </button>
+          </div>
+          <p className="text-[11px] text-[#4E5968] -mt-2 text-center">
+            {filtered.length}개 내역을 CSV 또는 엑셀(.xlsx)로 다운로드해요
+          </p>
 
           {/* 아카이브 버튼 (이번 달·전체 제외) */}
           {canArchive && (
