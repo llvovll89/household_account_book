@@ -141,43 +141,6 @@ export interface Subscription {
   createdAt: number
 }
 
-export type StockTradeType = 'buy' | 'sell'
-
-export interface StockTrade {
-  id: string
-  ticker: string        // 종목명 (예: "삼성전자", "AAPL")
-  tradeType: StockTradeType
-  quantity: number      // 수량 (소수 허용 - ETF/해외주식)
-  price: number         // 주당 단가
-  fee: number           // 수수료 (0 허용)
-  currency: string      // 'KRW' | 'USD' 등 (기본 'KRW')
-  date: string          // YYYY-MM-DD
-  note: string          // 메모 (선택)
-  createdAt: number
-}
-
-export interface StockHolding {
-  ticker: string
-  quantity: number
-  avgBuyPrice: number
-  totalCost: number
-  realizedPnL: number
-  totalFee: number
-}
-
-export interface StockQuote {
-  symbol: string
-  ticker: string
-  currentPrice: number
-  prevClose: number
-  change: number
-  changePct: number
-  currency: string
-  marketState: string
-  shortName: string
-  lastUpdated: number
-}
-
 export interface MonthlyDataPoint {
   ym: string
   label: string

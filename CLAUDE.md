@@ -1,6 +1,6 @@
 # 잔고플랜 — Household Account Book
 
-개인 가계부 PWA. 수입/지출 내역, 예산, 반복거래, 메모, 주식 포트폴리오 관리.
+개인 가계부 PWA. 수입/지출 내역, 예산, 반복거래, 메모 관리.
 
 ## 스택
 
@@ -20,25 +20,20 @@
 src/
 ├── App.tsx                  # 앱 전체 상태 + 탭 라우팅 + 모달 관리
 ├── types/index.ts           # 모든 인터페이스 + 카테고리 상수 + 색상/이모지 맵
-├── types/navigation.ts      # Tab, AppMode, StockSubTab 타입
+├── types/navigation.ts      # Tab 타입
 ├── hooks/
 │   ├── useTransactions.ts   # 내역 CRUD
-│   ├── useStockTrades.ts    # 주식거래 CRUD
-│   ├── useAuthSync.ts       # Firebase 인증 + 로컬 데이터 마이그레이션
-│   ├── useStockChart.ts     # 주식 차트 데이터
-│   └── useStockPrice.ts     # 실시간 주가 (Yahoo Finance)
+│   └── useAuthSync.ts       # Firebase 인증 + 로컬 데이터 마이그레이션
 ├── lib/
 │   ├── storage.ts           # localStorage ↔ Firestore 추상화
 │   ├── format.ts            # fmt(숫자), fmtShort, generateId
 │   ├── useMonthlyData.ts    # 월별 집계 훅
 │   ├── chartTheme.ts        # 차트 색상 테마
-│   ├── stockPriceApi.ts     # Yahoo Finance API 래퍼
-│   ├── stockCalc.ts         # 주식 계산 로직
 │   ├── bankParser.ts        # 은행 CSV 파서
 │   ├── exportCsv.ts         # CSV 내보내기
 │   └── toast.ts             # 토스트 알림
 ├── components/
-│   ├── workspaces/          # LedgerWorkspace, StocksWorkspace (뷰 컨테이너)
+│   ├── workspaces/          # LedgerWorkspace (뷰 컨테이너)
 │   ├── charts/              # SparklineCard, DonutChart, TrendAreaChart 등 8개
 │   ├── layout/              # BottomNavigation
 │   ├── TransactionModal.tsx # 내역 추가/수정 폼
@@ -54,7 +49,7 @@ src/
 
 ### 상태 관리
 - **Redux/Zustand 없음** — App.tsx에서 useState로 중앙 관리 후 props drilling
-- CRUD 로직은 커스텀 훅으로 분리 (`useTransactions`, `useStockTrades`)
+- CRUD 로직은 커스텀 훅으로 분리 (`useTransactions`)
 - useCallback으로 핸들러 메모이제이션
 
 ### 이중 스토리지
@@ -64,7 +59,7 @@ src/
 - 로그인 시 로컬 데이터 → Firebase 병합 확인 모달 (`MergeLocalDataModal`)
 
 ### 컴포넌트 패턴
-- **워크스페이스** 패턴: LedgerWorkspace/StocksWorkspace가 탭 내 뷰 전체 담당
+- **워크스페이스** 패턴: LedgerWorkspace가 탭 내 뷰 전체 담당
 - **모달 기반 폼**: 추가/수정은 모두 바텀시트 모달
 - `charts/` — Recharts 기반 차트 컴포넌트 모음
 
@@ -75,8 +70,7 @@ Transaction    // id, type(income|expense), amount, category, description, tags?
 Budget         // category, limit
 RecurringTransaction  // id, type, amount, category, dayOfMonth, lastAppliedMonth
 Memo           // id, title, content, date?, amount?, category?, pinned, createdAt, updatedAt
-StockTrade     // id, ticker, tradeType(buy|sell), quantity, price, fee, currency, date, note
-AppSettings    // payday, customExpenseCategories[], customIncomeCategories[], stockWatchlist[]
+AppSettings    // payday, customExpenseCategories[], customIncomeCategories[]
 ```
 
 ## 카테고리 상수 (`src/types/index.ts`)

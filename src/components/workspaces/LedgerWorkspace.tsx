@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import type { Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
+import type { Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
 import type { Tab } from '../../types/navigation'
 
 const Dashboard = lazy(() => import('../Dashboard'))
@@ -22,7 +22,6 @@ interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
-  stockTrades: StockTrade[]
   subscriptions: Subscription[]
   goals: SavingsGoal[]
   settingsVersion: number
@@ -60,7 +59,6 @@ export default function LedgerWorkspace({
   transactions,
   budgets,
   recurring,
-  stockTrades,
   subscriptions,
   goals,
   settingsVersion,
@@ -101,7 +99,6 @@ export default function LedgerWorkspace({
               transactions={transactions}
               budgets={budgets}
               recurring={recurring}
-              stockTrades={stockTrades}
               goals={goals}
               settingsVersion={settingsVersion}
               yearMonth={yearMonth}

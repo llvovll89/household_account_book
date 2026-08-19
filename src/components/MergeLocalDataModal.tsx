@@ -12,7 +12,6 @@ const COUNT_LABELS: { key: keyof LocalDataCounts; label: string }[] = [
   { key: 'memos', label: '메모' },
   { key: 'budgets', label: '예산' },
   { key: 'recurring', label: '반복거래' },
-  { key: 'stockTrades', label: '주식거래' },
   { key: 'subscriptions', label: '구독' },
   { key: 'goals', label: '목표' },
 ]

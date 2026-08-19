@@ -21,21 +21,6 @@ export default defineConfig({
       },
     },
   },
-  server: {
-    proxy: {
-      // 개발환경 CORS 우회: /yf-api/* → https://query1.finance.yahoo.com/*
-      '/yf-api': {
-        target: 'https://query1.finance.yahoo.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/yf-api/, ''),
-      },
-      '/yf-api2': {
-        target: 'https://query2.finance.yahoo.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/yf-api2/, ''),
-      },
-    },
-  },
   plugins: [
     react(),
     tailwindcss(),
@@ -84,7 +69,6 @@ export default defineConfig({
           '**/assets/vendor-pdf-*.js',
           '**/assets/ImportModal-*.js',
           '**/assets/TransactionModal-*.js',
-          '**/assets/StockTradeModal-*.js',
           '**/assets/SyncConflictModal-*.js',
           '**/assets/SyncRecoveryGuideModal-*.js',
           '**/assets/MergeLocalDataModal-*.js',
@@ -92,7 +76,6 @@ export default defineConfig({
           '**/assets/HelpModal-*.js',
           '**/assets/CategoryModal-*.js',
           '**/assets/PaymentMethodsModal-*.js',
-          '**/assets/StockDetailModal-*.js',
         ],
         clientsClaim: true,
         skipWaiting: true,

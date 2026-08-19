@@ -23,7 +23,6 @@ const KEY_LABELS: Record<string, string> = {
     memos: '메모',
     budgets: '예산',
     recurring: '반복거래',
-    stockTrades: '주식거래',
     subscriptions: '구독',
     goals: '목표',
     settings: '설정',

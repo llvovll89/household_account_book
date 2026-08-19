@@ -1,6 +1,6 @@
 import { doc, getDoc, runTransaction } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
-import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, StockTrade, Subscription, Transaction, UserPaymentMethod } from '../types'
+import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
 import { showToast } from './toast'
 
 function safeSave(key: string, value: unknown): void {
@@ -19,7 +19,6 @@ const TRANSACTIONS_KEY = 'hb_transactions'
 const MEMOS_KEY = 'hb_memos'
 const BUDGETS_KEY = 'hb_budgets'
 const RECURRING_KEY = 'hb_recurring'
-const STOCK_TRADES_KEY = 'hb_stock_trades'
 const SUBSCRIPTIONS_KEY = 'hb_subscriptions'
 const GOALS_KEY = 'hb_goals'
 const SETTINGS_KEY = 'hb_settings'
@@ -38,7 +37,6 @@ export interface AppSettings {
   userPaymentMethods: UserPaymentMethod[]
   customExpenseCategories: string[]
   customIncomeCategories: string[]
-  stockWatchlist: string[]
   transactionTemplates: import('../types').TransactionTemplate[]
   swipeSensitivity?: SwipeSensitivity
   autoCategoryRules: AutoCategoryRule[]
@@ -50,13 +48,12 @@ interface RemoteState {
   memos: Memo[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
-  stockTrades: StockTrade[]
   subscriptions: Subscription[]
   goals: SavingsGoal[]
   settings: AppSettings
 }
 
-export const VERSION_KEYS = ['transactions', 'memos', 'budgets', 'recurring', 'stockTrades', 'subscriptions', 'goals', 'settings'] as const
+export const VERSION_KEYS = ['transactions', 'memos', 'budgets', 'recurring', 'subscriptions', 'goals', 'settings'] as const
 export type RemoteVersionKey = (typeof VERSION_KEYS)[number]
 type RemoteVersions = Record<RemoteVersionKey, number>
 type ConflictCountDiff = Partial<Record<RemoteVersionKey, { localCount: number | null; remoteCount: number | null }>>
@@ -100,7 +97,6 @@ export interface AppDataSnapshot {
   memos: Memo[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
-  stockTrades: StockTrade[]
   subscriptions: Subscription[]
   goals: SavingsGoal[]
   settings: AppSettings
@@ -114,7 +110,6 @@ interface MergeResult {
     memos: number
     budgets: number
     recurring: number
-    stockTrades: number
     subscriptions: number
     goals: number
   }
@@ -130,7 +125,6 @@ function emptyVersions(): RemoteVersions {
     memos: 0,
     budgets: 0,
     recurring: 0,
-    stockTrades: 0,
     subscriptions: 0,
     goals: 0,
     settings: 0,
@@ -164,7 +158,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   userPaymentMethods: [],
   customExpenseCategories: [],
   customIncomeCategories: [],
-  stockWatchlist: [],
   transactionTemplates: [],
   swipeSensitivity: 'medium',
   autoCategoryRules: [],
@@ -251,17 +244,6 @@ function isRecurring(v: unknown): v is RecurringTransaction {
   )
 }
 
-function isStockTrade(v: unknown): v is StockTrade {
-  if (!isObj(v)) return false
-  return (
-    typeof v.id === 'string' &&
-    typeof v.ticker === 'string' &&
-    (v.tradeType === 'buy' || v.tradeType === 'sell') &&
-    typeof v.quantity === 'number' &&
-    typeof v.price === 'number'
-  )
-}
-
 function isSubscription(v: unknown): v is Subscription {
   if (!isObj(v)) return false
   return (
@@ -296,10 +278,6 @@ function loadLocalBudgets(): Budget[] {
 
 function loadLocalRecurring(): RecurringTransaction[] {
   return parseValidArray(RECURRING_KEY, isRecurring)
-}
-
-function loadLocalStockTrades(): StockTrade[] {
-  return parseValidArray(STOCK_TRADES_KEY, isStockTrade)
 }
 
 function loadLocalSubscriptions(): Subscription[] {
@@ -339,7 +317,6 @@ function normalizeRemoteState(raw: unknown): RemoteState {
       memos: [],
       budgets: [],
       recurring: [],
-      stockTrades: [],
       subscriptions: [],
       goals: [],
       settings: { ...DEFAULT_SETTINGS },
@@ -358,7 +335,6 @@ function normalizeRemoteState(raw: unknown): RemoteState {
     memos: Array.isArray(data.memos) ? data.memos : [],
     budgets: Array.isArray(data.budgets) ? data.budgets : [],
     recurring: Array.isArray(data.recurring) ? data.recurring : [],
-    stockTrades: Array.isArray(data.stockTrades) ? data.stockTrades : [],
     subscriptions: Array.isArray(data.subscriptions) ? data.subscriptions : [],
     goals: Array.isArray(data.goals) ? data.goals : [],
     settings,
@@ -426,7 +402,6 @@ function localSnapshot(): RemoteState {
     memos: loadLocalMemos(),
     budgets: loadLocalBudgets(),
     recurring: loadLocalRecurring(),
-    stockTrades: loadLocalStockTrades(),
     subscriptions: loadLocalSubscriptions(),
     goals: loadLocalGoals(),
     settings: loadLocalSettings(),
@@ -443,10 +418,6 @@ function memoKey(m: Memo): string {
 
 function recurringKey(r: RecurringTransaction): string {
   return [r.dayOfMonth, r.amount, r.category, r.type, r.description].join('|')
-}
-
-function stockKey(t: StockTrade): string {
-  return [t.ticker, t.tradeType, t.quantity, t.price, t.fee, t.currency, t.date, t.note].join('|')
 }
 
 function mergeUniqueByKey<T>(base: T[], incoming: T[], keyFn: (item: T) => string): T[] {
@@ -477,7 +448,6 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
     userPaymentMethods: local.userPaymentMethods.length > 0 ? local.userPaymentMethods : remote.userPaymentMethods,
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
-    stockWatchlist: local.stockWatchlist.length > 0 ? local.stockWatchlist : remote.stockWatchlist,
     transactionTemplates: (local.transactionTemplates?.length ?? 0) > 0 ? local.transactionTemplates : (remote.transactionTemplates ?? []),
     autoCategoryRules: (local.autoCategoryRules?.length ?? 0) > 0 ? local.autoCategoryRules : (remote.autoCategoryRules ?? []),
     hiddenWidgets: local.hiddenWidgets ?? remote.hiddenWidgets ?? [],
@@ -486,7 +456,7 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
 
 function backupAndClearLocalData(): void {
   const backupPrefix = `hb_backup_${Date.now()}`
-  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, STOCK_TRADES_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
+  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
 
   for (const key of keys) {
     const value = localStorage.getItem(key)
@@ -558,7 +528,6 @@ export interface LocalDataCounts {
   memos: number
   budgets: number
   recurring: number
-  stockTrades: number
   subscriptions: number
   goals: number
 }
@@ -570,7 +539,6 @@ export function getLocalDataCounts(): LocalDataCounts {
     memos: snapshot.memos.length,
     budgets: snapshot.budgets.length,
     recurring: snapshot.recurring.length,
-    stockTrades: snapshot.stockTrades.length,
     subscriptions: snapshot.subscriptions.length,
     goals: snapshot.goals.length,
   }
@@ -586,14 +554,12 @@ export function hasLocalMigratableData(): boolean {
       snapshot.memos.length > 0
       || snapshot.budgets.length > 0
       || snapshot.recurring.length > 0
-      || snapshot.stockTrades.length > 0
       || snapshot.subscriptions.length > 0
       || snapshot.goals.length > 0
       || hasValidPayday(snapshot.settings.payday)
       || hasValidBillingDay(snapshot.settings.cardBillingDay)
       || snapshot.settings.customExpenseCategories.length > 0
       || snapshot.settings.customIncomeCategories.length > 0
-      || snapshot.settings.stockWatchlist.length > 0
     )
   }
 
@@ -602,14 +568,12 @@ export function hasLocalMigratableData(): boolean {
     || snapshot.memos.length > 0
     || snapshot.budgets.length > 0
     || snapshot.recurring.length > 0
-    || snapshot.stockTrades.length > 0
     || snapshot.subscriptions.length > 0
     || snapshot.goals.length > 0
     || hasValidPayday(snapshot.settings.payday)
     || hasValidBillingDay(snapshot.settings.cardBillingDay)
     || snapshot.settings.customExpenseCategories.length > 0
     || snapshot.settings.customIncomeCategories.length > 0
-    || snapshot.settings.stockWatchlist.length > 0
   )
 }
 
@@ -622,7 +586,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     return {
       merged: false,
       message: '로그인 상태에서만 병합할 수 있습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0, subscriptions: 0, goals: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, subscriptions: 0, goals: 0 },
     }
   }
 
@@ -632,7 +596,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     return {
       merged: false,
       message: '로컬 데이터가 없어 병합을 건너뛰었습니다.',
-      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0, subscriptions: 0, goals: 0 },
+      counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, subscriptions: 0, goals: 0 },
     }
   }
 
@@ -650,7 +614,6 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     memos: mergeUniqueByKey(remote.memos, local.memos, memoKey),
     budgets: mergeBudgets(remote.budgets, local.budgets),
     recurring: mergeRecurring(remote.recurring, local.recurring),
-    stockTrades: mergeUniqueByKey(remote.stockTrades, local.stockTrades, stockKey),
     subscriptions: mergeUniqueByKey(remote.subscriptions, local.subscriptions, (s) => s.id),
     goals: mergeUniqueByKey(remote.goals, local.goals, (g) => g.id),
     settings: mergeSettings(remote.settings, local.settings),
@@ -668,7 +631,6 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
       memos: merged.memos.length,
       budgets: merged.budgets.length,
       recurring: merged.recurring.length,
-      stockTrades: merged.stockTrades.length,
       subscriptions: merged.subscriptions.length,
       goals: merged.goals.length,
     },
@@ -761,20 +723,6 @@ export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
     return
   }
   await saveRemotePatch(getStorageUid(), { recurring: r })
-}
-
-export async function loadStockTrades(): Promise<StockTrade[]> {
-  if (storageMode === 'local') return loadLocalStockTrades()
-  return (await loadRemoteState(getStorageUid())).stockTrades
-}
-
-export async function saveStockTrades(trades: StockTrade[]): Promise<void> {
-  if (storageMode === 'local') {
-    safeSave(STOCK_TRADES_KEY, trades)
-    markUserLocalData()
-    return
-  }
-  await saveRemotePatch(getStorageUid(), { stockTrades: trades })
 }
 
 export async function loadSubscriptions(): Promise<Subscription[]> {

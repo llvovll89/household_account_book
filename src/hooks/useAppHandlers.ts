@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, TransactionType, StockTrade, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, TransactionType, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
-import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveStockTrades, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
+import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
@@ -14,17 +14,14 @@ export type { UIAction }
 interface HandlersInput {
   transactions: Transaction[]
   editingTransaction: Transaction | null
-  editingTrade: StockTrade | null
   yearMonth: string
   persist: (task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => void
   setTransactions: Dispatch<React.SetStateAction<Transaction[]>>
-  setStockTrades: Dispatch<React.SetStateAction<StockTrade[]>>
   setBudgets: Dispatch<React.SetStateAction<Budget[]>>
   setRecurring: Dispatch<React.SetStateAction<RecurringTransaction[]>>
   setSubscriptions: Dispatch<React.SetStateAction<Subscription[]>>
   setGoals: Dispatch<React.SetStateAction<SavingsGoal[]>>
   setMemos: Dispatch<React.SetStateAction<Memo[]>>
-  setStockWatchlist: Dispatch<React.SetStateAction<string[]>>
   setCustomExpenseCategories: Dispatch<React.SetStateAction<string[]>>
   setCustomIncomeCategories: Dispatch<React.SetStateAction<string[]>>
   setUserPaymentMethods: Dispatch<React.SetStateAction<UserPaymentMethod[]>>
@@ -37,17 +34,14 @@ interface HandlersInput {
 export function useAppHandlers({
   transactions,
   editingTransaction,
-  editingTrade,
   yearMonth,
   persist,
   setTransactions,
-  setStockTrades,
   setBudgets,
   setRecurring,
   setSubscriptions,
   setGoals,
   setMemos,
-  setStockWatchlist,
   setCustomExpenseCategories,
   setCustomIncomeCategories,
   setUserPaymentMethods,
@@ -138,31 +132,6 @@ export function useAppHandlers({
       return next
     })
   }, [persist, setTransactions])
-
-  const handleSaveStockTrade = useCallback((data: Omit<StockTrade, 'id' | 'createdAt'>) => {
-    setStockTrades((prev) => {
-      const next = editingTrade
-        ? prev.map((t) => t.id === editingTrade.id ? { ...t, ...data } : t)
-        : [...prev, { ...data, id: generateId(), createdAt: Date.now() }]
-      persist(() => saveStockTrades(next), '주식 거래 저장에 실패했습니다.', 'stockTrades')
-      return next
-    })
-    dispatchUI({ type: 'CLOSE_STOCK_MODAL' })
-  }, [editingTrade, persist, setStockTrades, dispatchUI])
-
-  const handleDeleteStockTrade = useCallback((id: string) => {
-    dispatchUI({
-      type: 'OPEN_CONFIRM',
-      message: '이 거래를 삭제할까요?',
-      onConfirm: () => {
-        setStockTrades((prev) => {
-          const next = prev.filter((t) => t.id !== id)
-          persist(() => saveStockTrades(next), '주식 거래 삭제에 실패했습니다.', 'stockTrades')
-          return next
-        })
-      },
-    })
-  }, [persist, setStockTrades, dispatchUI])
 
   const handleBudgetsChange = useCallback((b: Budget[]) => {
     setBudgets(b)
@@ -324,39 +293,6 @@ export function useAppHandlers({
     )
   }, [persist, setCustomExpenseCategories, setCustomIncomeCategories])
 
-  const handleAddWatchTicker = useCallback((ticker: string) => {
-    const normalized = ticker.trim().toUpperCase()
-    if (!normalized) return
-    setStockWatchlist((prev) => {
-      if (prev.includes(normalized)) return prev
-      const next = [...prev, normalized]
-      persist(
-        async () => {
-          const current = await loadSettings()
-          await saveSettings({ ...current, stockWatchlist: next })
-        },
-        '관심종목 저장에 실패했습니다.',
-        'settings'
-      )
-      return next
-    })
-  }, [persist, setStockWatchlist])
-
-  const handleRemoveWatchTicker = useCallback((ticker: string) => {
-    setStockWatchlist((prev) => {
-      const next = prev.filter((item) => item !== ticker)
-      persist(
-        async () => {
-          const current = await loadSettings()
-          await saveSettings({ ...current, stockWatchlist: next })
-        },
-        '관심종목 저장에 실패했습니다.',
-        'settings'
-      )
-      return next
-    })
-  }, [persist, setStockWatchlist])
-
   const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
     setMemos((prev) => {
       const now = Date.now()
@@ -403,8 +339,6 @@ export function useAppHandlers({
     handleBulkDeleteTransactions,
     handleTransactionArchive,
     handleBulkImport,
-    handleSaveStockTrade,
-    handleDeleteStockTrade,
     handleBudgetsChange,
     handleRecurringSave,
     handleSubscriptionsChange,
@@ -417,8 +351,6 @@ export function useAppHandlers({
     handleDeleteTag,
     handleSaveHiddenWidgets,
     handleSaveCategories,
-    handleAddWatchTicker,
-    handleRemoveWatchTicker,
     handleAddMemo,
     handleUpdateMemo,
     handleDeleteMemo,

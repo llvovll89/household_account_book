@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react'
-import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, StockTrade, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
+import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -12,14 +12,12 @@ import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
 import { fmt, fmtShort, parseYmdLocal, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { calcHoldings } from '../lib/stockCalc'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
 
 interface Props {
   transactions: Transaction[]
   budgets: Budget[]
   recurring: RecurringTransaction[]
-  stockTrades: StockTrade[]
   goals: SavingsGoal[]
   settingsVersion: number
   yearMonth: string
@@ -97,7 +95,7 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
   )
 }
 
-export default function Dashboard({ transactions, budgets, recurring, stockTrades, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings }: Props) {
   const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
   const [showBudget, setShowBudget] = useState(false)
   const [showRecurring, setShowRecurring] = useState(false)
@@ -420,24 +418,16 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       (s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0
     )
 
-    // 2) 주식 보유 원가 합계 (실현되지 않은 보유분)
-    const holdings = calcHoldings(stockTrades)
-    const stockBookValue = holdings.reduce((s, h) => s + h.totalCost, 0)
-
-    // 3) 저축 목표 달성 금액 합계
+    // 2) 저축 목표 달성 금액 합계
     const goalsSaved = goals.reduce((s, g) => s + (g.currentAmount ?? 0), 0)
-
-    const total = totalBalance + stockBookValue
 
     return {
       totalBalance,
-      stockBookValue,
       goalsSaved,
-      total,
-      holdingCount: holdings.length,
+      total: totalBalance,
       goalCount: goals.length,
     }
-  }, [transactions, stockTrades, goals])
+  }, [transactions, goals])
 
   // 월별 순자산 추이 (전체 거래 기준 누적) — 단일 패스로 6개 월말 잔액 계산
   const netWorthTrend = useMemo(() => {
@@ -1988,7 +1978,7 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
       )}
 
       {/* 순자산 카드 */}
-      {!hide('net-worth') && (transactions.length > 0 || stockTrades.length > 0) && (
+      {!hide('net-worth') && transactions.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-3xl px-5 py-3.5">
           <div className="flex items-center gap-2 mb-2.5">
             <PieChart size={14} className="text-[#3D8EF8]" />
@@ -2009,21 +1999,12 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               )
             })()}
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
               <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 잔액</p>
               <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
                 {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
               </p>
-            </div>
-            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">주식 원가</p>
-              <p className="text-[13px] font-extrabold text-[#F5BE3A] num">
-                {netWorth.stockBookValue > 0 ? fmtShort(netWorth.stockBookValue) : '-'}
-              </p>
-              {netWorth.holdingCount > 0 && (
-                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.holdingCount}종목</p>
-              )}
             </div>
             <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
               <p className="text-[10px] text-[#4E5968] font-semibold mb-1">저축 목표</p>
@@ -2052,7 +2033,6 @@ export default function Dashboard({ transactions, budgets, recurring, stockTrade
               </ResponsiveContainer>
             </div>
           )}
-          <p className="text-[10px] text-[#4E5968] mt-2.5 text-right">주식은 매입 원가 기준 · 시세 반영 안됨</p>
         </div>
       )}
 

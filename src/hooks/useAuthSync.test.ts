@@ -47,8 +47,8 @@ describe('useAuthSync', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.hasLocalMigratableDataMock.mockReturnValue(false)
-    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 })
-    mocks.mergeLocalIntoFirebaseMock.mockResolvedValue({ merged: true, message: 'ok', counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 } })
+    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 0, memos: 0, budgets: 0, recurring: 0 })
+    mocks.mergeLocalIntoFirebaseMock.mockResolvedValue({ merged: true, message: 'ok', counts: { transactions: 0, memos: 0, budgets: 0, recurring: 0 } })
 
     mocks.onAuthStateChangedMock.mockImplementation((_auth: unknown, callback: (u: unknown) => void) => {
       callback(null)
@@ -73,7 +73,7 @@ describe('useAuthSync', () => {
   it('로그인 + 로컬 데이터 존재 시 병합 모달을 띄우고 카운트를 설정한다', async () => {
     const hydrateData = vi.fn().mockResolvedValue(undefined)
     mocks.hasLocalMigratableDataMock.mockReturnValue(true)
-    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 5, memos: 1, budgets: 2, recurring: 0, stockTrades: 0 })
+    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 5, memos: 1, budgets: 2, recurring: 0 })
 
     mocks.onAuthStateChangedMock.mockImplementation((_auth: unknown, callback: (u: unknown) => void) => {
       callback({ uid: 'user-1' })
@@ -95,7 +95,7 @@ describe('useAuthSync', () => {
   it('handleMergeConfirm은 병합 후 hydrateData를 호출하고 모달을 닫는다', async () => {
     const hydrateData = vi.fn().mockResolvedValue(undefined)
     mocks.hasLocalMigratableDataMock.mockReturnValue(true)
-    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 2, memos: 0, budgets: 0, recurring: 0, stockTrades: 0 })
+    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 2, memos: 0, budgets: 0, recurring: 0 })
 
     mocks.onAuthStateChangedMock.mockImplementation((_auth: unknown, callback: (u: unknown) => void) => {
       callback({ uid: 'user-1' })
@@ -120,7 +120,7 @@ describe('useAuthSync', () => {
   it('handleMergeCancel은 로컬 데이터를 정리하고 hydrateData를 호출한다', async () => {
     const hydrateData = vi.fn().mockResolvedValue(undefined)
     mocks.hasLocalMigratableDataMock.mockReturnValue(true)
-    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 3, memos: 1, budgets: 0, recurring: 0, stockTrades: 0 })
+    mocks.getLocalDataCountsMock.mockReturnValue({ transactions: 3, memos: 1, budgets: 0, recurring: 0 })
 
     mocks.onAuthStateChangedMock.mockImplementation((_auth: unknown, callback: (u: unknown) => void) => {
       callback({ uid: 'user-1' })

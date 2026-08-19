@@ -36,7 +36,6 @@ import type {
     Memo,
     Budget,
     RecurringTransaction,
-    StockTrade,
     Subscription,
     SavingsGoal,
     UserPaymentMethod,
@@ -44,7 +43,7 @@ import type {
     TransactionType,
 } from "./types";
 import {CATEGORY_EMOJI} from "./types";
-import type {AppMode, StockSubTab, Tab} from "./types/navigation";
+import type {Tab} from "./types/navigation";
 import {loadAllData, loadSettings} from "./lib/storage";
 import type {RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
@@ -65,16 +64,12 @@ import WorkspaceSkeleton from "./components/layout/WorkspaceSkeleton";
 const TransactionModal = lazy(() => import("./components/TransactionModal"));
 const ImportModal = lazy(() => import("./components/ImportModal"));
 const HelpModal = lazy(() => import("./components/HelpModal"));
-const StockTradeModal = lazy(() => import("./components/StockTradeModal"));
 const CategoryModal = lazy(() => import("./components/CategoryModal"));
 const PaymentMethodsModal = lazy(
     () => import("./components/PaymentMethodsModal"),
 );
 const LedgerWorkspace = lazy(
     () => import("./components/workspaces/LedgerWorkspace"),
-);
-const StocksWorkspace = lazy(
-    () => import("./components/workspaces/StocksWorkspace"),
 );
 const MergeLocalDataModal = lazy(
     () => import("./components/MergeLocalDataModal"),
@@ -144,7 +139,6 @@ function parseConflictScopePreference(): RemoteVersionKey[] {
                 "memos",
                 "budgets",
                 "recurring",
-                "stockTrades",
                 "subscriptions",
                 "goals",
             ];
@@ -155,7 +149,6 @@ function parseConflictScopePreference(): RemoteVersionKey[] {
                 "memos",
                 "budgets",
                 "recurring",
-                "stockTrades",
                 "subscriptions",
                 "goals",
             ];
@@ -164,7 +157,6 @@ function parseConflictScopePreference(): RemoteVersionKey[] {
             "memos",
             "budgets",
             "recurring",
-            "stockTrades",
             "subscriptions",
             "goals",
             "settings",
@@ -179,7 +171,6 @@ function parseConflictScopePreference(): RemoteVersionKey[] {
                   "memos",
                   "budgets",
                   "recurring",
-                  "stockTrades",
                   "subscriptions",
                   "goals",
               ];
@@ -189,7 +180,6 @@ function parseConflictScopePreference(): RemoteVersionKey[] {
             "memos",
             "budgets",
             "recurring",
-            "stockTrades",
             "subscriptions",
             "goals",
         ];
@@ -225,7 +215,6 @@ function scopeLabel(scope: RemoteVersionKey): string {
         memos: "메모",
         budgets: "예산",
         recurring: "반복거래",
-        stockTrades: "주식거래",
         subscriptions: "구독",
         goals: "목표",
         settings: "설정",
@@ -289,9 +278,6 @@ interface UIState {
     editingTransaction: Transaction | null;
     showImport: boolean;
     showHelp: boolean;
-    showStockModal: boolean;
-    editingTrade: StockTrade | null;
-    stockSubTab: StockSubTab;
     showCategoryModal: boolean;
     showPaymentMethodsModal: boolean;
     memoAddTrigger: number;
@@ -340,9 +326,6 @@ const UI_INIT: UIState = {
     editingTransaction: null,
     showImport: false,
     showHelp: false,
-    showStockModal: false,
-    editingTrade: null,
-    stockSubTab: "portfolio",
     showCategoryModal: false,
     showPaymentMethodsModal: false,
     memoAddTrigger: 0,
@@ -361,14 +344,6 @@ function uiReducer(state: UIState, action: UIAction): UIState {
             };
         case "CLOSE_TX_MODAL":
             return {...state, showModal: false, editingTransaction: null};
-        case "OPEN_STOCK_MODAL":
-            return {
-                ...state,
-                showStockModal: true,
-                editingTrade: action.editing ?? null,
-            };
-        case "CLOSE_STOCK_MODAL":
-            return {...state, showStockModal: false, editingTrade: null};
         case "SET_IMPORT":
             return {...state, showImport: action.value};
         case "SET_HELP":
@@ -377,8 +352,6 @@ function uiReducer(state: UIState, action: UIAction): UIState {
             return {...state, showCategoryModal: action.value};
         case "SET_PAYMENT_METHODS":
             return {...state, showPaymentMethodsModal: action.value};
-        case "SET_STOCK_SUBTAB":
-            return {...state, stockSubTab: action.value};
         case "TRIGGER_MEMO":
             return {...state, memoAddTrigger: state.memoAddTrigger + 1};
         case "TRIGGER_SUB":
@@ -454,7 +427,6 @@ export default function App() {
         handleInstallClick,
     } = usePWAInstall();
 
-    const [mode, setMode] = useState<AppMode>("ledger");
     const [tab, setTab] = useState<Tab>(() => {
         const saved = localStorage.getItem("hb_active_tab");
         const valid: Tab[] = [
@@ -469,8 +441,6 @@ export default function App() {
     });
     const [currentDate, setCurrentDate] = useState(new Date());
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [stockTrades, setStockTrades] = useState<StockTrade[]>([]);
-    const [stockWatchlist, setStockWatchlist] = useState<string[]>([]);
     const [cardBillingDay, setCardBillingDay] = useState<number | null>(null);
     const [settingsSyncTick, setSettingsSyncTick] = useState(0);
     const [memos, setMemos] = useState<Memo[]>([]);
@@ -512,9 +482,6 @@ export default function App() {
         editingTransaction,
         showImport,
         showHelp,
-        showStockModal,
-        editingTrade,
-        stockSubTab,
         showCategoryModal,
         showPaymentMethodsModal,
         memoAddTrigger,
@@ -623,7 +590,7 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (tab !== "stocks") localStorage.setItem("hb_active_tab", tab);
+        localStorage.setItem("hb_active_tab", tab);
     }, [tab]);
 
     useEffect(() => {
@@ -718,10 +685,8 @@ export default function App() {
         setMemos(snapshot.memos);
         setBudgets(snapshot.budgets);
         setRecurring(snapshot.recurring);
-        setStockTrades(snapshot.stockTrades);
         setSubscriptions(snapshot.subscriptions ?? []);
         setGoals(snapshot.goals ?? []);
-        setStockWatchlist(snapshot.settings.stockWatchlist ?? []);
         setCardBillingDay(snapshot.settings.cardBillingDay ?? null);
         setUserPaymentMethods(snapshot.settings.userPaymentMethods ?? []);
         setCustomExpenseCategories(snapshot.settings.customExpenseCategories);
@@ -756,10 +721,8 @@ export default function App() {
         handleLogout,
     } = useAuthSync({hydrateData});
 
-    const activeMode: AppMode = user ? mode : "ledger";
     const visibleTabs = LEDGER_TABS;
-    const activeTab: Tab =
-        activeMode === "stocks" ? "stocks" : tab === "stocks" ? "home" : tab;
+    const activeTab: Tab = tab;
 
     const prefetchLedgerTab = useCallback((target: Tab) => {
         if (target === "home") {
@@ -787,45 +750,7 @@ export default function App() {
         }
     }, []);
 
-    const prefetchStockSubTab = useCallback((target: StockSubTab) => {
-        if (target === "portfolio") {
-            void import("./components/StockPortfolio");
-            return;
-        }
-        if (target === "watchlist") {
-            void import("./components/StockWatchlist");
-            return;
-        }
-        if (target === "trades") {
-            void import("./components/StockTradeList");
-            return;
-        }
-        if (target === "performance") {
-            void import("./components/StockPerformance");
-        }
-    }, []);
-
-    const prefetchMode = useCallback(
-        (target: AppMode) => {
-            if (target === "stocks") {
-                prefetchStockSubTab("portfolio");
-                prefetchStockSubTab("watchlist");
-                return;
-            }
-            prefetchLedgerTab("home");
-            prefetchLedgerTab("transactions");
-        },
-        [prefetchLedgerTab, prefetchStockSubTab],
-    );
-
     const prefetchFabModal = useCallback(() => {
-        if (
-            activeTab === "stocks" &&
-            (stockSubTab === "portfolio" || stockSubTab === "trades")
-        ) {
-            void import("./components/StockTradeModal");
-            return;
-        }
         if (
             activeTab === "memos" ||
             activeTab === "subscriptions" ||
@@ -834,7 +759,7 @@ export default function App() {
             return;
         }
         void import("./components/TransactionModal");
-    }, [activeTab, stockSubTab]);
+    }, [activeTab]);
 
     const prefetchImportUtilities = useCallback(() => {
         void import("./components/ImportModal");
@@ -873,38 +798,8 @@ export default function App() {
         [prefetchLedgerTab],
     );
 
-    const handleStockSubTabChange = useCallback(
-        (nextSubTab: StockSubTab) => {
-            if (import.meta.env.DEV) {
-                transitionStartRef.current = performance.now();
-                transitionLabelRef.current = `stocks:${nextSubTab}`;
-            }
-
-            prefetchStockSubTab(nextSubTab);
-            const likelyNext: Partial<Record<StockSubTab, StockSubTab>> = {
-                portfolio: "watchlist",
-                watchlist: "trades",
-                trades: "performance",
-                performance: "portfolio",
-            };
-            const predicted = likelyNext[nextSubTab];
-            if (predicted) prefetchStockSubTab(predicted);
-            dispatchUI({type: "SET_STOCK_SUBTAB", value: nextSubTab});
-        },
-        [prefetchStockSubTab],
-    );
-
     useEffect(() => {
         const preloadByContext = () => {
-            if (activeMode === "stocks") {
-                prefetchStockSubTab("portfolio");
-                prefetchStockSubTab("watchlist");
-                prefetchStockSubTab("trades");
-                prefetchStockSubTab("performance");
-                void import("./components/StockTradeModal");
-                return;
-            }
-
             if (activeTab === "home") {
                 prefetchLedgerTab("transactions");
                 prefetchLedgerTab("analytics");
@@ -964,7 +859,7 @@ export default function App() {
             if (idleId !== null && w.cancelIdleCallback)
                 w.cancelIdleCallback(idleId);
         };
-    }, [activeMode, activeTab, prefetchLedgerTab, prefetchStockSubTab]);
+    }, [activeTab, prefetchLedgerTab]);
 
     useEffect(() => {
         if (!import.meta.env.DEV) return;
@@ -987,7 +882,7 @@ export default function App() {
         });
 
         return () => cancelAnimationFrame(frame1);
-    }, [activeMode, activeTab, stockSubTab]);
+    }, [activeTab]);
 
     const persist = useCallback(
         (
@@ -1330,8 +1225,6 @@ export default function App() {
         handleDeleteTransaction,
         handleTransactionArchive,
         handleBulkImport,
-        handleSaveStockTrade,
-        handleDeleteStockTrade,
         handleBudgetsChange,
         handleRecurringSave,
         handleSubscriptionsChange,
@@ -1344,8 +1237,6 @@ export default function App() {
         handleDeleteTag,
         handleSaveHiddenWidgets,
         handleSaveCategories,
-        handleAddWatchTicker,
-        handleRemoveWatchTicker,
         handleAddMemo,
         handleUpdateMemo,
         handleDeleteMemo,
@@ -1355,17 +1246,14 @@ export default function App() {
     } = useAppHandlers({
         transactions,
         editingTransaction,
-        editingTrade,
         yearMonth,
         persist,
         setTransactions,
-        setStockTrades,
         setBudgets,
         setRecurring,
         setSubscriptions,
         setGoals,
         setMemos,
-        setStockWatchlist,
         setCustomExpenseCategories,
         setCustomIncomeCategories,
         setUserPaymentMethods,
@@ -1426,7 +1314,6 @@ export default function App() {
             localStorage.setItem(METHOD_FILTER_KEY, "credit");
             localStorage.setItem(BILLING_FILTER_KEY, billing);
             localStorage.removeItem(STATEMENT_MONTH_FILTER_KEY);
-            setMode("ledger");
             setTab("transactions");
             showToast(
                 billing === "current"
@@ -1482,10 +1369,6 @@ export default function App() {
                 cardBillingDay ?? 25,
             ),
         [transactions, yearMonth, cardBillingDay],
-    );
-    const stockTickerCount = useMemo(
-        () => new Set(stockTrades.map((t) => t.ticker)).size,
-        [stockTrades],
     );
     const retryReasonTotals = useMemo(
         () => getRetryReasonTotals(lastRetryReasons),
@@ -1607,13 +1490,11 @@ export default function App() {
     }, [pendingCount]);
 
     const showFAB =
-        activeMode === "stocks"
-            ? stockSubTab === "portfolio" || stockSubTab === "trades"
-            : activeTab === "home" ||
-              activeTab === "transactions" ||
-              activeTab === "memos" ||
-              activeTab === "subscriptions" ||
-              activeTab === "goals";
+        activeTab === "home" ||
+        activeTab === "transactions" ||
+        activeTab === "memos" ||
+        activeTab === "subscriptions" ||
+        activeTab === "goals";
 
     if (!authReady || isSyncing) {
         return (
@@ -1734,63 +1615,59 @@ export default function App() {
                                                 </p>
                                             </div>
                                             <div className="p-1">
-                                                {activeMode === "ledger" && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => {
-                                                                dispatchUI({
-                                                                    type: "SET_IMPORT",
-                                                                    value: true,
-                                                                });
-                                                                setShowUserMenu(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
-                                                        >
-                                                            <FileDown
-                                                                size={14}
-                                                                className="text-[#8B95A1]"
-                                                            />
-                                                            가져오기
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                dispatchUI({
-                                                                    type: "SET_PAYMENT_METHODS",
-                                                                    value: true,
-                                                                });
-                                                                setShowUserMenu(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
-                                                        >
-                                                            <CreditCard
-                                                                size={14}
-                                                                className="text-[#8B95A1]"
-                                                            />
-                                                            결제수단 관리
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setShowAutoCategoryRuleModal(
-                                                                    true,
-                                                                );
-                                                                setShowUserMenu(
-                                                                    false,
-                                                                );
-                                                            }}
-                                                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
-                                                        >
-                                                            <Target
-                                                                size={14}
-                                                                className="text-[#8B95A1]"
-                                                            />
-                                                            자동 분류 규칙
-                                                        </button>
-                                                    </>
-                                                )}
+                                                <button
+                                                    onClick={() => {
+                                                        dispatchUI({
+                                                            type: "SET_IMPORT",
+                                                            value: true,
+                                                        });
+                                                        setShowUserMenu(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                >
+                                                    <FileDown
+                                                        size={14}
+                                                        className="text-[#8B95A1]"
+                                                    />
+                                                    가져오기
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        dispatchUI({
+                                                            type: "SET_PAYMENT_METHODS",
+                                                            value: true,
+                                                        });
+                                                        setShowUserMenu(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                >
+                                                    <CreditCard
+                                                        size={14}
+                                                        className="text-[#8B95A1]"
+                                                    />
+                                                    결제수단 관리
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setShowAutoCategoryRuleModal(
+                                                            true,
+                                                        );
+                                                        setShowUserMenu(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                >
+                                                    <Target
+                                                        size={14}
+                                                        className="text-[#8B95A1]"
+                                                    />
+                                                    자동 분류 규칙
+                                                </button>
                                                 <button
                                                     onClick={() => {
                                                         setShowUserMenu(false);
@@ -1817,27 +1694,25 @@ export default function App() {
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-2">
-                                    {activeMode === "ledger" && (
-                                        <button
-                                            onClick={() =>
-                                                dispatchUI({
-                                                    type: "SET_IMPORT",
-                                                    value: true,
-                                                })
-                                            }
-                                            onMouseEnter={
-                                                prefetchImportUtilities
-                                            }
-                                            onFocus={prefetchImportUtilities}
-                                            onTouchStart={
-                                                prefetchImportUtilities
-                                            }
-                                            aria-label="거래내역 가져오기"
-                                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
-                                        >
-                                            <FileDown size={12} />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() =>
+                                            dispatchUI({
+                                                type: "SET_IMPORT",
+                                                value: true,
+                                            })
+                                        }
+                                        onMouseEnter={
+                                            prefetchImportUtilities
+                                        }
+                                        onFocus={prefetchImportUtilities}
+                                        onTouchStart={
+                                            prefetchImportUtilities
+                                        }
+                                        aria-label="거래내역 가져오기"
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
+                                    >
+                                        <FileDown size={12} />
+                                    </button>
                                     <button
                                         aria-label="로그인 모달 열기"
                                         onClick={() => setShowAuthModal(true)}
@@ -1850,47 +1725,7 @@ export default function App() {
                         </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-center gap-2 rounded-2xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] p-1.5">
-                        <button
-                            onClick={() => {
-                                setMode("ledger");
-                                if (tab === "stocks") setTab("home");
-                            }}
-                            onMouseEnter={() => prefetchMode("ledger")}
-                            onFocus={() => prefetchMode("ledger")}
-                            onTouchStart={() => prefetchMode("ledger")}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === "ledger" ? "bg-[#3D8EF8] text-white" : "text-[#8B95A1] hover:bg-white/5"}`}
-                        >
-                            가계부
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (!user) {
-                                    setShowAuthModal(true);
-                                    showToast(
-                                        "주식 모드는 로그인 후 사용할 수 있어요.",
-                                    );
-                                    return;
-                                }
-                                setMode("stocks");
-                                setTab("stocks");
-                                dispatchUI({
-                                    type: "SET_STOCK_SUBTAB",
-                                    value: "portfolio",
-                                });
-                            }}
-                            onMouseEnter={() => prefetchMode("stocks")}
-                            onFocus={() => prefetchMode("stocks")}
-                            onTouchStart={() => prefetchMode("stocks")}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${activeMode === "stocks" ? "bg-[#F5BE3A] text-[#111111]" : "text-[#8B95A1] hover:bg-white/5"}`}
-                        >
-                            주식
-                        </button>
-                    </div>
-
-                    {activeMode === "ledger" ? (
-                        <>
-                            <div className="flex items-center justify-center gap-3 mt-3">
+                    <div className="flex items-center justify-center gap-3 mt-3">
                                 <button
                                     aria-label="이전 달 보기"
                                     onClick={prevMonth}
@@ -1974,23 +1809,6 @@ export default function App() {
                                     )}
                                 </div>
                             )}
-                        </>
-                    ) : (
-                        <div className="mt-3 pb-1 bg-[#1C1C1E] rounded-2xl border border-[rgba(255,255,255,0.06)] p-4">
-                            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">
-                                투자 워크스페이스
-                            </p>
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm font-bold text-[#F5F7FA]">
-                                    총 거래{" "}
-                                    {stockTrades.length.toLocaleString()}건
-                                </p>
-                                <p className="text-xs font-semibold text-[#8B95A1]">
-                                    보유 종목 {stockTickerCount}개
-                                </p>
-                            </div>
-                        </div>
-                    )}
 
                     {showSyncStatusBar && (
                         <div
@@ -2211,14 +2029,12 @@ export default function App() {
             </header>
 
             <main className="max-w-lg mx-auto px-4 py-4">
-                {activeMode === "ledger" && (
-                    <Suspense fallback={<WorkspaceSkeleton mode="ledger" />}>
+                <Suspense fallback={<WorkspaceSkeleton />}>
                         <LedgerWorkspace
                             activeTab={activeTab}
                             transactions={transactions}
                             budgets={budgets}
                             recurring={recurring}
-                            stockTrades={stockTrades}
                             subscriptions={subscriptions}
                             goals={goals}
                             settingsVersion={settingsVersion + settingsSyncTick}
@@ -2269,29 +2085,6 @@ export default function App() {
                             }
                         />
                     </Suspense>
-                )}
-                {activeTab === "stocks" && (
-                    <Suspense fallback={<WorkspaceSkeleton mode="stocks" />}>
-                        <StocksWorkspace
-                            stockSubTab={stockSubTab}
-                            stockTrades={stockTrades}
-                            stockWatchlist={stockWatchlist}
-                            onStockSubTabChange={handleStockSubTabChange}
-                            onTradeAdd={() =>
-                                dispatchUI({type: "OPEN_STOCK_MODAL"})
-                            }
-                            onTradeEdit={(t) =>
-                                dispatchUI({
-                                    type: "OPEN_STOCK_MODAL",
-                                    editing: t,
-                                })
-                            }
-                            onTradeDelete={handleDeleteStockTrade}
-                            onWatchAdd={handleAddWatchTicker}
-                            onWatchRemove={handleRemoveWatchTicker}
-                        />
-                    </Suspense>
-                )}
             </main>
 
             {/* Speed Dial 백드롭 */}
@@ -2306,11 +2099,9 @@ export default function App() {
                 <div className="max-w-lg mx-auto relative h-0">
                     {showFAB &&
                         (() => {
-                            const isSpeedDialTab =
-                                activeMode === "ledger" &&
-                                !(
-                                    ["memos", "subscriptions", "goals"] as Tab[]
-                                ).includes(activeTab);
+                            const isSpeedDialTab = !(
+                                ["memos", "subscriptions", "goals"] as Tab[]
+                            ).includes(activeTab);
                             return (
                                 <>
                                     {/* Speed Dial: 수입 버튼 */}
@@ -2369,15 +2160,7 @@ export default function App() {
                                         onFocus={prefetchFabModal}
                                         onTouchStart={prefetchFabModal}
                                         onClick={() => {
-                                            if (
-                                                activeTab === "stocks" &&
-                                                (stockSubTab === "portfolio" ||
-                                                    stockSubTab === "trades")
-                                            ) {
-                                                dispatchUI({
-                                                    type: "OPEN_STOCK_MODAL",
-                                                });
-                                            } else if (activeTab === "memos") {
+                                            if (activeTab === "memos") {
                                                 dispatchUI({
                                                     type: "TRIGGER_MEMO",
                                                 });
@@ -2462,14 +2245,10 @@ export default function App() {
             )}
 
             <BottomNavigation
-                activeMode={activeMode}
                 ledgerTabs={visibleTabs}
                 activeTab={activeTab}
-                stockSubTab={stockSubTab}
                 onLedgerTabChange={handleLedgerTabChange}
-                onStockSubTabChange={handleStockSubTabChange}
                 onLedgerTabHover={prefetchLedgerTab}
-                onStockSubTabHover={prefetchStockSubTab}
             />
 
             {toastMsg && (
@@ -2520,15 +2299,6 @@ export default function App() {
                 </div>
             )}
 
-            {showStockModal && (
-                <Suspense fallback={null}>
-                    <StockTradeModal
-                        trade={editingTrade}
-                        onSave={handleSaveStockTrade}
-                        onClose={() => dispatchUI({type: "CLOSE_STOCK_MODAL"})}
-                    />
-                </Suspense>
-            )}
             {showHelp && (
                 <Suspense fallback={null}>
                     <HelpModal
