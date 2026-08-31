@@ -12,10 +12,8 @@ import {
     Plus,
     Search,
 } from "lucide-react";
-import type {Memo, TransactionType} from "../types";
+import type {Memo} from "../types";
 import {
-    INCOME_CATEGORIES,
-    EXPENSE_CATEGORIES,
     MEMO_CATEGORIES,
     CATEGORY_EMOJI,
     CATEGORY_COLOR,
@@ -30,8 +28,6 @@ interface Props {
     onAdd: (
         title: string,
         content: string,
-        amount?: number,
-        transactionType?: TransactionType,
         category?: string,
         date?: string,
         dateEnd?: string,
@@ -40,8 +36,6 @@ interface Props {
         id: string,
         title: string,
         content: string,
-        amount?: number,
-        transactionType?: TransactionType,
         category?: string,
         date?: string,
         dateEnd?: string,
@@ -54,8 +48,6 @@ interface Props {
 type MemoQueueItem = {
     title: string;
     content: string;
-    amount?: number;
-    transactionType?: TransactionType;
     category?: string;
     date: string;
     dateEnd?: string;
@@ -94,10 +86,6 @@ const CARD_COLORS = [
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-function formatAmount(n: number) {
-    return n.toLocaleString();
-}
-
 function todayStr() {
     return toLocalDateStr();
 }
@@ -117,8 +105,6 @@ export default function MemoSection({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
-    const [amountStr, setAmountStr] = useState("");
-    const [txType, setTxType] = useState<TransactionType>("expense");
     const [category, setCategory] = useState(MEMO_CATEGORIES[0]);
     const [date, setDate] = useState(todayStr());
     const [dateEnd, setDateEnd] = useState("");
@@ -144,12 +130,6 @@ export default function MemoSection({
             },
         });
     }
-
-    const categories = amountStr
-        ? txType === "income"
-            ? INCOME_CATEGORIES
-            : EXPENSE_CATEGORIES
-        : MEMO_CATEGORIES;
 
     const sorted = useMemo(() => {
         const base = [...memos].sort((a, b) => {
@@ -222,8 +202,6 @@ export default function MemoSection({
         setEditingId(null);
         setTitle("");
         setContent("");
-        setAmountStr("");
-        setTxType("expense");
         setCategory(MEMO_CATEGORIES[0]);
         setDate(todayStr());
         setDateEnd("");
@@ -244,16 +222,7 @@ export default function MemoSection({
         setEditingId(m.id);
         setTitle(m.title);
         setContent(m.content);
-        setAmountStr(m.amount ? m.amount.toLocaleString() : "");
-        setTxType(m.transactionType ?? "expense");
-        setCategory(
-            m.category ??
-                (m.transactionType === "income"
-                    ? INCOME_CATEGORIES[0]
-                    : m.transactionType === "expense"
-                      ? EXPENSE_CATEGORIES[0]
-                      : MEMO_CATEGORIES[0]),
-        );
+        setCategory(m.category ?? MEMO_CATEGORIES[0]);
         setDate(m.date ?? todayStr());
         if (m.dateEnd) {
             setDateEnd(m.dateEnd);
@@ -264,21 +233,6 @@ export default function MemoSection({
         }
         setQueue([]);
         setShowForm(true);
-    }
-
-    function handleAmountChange(val: string) {
-        const digits = val.replace(/[^0-9]/g, "");
-        const newAmountStr = digits ? Number(digits).toLocaleString() : "";
-        if (!newAmountStr && amountStr) setCategory(MEMO_CATEGORIES[0]);
-        if (newAmountStr && !amountStr) setCategory(EXPENSE_CATEGORIES[0]);
-        setAmountStr(newAmountStr);
-    }
-
-    function handleTypeChange(t: TransactionType) {
-        setTxType(t);
-        setCategory(
-            t === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0],
-        );
     }
 
     function toggleDateEnd() {
@@ -293,14 +247,9 @@ export default function MemoSection({
 
     function buildCurrentItem(): MemoQueueItem | null {
         if (!title.trim() && !content.trim()) return null;
-        const parsedAmount = amountStr
-            ? parseInt(amountStr.replace(/,/g, ""), 10)
-            : undefined;
         return {
             title,
             content,
-            amount: parsedAmount,
-            transactionType: parsedAmount ? txType : undefined,
             category: category || undefined,
             date,
             dateEnd: showDateEnd && dateEnd ? dateEnd : undefined,
@@ -313,8 +262,6 @@ export default function MemoSection({
         setQueue((prev) => [...prev, item]);
         setTitle("");
         setContent("");
-        setAmountStr("");
-        setTxType("expense");
         setCategory(MEMO_CATEGORIES[0]);
         setDateEnd("");
         setShowDateEnd(false);
@@ -331,8 +278,6 @@ export default function MemoSection({
                 editingId!,
                 current.title,
                 current.content,
-                current.amount,
-                current.transactionType,
                 current.category,
                 current.date,
                 current.dateEnd,
@@ -344,8 +289,6 @@ export default function MemoSection({
                 onAdd(
                     item.title,
                     item.content,
-                    item.amount,
-                    item.transactionType,
                     item.category,
                     item.date,
                     item.dateEnd,
@@ -360,8 +303,6 @@ export default function MemoSection({
     function resetForm() {
         setTitle("");
         setContent("");
-        setAmountStr("");
-        setTxType("expense");
         setCategory(MEMO_CATEGORIES[0]);
         setDate(todayStr());
         setDateEnd("");
@@ -495,27 +436,6 @@ export default function MemoSection({
                                 <h3 className="text-[13px] font-bold text-white leading-tight pr-5 truncate">
                                     {memo.title || "(제목 없음)"}
                                 </h3>
-
-                                {/* 금액 정보 */}
-                                {memo.amount != null && (
-                                    <div className="flex items-center gap-1.5">
-                                        <span
-                                            className="text-[13px] font-extrabold num leading-none"
-                                            style={{
-                                                color:
-                                                    memo.transactionType ===
-                                                    "income"
-                                                        ? "#2ACF6A"
-                                                        : "#F25260",
-                                            }}
-                                        >
-                                            {memo.transactionType === "income"
-                                                ? "+"
-                                                : "-"}
-                                            {formatAmount(memo.amount)}원
-                                        </span>
-                                    </div>
-                                )}
 
                                 {/* 카테고리 */}
                                 {memo.category && catColor && (
@@ -998,7 +918,7 @@ export default function MemoSection({
                                                             color: color.text,
                                                         }}
                                                     >
-                                                        {categories.map((c) => (
+                                                        {MEMO_CATEGORIES.map((c) => (
                                                             <option
                                                                 key={c}
                                                                 value={c}
@@ -1069,7 +989,7 @@ export default function MemoSection({
                                                             color: color.text,
                                                         }}
                                                     >
-                                                        {categories.map((c) => (
+                                                        {MEMO_CATEGORIES.map((c) => (
                                                             <option
                                                                 key={c}
                                                                 value={c}
@@ -1089,69 +1009,6 @@ export default function MemoSection({
                                     </div>
                                 )}
                             </div>
-
-                            <div className="h-px bg-white/6" />
-
-                            <div>
-                                <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">
-                                    금액 (선택)
-                                </p>
-                                <div
-                                    className="flex items-baseline gap-2 bg-[#2C2C2E] rounded-xl px-4 py-3 overflow-hidden cursor-text"
-                                    onClick={(e) =>
-                                        (
-                                            e.currentTarget.querySelector(
-                                                "input",
-                                            ) as HTMLInputElement | null
-                                        )?.focus()
-                                    }
-                                >
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={amountStr}
-                                        onChange={(e) =>
-                                            handleAmountChange(e.target.value)
-                                        }
-                                        placeholder="0"
-                                        className="flex-1 min-w-0 bg-transparent text-[22px] font-extrabold text-white focus:outline-none num text-right placeholder-[#2D3352]"
-                                    />
-                                    <span className="text-sm font-bold text-[#4E5968] shrink-0">
-                                        원
-                                    </span>
-                                </div>
-                            </div>
-
-                            {amountStr !== "" && (
-                                <div className="flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleTypeChange("income")
-                                        }
-                                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                                            txType === "income"
-                                                ? "bg-[#2ACF6A]/20 text-[#2ACF6A]"
-                                                : "text-[#4E5968]"
-                                        }`}
-                                    >
-                                        수입
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            handleTypeChange("expense")
-                                        }
-                                        className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                                            txType === "expense"
-                                                ? "bg-[#F25260]/20 text-[#F25260]"
-                                                : "text-[#4E5968]"
-                                        }`}
-                                    >
-                                        지출
-                                    </button>
-                                </div>
-                            )}
 
                             <div className="flex justify-end gap-2 pt-1 border-t border-white/6">
                                 <button

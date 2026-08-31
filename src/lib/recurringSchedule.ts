@@ -12,6 +12,12 @@ export function formatRecurringSchedule(r: ScheduleFields): string {
   return `매월 ${r.dayOfMonth}일`
 }
 
+/** 해당 월의 실제 일수를 넘는 dayOfMonth를 그 달의 마지막 날로 클램프한다 (예: 2월 31일 → 28/29일) */
+function clampDayToMonth(today: Date, day: number): number {
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  return Math.min(day, lastDay)
+}
+
 /** 오늘 기준으로 이 정기 항목을 자동 적용해야 하는지 판정한다 */
 export function isRecurringDueToday(r: DueCheckFields, today: Date, todayYM: string): boolean {
   if (r.frequency === 'weekly' || r.frequency === 'biweekly') {
@@ -22,5 +28,5 @@ export function isRecurringDueToday(r: DueCheckFields, today: Date, todayYM: str
     const period = r.frequency === 'weekly' ? 7 : 14
     return diffDays >= period
   }
-  return r.lastAppliedMonth !== todayYM && r.dayOfMonth <= today.getDate()
+  return r.lastAppliedMonth !== todayYM && clampDayToMonth(today, r.dayOfMonth) <= today.getDate()
 }

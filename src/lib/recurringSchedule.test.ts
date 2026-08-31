@@ -60,4 +60,20 @@ describe('isRecurringDueToday', () => {
     const r = { frequency: 'biweekly' as const, dayOfMonth: 1, weekday: 6, lastAppliedMonth: '', lastAppliedDate: '2026-08-01' }
     expect(isRecurringDueToday(r, new Date(2026, 7, 15), '2026-08')).toBe(true)
   })
+
+  it('monthly: dayOfMonth가 31일이고 2월(28일까지)이면 2월 마지막 날에 적용된다', () => {
+    const r = { dayOfMonth: 31, lastAppliedMonth: '2026-01' }
+    // 2026년은 평년 → 2월은 28일까지
+    expect(isRecurringDueToday(r, new Date(2026, 1, 28), '2026-02')).toBe(true)
+  })
+
+  it('monthly: dayOfMonth가 31일이고 2월 마지막 날 이전이면 아직 false', () => {
+    const r = { dayOfMonth: 31, lastAppliedMonth: '2026-01' }
+    expect(isRecurringDueToday(r, new Date(2026, 1, 27), '2026-02')).toBe(false)
+  })
+
+  it('monthly: dayOfMonth가 31일이고 30일짜리 달(4월)이면 30일에 적용된다', () => {
+    const r = { dayOfMonth: 31, lastAppliedMonth: '2026-03' }
+    expect(isRecurringDueToday(r, new Date(2026, 3, 30), '2026-04')).toBe(true)
+  })
 })

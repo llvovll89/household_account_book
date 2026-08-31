@@ -304,6 +304,44 @@ describe('storage util', () => {
     expect(localStorage.getItem('hb_pending_sync')).toBe('true')
   })
 
+  it('mergeLocalIntoFirebase는 원격 저장 실패 시 로컬을 병합된(원격+로컬) 데이터로 갱신한다', async () => {
+    setStorageContext('firebase', 'uid-1')
+    localStorage.setItem('hb_transactions', JSON.stringify([{ ...TX, id: 'tx-local-only' }]))
+    writeDefaultSettings()
+
+    const remoteTx = { ...TX, id: 'tx-remote-only', description: '저녁', date: '2026-06-03' }
+    vi.mocked(getDoc).mockResolvedValue({
+      data: () => ({
+        transactions: [remoteTx],
+        memos: [],
+        budgets: [],
+        recurring: [],
+        subscriptions: [],
+        goals: [],
+        settings: {
+          payday: null,
+          cardBillingDay: null,
+          userPaymentMethods: [],
+          customExpenseCategories: [],
+          customIncomeCategories: [],
+          transactionTemplates: [],
+        },
+      }),
+    } as never)
+
+    // 병합 자체(트랜잭션 읽기)는 성공하지만, 최종 원격 쓰기(runTransaction)가 네트워크 문제로 실패하는 상황
+    vi.mocked(runTransaction).mockRejectedValue(new Error('network down'))
+
+    await expect(mergeLocalIntoFirebase()).rejects.toThrow('network down')
+
+    // 실패 이전의 "로컬 전용" 스냅샷이 아니라, 원격+로컬이 합쳐진 스냅샷이 로컬에 남아야
+    // 이후 pending_sync 재시도가 원격 데이터를 로컬-only 값으로 덮어쓰지 않는다.
+    const saved = JSON.parse(localStorage.getItem('hb_transactions') ?? '[]')
+    expect(saved).toHaveLength(2)
+    expect(saved.map((t: Transaction) => t.id).sort()).toEqual(['tx-local-only', 'tx-remote-only'])
+    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+  })
+
   it('resetAllData(로컬 모드)는 모든 키를 지우고 백업 키를 남기지 않는다', async () => {
     localStorage.setItem('hb_transactions', JSON.stringify([TX]))
     localStorage.setItem('hb_memos', JSON.stringify([MEMO]))

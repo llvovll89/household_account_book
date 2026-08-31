@@ -26,6 +26,24 @@ const SETTINGS_KEY = 'hb_settings'
 const PENDING_SYNC_KEY = 'hb_pending_sync'
 // Firebase 모드에서 폴백 용도로 저장한 로컬 캐시 여부를 표시
 const FIREBASE_CACHE_KEY = 'hb_firebase_cache'
+// 오프라인 등으로 Firestore 요청이 무한 대기하는 것을 막기 위한 최대 대기 시간
+const REMOTE_WRITE_TIMEOUT_MS = 9000
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error('remote-write-timeout')), ms)
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        window.clearTimeout(timer)
+        reject(err)
+      }
+    )
+  })
+}
 
 type StorageMode = 'local' | 'firebase'
 
@@ -408,12 +426,23 @@ function localSnapshot(): RemoteState {
   }
 }
 
+// 로컬스토리지를 주어진 스냅샷으로 직접 덮어쓴다 (원격 저장 시도 없이)
+function writeLocalSnapshot(state: RemoteState): void {
+  safeSave(TRANSACTIONS_KEY, state.transactions)
+  safeSave(MEMOS_KEY, state.memos)
+  safeSave(BUDGETS_KEY, state.budgets)
+  safeSave(RECURRING_KEY, state.recurring)
+  safeSave(SUBSCRIPTIONS_KEY, state.subscriptions)
+  safeSave(GOALS_KEY, state.goals)
+  safeSave(SETTINGS_KEY, state.settings)
+}
+
 function txKey(t: Transaction): string {
   return [t.date, t.amount, t.type, t.category, t.description].join('|')
 }
 
 function memoKey(m: Memo): string {
-  return [m.title, m.content, m.date ?? '', m.amount ?? '', m.transactionType ?? '', m.category ?? ''].join('|')
+  return [m.title, m.content, m.date ?? '', m.category ?? ''].join('|')
 }
 
 function recurringKey(r: RecurringTransaction): string {
@@ -595,15 +624,20 @@ export async function resetAllData(): Promise<void> {
     const uid = getStorageUid()
     // 캐시된 버전을 지워 현재 원격 버전을 그대로 기준점으로 삼는다 → 충돌 없이 항상 덮어써진다
     cachedRemoteVersions = null
-    await saveRemotePatch(uid, {
-      transactions: [],
-      memos: [],
-      budgets: [],
-      recurring: [],
-      subscriptions: [],
-      goals: [],
-      settings: { ...DEFAULT_SETTINGS },
-    })
+    // 오프라인 상태 등으로 Firestore 트랜잭션이 무한 대기하면 초기화 모달이 영원히
+    // busy 상태로 남아 화면 전체를 가리게 되므로, 일정 시간 후 강제로 실패 처리한다
+    await withTimeout(
+      saveRemotePatch(uid, {
+        transactions: [],
+        memos: [],
+        budgets: [],
+        recurring: [],
+        subscriptions: [],
+        goals: [],
+        settings: { ...DEFAULT_SETTINGS },
+      }),
+      REMOTE_WRITE_TIMEOUT_MS
+    )
   }
 
   emitSettingsUpdatedEvent()
@@ -647,8 +681,16 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     settings: mergeSettings(remote.settings, local.settings),
   }
 
-  // saveRemotePatch 실패 시 PENDING_SYNC_KEY를 자동으로 설정하고 예외를 던진다
-  await saveRemotePatch(uid, merged)
+  try {
+    // saveRemotePatch 실패 시 PENDING_SYNC_KEY를 자동으로 설정하고 예외를 던진다
+    await saveRemotePatch(uid, merged)
+  } catch (e) {
+    // 원격 저장은 실패했지만 병합 결과 자체는 유효하므로, 로컬을 병합 전(local-only)
+    // 스냅샷이 아닌 병합된 스냅샷으로 갱신해둔다. 이렇게 해야 다음 로드 시
+    // PENDING_SYNC_KEY 재시도 경로가 로컬-only 데이터로 원격을 덮어쓰지 않는다.
+    writeLocalSnapshot(merged)
+    throw e
+  }
   backupAndClearLocalData()
 
   return {

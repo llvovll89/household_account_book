@@ -46,8 +46,6 @@ export interface Memo {
   updatedAt: number
   date?: string    // YYYY-MM-DD (시작일, 사용자 지정)
   dateEnd?: string // YYYY-MM-DD (종료일, 선택)
-  amount?: number
-  transactionType?: TransactionType
   category?: string
 }
 

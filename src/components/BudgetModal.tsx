@@ -10,6 +10,7 @@ interface Props {
   budgets: Budget[]
   customExpenseCategories?: string[]
   yearMonth: string
+  hasMonthOverride?: boolean
   onSave: (budgets: Budget[], scope: BudgetScope) => void
   onClose: () => void
 }
@@ -19,9 +20,9 @@ function formatYearMonthLabel(yearMonth: string): string {
   return `${y}년 ${m}월`
 }
 
-export default function BudgetModal({ budgets, customExpenseCategories = [], yearMonth, onSave, onClose }: Props) {
+export default function BudgetModal({ budgets, customExpenseCategories = [], yearMonth, hasMonthOverride = false, onSave, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
-  const [scope, setScope] = useState<BudgetScope>('base')
+  const [scope, setScope] = useState<BudgetScope>(hasMonthOverride ? 'thisMonth' : 'base')
   const [values, setValues] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
     budgets.forEach((b) => { m[b.category] = b.limit.toLocaleString() })

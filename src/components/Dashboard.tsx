@@ -354,6 +354,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     [recurring, yearMonth]
   )
 
+  // 아직 오지 않은 달에 미리 등록하면 실제 그 달이 됐을 때 자동 적용이 스킵되므로 방지
+  const isFutureMonth = useMemo(() => yearMonth > toLocalDateStr(new Date()).slice(0, 7), [yearMonth])
+
   // 이번 달에 적용되는 유효 예산 (월별 특화 > 전체 기본값)
   const effectiveBudgets = useMemo(() => {
     const monthSpecific = budgets.filter((b) => b.yearMonth === yearMonth)
@@ -1017,7 +1020,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                 <span className={`text-[11px] font-semibold ${item.done ? 'text-[#8B95A1]' : 'text-[#F5F7FA]'}`}>
                   {item.done ? '✅' : '⚠️'} {item.label}
                 </span>
-                {!item.done && item.id === 'recurring' && (
+                {!item.done && item.id === 'recurring' && !isFutureMonth && (
                   <button
                     onClick={() => onApplyRecurring(pendingRecurring)}
                     className="text-[10px] px-2 py-0.5 rounded-md bg-[#3D8EF8]/20 text-[#79B2FF] font-bold"
@@ -1177,13 +1180,19 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               </div>
             )
           })()}
-          <button
-            onClick={() => onApplyRecurring(pendingRecurring)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#3D8EF8]/15 text-[#3D8EF8] text-sm font-bold hover:bg-[#3D8EF8]/25 transition-colors"
-          >
-            <PlusCircle size={14} />
-            {pendingRecurring.length}건 이번 달에 등록
-          </button>
+          {isFutureMonth ? (
+            <p className="text-xs text-[#4E5968] text-center py-1.5">
+              아직 오지 않은 달이라 미리 등록할 수 없어요. 실제 그 달이 되면 자동으로 등록돼요.
+            </p>
+          ) : (
+            <button
+              onClick={() => onApplyRecurring(pendingRecurring)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#3D8EF8]/15 text-[#3D8EF8] text-sm font-bold hover:bg-[#3D8EF8]/25 transition-colors"
+            >
+              <PlusCircle size={14} />
+              {pendingRecurring.length}건 이번 달에 등록
+            </button>
+          )}
         </div>
       )}
 
@@ -2141,15 +2150,16 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           budgets={effectiveBudgets.map((b) => ({ ...b, yearMonth: undefined }))}
           customExpenseCategories={customExpenseCategories}
           yearMonth={yearMonth}
+          hasMonthOverride={budgets.some((b) => b.yearMonth === yearMonth)}
           onSave={(newBudgets, scope) => {
             if (scope === 'thisMonth') {
               // 이번 달 전용 예산만 교체, 기본 예산과 다른 달의 전용 예산은 그대로 둔다
               const others = budgets.filter((b) => b.yearMonth !== yearMonth)
               onBudgetsChange([...others, ...newBudgets])
             } else {
-              // 다른 월 특화 예산은 보존, 전체 기본 예산만 교체
-              const otherMonthSpecific = budgets.filter((b) => b.yearMonth && b.yearMonth !== yearMonth)
-              onBudgetsChange([...otherMonthSpecific, ...newBudgets])
+              // 기본 예산 저장은 월별 전용 예산(이번 달 포함)을 전혀 건드리지 않는다
+              const monthSpecific = budgets.filter((b) => b.yearMonth)
+              onBudgetsChange([...monthSpecific, ...newBudgets])
             }
           }}
           onClose={() => setShowBudget(false)}

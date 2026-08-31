@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import type { Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, TransactionType, UserPaymentMethod } from '../../types'
+import type { Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../../types'
 import type { Tab } from '../../types/navigation'
 
 const Dashboard = lazy(() => import('../Dashboard'))
@@ -45,8 +45,8 @@ interface Props {
   onBulkDeleteTransactions?: (ids: string[]) => void
   onBulkEditTransactions?: (ids: string[], category: string) => void
   onTransactionArchive: (cutoff: string) => void
-  onMemoAdd: (title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
-  onMemoUpdate: (id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => void
+  onMemoAdd: (title: string, content: string, category?: string, date?: string, dateEnd?: string) => void
+  onMemoUpdate: (id: string, title: string, content: string, category?: string, date?: string, dateEnd?: string) => void
   onMemoDelete: (id: string) => void
   onMemoTogglePin: (id: string) => void
   hiddenWidgets?: DashboardWidgetId[]

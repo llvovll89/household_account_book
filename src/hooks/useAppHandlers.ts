@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, TransactionType, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, Subscription, SavingsGoal, TransactionType, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
@@ -15,6 +15,10 @@ interface HandlersInput {
   transactions: Transaction[]
   editingTransaction: Transaction | null
   yearMonth: string
+  customExpenseCategories: string[]
+  customIncomeCategories: string[]
+  transactionTemplates: TransactionTemplate[]
+  autoCategoryRules: AutoCategoryRule[]
   persist: (task: () => Promise<void>, failMsg: string, scope: RemoteVersionKey) => void
   setTransactions: Dispatch<React.SetStateAction<Transaction[]>>
   setBudgets: Dispatch<React.SetStateAction<Budget[]>>
@@ -35,6 +39,10 @@ export function useAppHandlers({
   transactions,
   editingTransaction,
   yearMonth,
+  customExpenseCategories,
+  customIncomeCategories,
+  transactionTemplates,
+  autoCategoryRules,
   persist,
   setTransactions,
   setBudgets,
@@ -253,28 +261,36 @@ export function useAppHandlers({
   }, [persist, setTransactions])
 
   const handleDeleteTag = useCallback((name: string) => {
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.tags?.includes(name)
-          ? { ...t, tags: t.tags.filter((tag) => tag !== name) }
-          : t
-      )
-    )
-    persist(
-      async () => {
-        const { loadTransactions, saveTransactions } = await import('../lib/storage')
-        const current = await loadTransactions()
-        const updated = current.map((t) =>
-          t.tags?.includes(name)
-            ? { ...t, tags: t.tags.filter((tag: string) => tag !== name) }
-            : t
+    dispatchUI({
+      type: 'OPEN_CONFIRM',
+      message: `"${name}" 태그를 삭제할까요? 이 태그가 달린 모든 내역에서 제거돼요.`,
+      confirmLabel: '삭제',
+      confirmVariant: 'danger',
+      onConfirm: () => {
+        setTransactions((prev) =>
+          prev.map((t) =>
+            t.tags?.includes(name)
+              ? { ...t, tags: t.tags.filter((tag) => tag !== name) }
+              : t
+          )
         )
-        await saveTransactions(updated)
+        persist(
+          async () => {
+            const { loadTransactions, saveTransactions } = await import('../lib/storage')
+            const current = await loadTransactions()
+            const updated = current.map((t) =>
+              t.tags?.includes(name)
+                ? { ...t, tags: t.tags.filter((tag: string) => tag !== name) }
+                : t
+            )
+            await saveTransactions(updated)
+          },
+          '태그 삭제에 실패했습니다.',
+          'transactions'
+        )
       },
-      '태그 삭제에 실패했습니다.',
-      'transactions'
-    )
-  }, [persist, setTransactions])
+    })
+  }, [persist, setTransactions, dispatchUI])
 
   const handleSaveHiddenWidgets = useCallback((hidden: DashboardWidgetId[]) => {
     setHiddenWidgets(hidden)
@@ -289,30 +305,91 @@ export function useAppHandlers({
   }, [persist, setHiddenWidgets])
 
   const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
+    const removedExpense = customExpenseCategories.filter((c) => !expense.includes(c))
+    const removedIncome = customIncomeCategories.filter((c) => !income.includes(c))
+    const removed = new Set([...removedExpense, ...removedIncome])
+    const fallbackFor = (type: TransactionType) => (type === 'income' ? '기타수입' : '기타지출')
+
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
+
+    // 삭제된 카테고리를 쓰던 템플릿/자동분류규칙은 폴백 카테고리로 재매핑
+    const nextTemplates = removed.size === 0
+      ? transactionTemplates
+      : transactionTemplates.map((tpl) => (removed.has(tpl.category) ? { ...tpl, category: fallbackFor(tpl.type) } : tpl))
+    const nextRules = removed.size === 0
+      ? autoCategoryRules
+      : autoCategoryRules.map((rule) => (removed.has(rule.category) ? { ...rule, category: fallbackFor(rule.type) } : rule))
+    if (removed.size > 0) {
+      setTransactionTemplates(nextTemplates)
+      setAutoCategoryRules(nextRules)
+    }
+
     persist(
       async () => {
         const current = await loadSettings()
-        await saveSettings({ ...current, customExpenseCategories: expense, customIncomeCategories: income })
+        await saveSettings({
+          ...current,
+          customExpenseCategories: expense,
+          customIncomeCategories: income,
+          transactionTemplates: nextTemplates,
+          autoCategoryRules: nextRules,
+        })
       },
       '카테고리 저장에 실패했습니다.',
       'settings'
     )
-  }, [persist, setCustomExpenseCategories, setCustomIncomeCategories])
 
-  const handleAddMemo = useCallback((title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
+    if (removed.size === 0) return
+
+    // 삭제된 카테고리를 쓰던 거래/반복거래도 폴백 카테고리로 재매핑 (데이터 보존)
+    setTransactions((prev) => {
+      const next = prev.map((t) => (removed.has(t.category) ? { ...t, category: fallbackFor(t.type) } : t))
+      persist(() => saveTransactions(next), '거래 카테고리 정리에 실패했습니다.', 'transactions')
+      return next
+    })
+
+    setRecurring((prev) => {
+      const next = prev.map((r) => (removed.has(r.category) ? { ...r, category: fallbackFor(r.type) } : r))
+      persist(() => saveRecurring(next), '반복거래 카테고리 정리에 실패했습니다.', 'recurring')
+      return next
+    })
+
+    // 예산은 재분류 개념이 없으므로, 삭제된 지출 카테고리의 항목(월별 오버라이드 포함)은 제거
+    if (removedExpense.length > 0) {
+      setBudgets((prev) => {
+        const next = prev.filter((b) => !removedExpense.includes(b.category))
+        persist(() => saveBudgets(next), '예산 정리에 실패했습니다.', 'budgets')
+        return next
+      })
+    }
+  }, [
+    persist,
+    customExpenseCategories,
+    customIncomeCategories,
+    transactionTemplates,
+    autoCategoryRules,
+    setCustomExpenseCategories,
+    setCustomIncomeCategories,
+    setTransactionTemplates,
+    setAutoCategoryRules,
+    setTransactions,
+    setRecurring,
+    setBudgets,
+  ])
+
+  const handleAddMemo = useCallback((title: string, content: string, category?: string, date?: string, dateEnd?: string) => {
     setMemos((prev) => {
       const now = Date.now()
-      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, dateEnd, amount, transactionType, category }]
+      const next = [...prev, { id: generateId(), title, content, pinned: false, createdAt: now, updatedAt: now, date, dateEnd, category }]
       persist(() => saveMemos(next), '메모 저장에 실패했습니다.', 'memos')
       return next
     })
   }, [persist, setMemos])
 
-  const handleUpdateMemo = useCallback((id: string, title: string, content: string, amount?: number, transactionType?: TransactionType, category?: string, date?: string, dateEnd?: string) => {
+  const handleUpdateMemo = useCallback((id: string, title: string, content: string, category?: string, date?: string, dateEnd?: string) => {
     setMemos((prev) => {
-      const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, dateEnd, amount, transactionType, category } : m)
+      const next = prev.map((m) => m.id === id ? { ...m, title, content, updatedAt: Date.now(), date, dateEnd, category } : m)
       persist(() => saveMemos(next), '메모 수정 저장에 실패했습니다.', 'memos')
       return next
     })
