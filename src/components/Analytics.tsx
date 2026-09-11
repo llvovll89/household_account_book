@@ -1,3 +1,4 @@
+import { getEffectiveBudgets } from '../lib/budgets'
 import {useEffect, useMemo, useState} from "react";
 import {
     TrendingUp,
@@ -77,22 +78,14 @@ export default function Analytics({
     >("balance");
     const [showMonthlyDetail, setShowMonthlyDetail] = useState(false);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [cardBillingDay, setCardBillingDay] = useState<number>(25);
+    const [fallbackBillingDay, setCardBillingDay] = useState<number>(25);
     const [progressMounted, setProgressMounted] = useState(false);
     const [showAllTags, setShowAllTags] = useState(false);
     const [summaryCopied, setSummaryCopied] = useState(false);
 
-    useEffect(() => {
-        if (userPaymentMethods.length > 0) {
-            const firstCredit = userPaymentMethods.find(
-                (m) => m.type === "credit",
-            );
-            if (firstCredit?.billingDay) {
-                setCardBillingDay(firstCredit.billingDay);
-                return;
-            }
-        }
+    const cardBillingDay = userPaymentMethods.find(m => m.type === "credit")?.billingDay ?? fallbackBillingDay;
 
+    useEffect(() => {
         let cancelled = false;
         void loadSettings().then((settings) => {
             if (!cancelled) setCardBillingDay(settings.cardBillingDay ?? 25);
@@ -108,16 +101,17 @@ export default function Analytics({
     }, []);
 
     // ── 월간 데이터 (공유 훅) ────────────────────────────────
-    const monthlyData = useMonthlyData(transactions);
+    const monthlyData = useMonthlyData(transactions, yearMonth);
     const current = monthlyData[5];
     const prev = monthlyData[4];
 
     // ── 예산 준수율 6개월 트렌드 (현재 등록된 카테고리 예산 기준) ──
     const budgetComplianceTrend = useMemo(() => {
-        const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
-        if (totalBudget === 0) return [];
-        const budgetedCategories = new Set(budgets.map((b) => b.category));
+        if (budgets.length === 0) return [];
         return monthlyData.map((m) => {
+            const effective = getEffectiveBudgets(budgets, m.ym);
+            const totalBudget = effective.reduce((sum, budget) => sum + budget.limit, 0);
+            const budgetedCategories = new Set(effective.map(budget => budget.category));
             const spent = transactions
                 .filter(
                     (t) =>
@@ -129,7 +123,7 @@ export default function Analytics({
             return {
                 ym: m.ym,
                 label: m.label,
-                rate: Math.round((spent / totalBudget) * 100),
+                rate: totalBudget > 0 ? Math.round((spent / totalBudget) * 100) : 0,
             };
         });
     }, [budgets, monthlyData, transactions]);
@@ -367,17 +361,14 @@ export default function Analytics({
             const pm = isCredit ? "credit" : (t.paymentMethod ?? "cash");
             const amt = t.amount;
             if (pm === "cash") {
-                t.type === "income"
-                    ? (cashIncome += amt)
-                    : (cashExpense += amt);
+                if (t.type === "income") cashIncome += amt;
+                else cashExpense += amt;
             } else if (pm === "check") {
-                t.type === "income"
-                    ? (checkIncome += amt)
-                    : (checkExpense += amt);
+                if (t.type === "income") checkIncome += amt;
+                else checkExpense += amt;
             } else {
-                t.type === "income"
-                    ? (creditIncome += amt)
-                    : (creditExpense += amt);
+                if (t.type === "income") creditIncome += amt;
+                else creditExpense += amt;
             }
         });
 

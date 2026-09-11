@@ -977,7 +977,7 @@ export default function App() {
                     });
                 });
         },
-        [],
+        [conflictPreferredScopes],
     );
 
     const retryFailedPersistTasks = useCallback(
@@ -1783,7 +1783,7 @@ export default function App() {
                                 <button
                                     aria-label="이전 달 보기"
                                     onClick={prevMonth}
-                                    className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-11 h-11 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
                                 >
                                     <ChevronLeft
                                         size={16}
@@ -1791,9 +1791,10 @@ export default function App() {
                                     />
                                 </button>
                                 <button
-                                    aria-label="이번 달로 이동"
+                                    aria-label={`${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월, 누르면 이번 달로 이동`}
+                                    title="누르면 이번 달로 돌아가요"
                                     onClick={() => setCurrentDate(new Date())}
-                                    className={`px-5 py-1.5 rounded-full text-sm font-bold transition-all ${isCurrentMonth() ? "bg-white text-[#111111]" : "bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]"}`}
+                                    className={`px-5 min-h-11 rounded-2xl text-base font-bold transition-all ${isCurrentMonth() ? "bg-white text-[#111111]" : "bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]"}`}
                                 >
                                     {currentDate.getFullYear()}년{" "}
                                     {currentDate.getMonth() + 1}월
@@ -1801,7 +1802,7 @@ export default function App() {
                                 <button
                                     aria-label="다음 달 보기"
                                     onClick={nextMonth}
-                                    className="w-8 h-8 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-11 h-11 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
                                 >
                                     <ChevronRight
                                         size={16}
@@ -2244,12 +2245,13 @@ export default function App() {
                                             fabExpanded ? "닫기" : "내역 추가"
                                         }
                                         aria-expanded={fabExpanded}
-                                        className={`pointer-events-auto absolute right-5 bottom-fab-safe w-12 h-12 text-white rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
+                                        className={`pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
                                     >
                                         <Plus
                                             size={20}
                                             className={`transition-transform duration-200 ${fabExpanded ? "rotate-45" : ""}`}
                                         />
+                                        <span className="text-sm font-semibold">{fabExpanded ? "닫기" : "추가"}</span>
                                     </button>
                                 </>
                             );

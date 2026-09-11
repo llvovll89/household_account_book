@@ -50,7 +50,7 @@ export function detectColumns(headers: string[]): Partial<ColumnMapping> {
 //  날짜 정규화  →  YYYY-MM-DD
 // ────────────────────────────────────────────
 function parseDate(raw: string): string {
-  const s = raw.trim().replace(/[.\/\s]/g, '-').replace(/[^0-9\-]/g, '')
+  const s = raw.trim().replace(/[./\s]/g, '-').replace(/[^0-9-]/g, '')
   // YYYYMMDD
   if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   // YYYY-MM-DD (already)
@@ -372,7 +372,7 @@ export function parsePDFText(text: string): ParsedRow[] {
   const results: ParsedRow[] = []
   // YYYY.MM.DD 또는 YYYY-MM-DD 또는 YYYY/MM/DD 로 시작하는 행 찾기
   const lines = text.split('\n')
-  const dateRe = /(\d{4}[.\-\/]\d{2}[.\-\/]\d{2})/
+  const dateRe = /(\d{4}[./-]\d{2}[./-]\d{2})/
   const amountRe = /([0-9,]{3,})/g
 
   for (const line of lines) {

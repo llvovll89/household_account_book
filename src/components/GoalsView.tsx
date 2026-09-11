@@ -1,4 +1,4 @@
-import {useState, useEffect, useRef, useMemo} from "react";
+import {useState, useEffect, useMemo} from "react";
 import {Plus, Pencil, Trash2, X, Check, Minus, Link} from "lucide-react";
 import type {SavingsGoal, Transaction} from "../types";
 import {EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI} from "../types";
@@ -127,18 +127,7 @@ export default function GoalsView({
     const [depositGoal, setDepositGoal] = useState<SavingsGoal | null>(null);
     const [depositMode, setDepositMode] = useState<"add" | "sub">("add");
     const [depositStr, setDepositStr] = useState("");
-    const mountedTriggerRef = useRef(addTrigger);
-
-    // FAB 트리거 — 마운트 시점 이후 변경됐을 때만 열기
-    useEffect(() => {
-        if (
-            addTrigger &&
-            addTrigger > 0 &&
-            addTrigger !== mountedTriggerRef.current
-        )
-            openAdd();
-        mountedTriggerRef.current = addTrigger;
-    }, [addTrigger]);
+    const [previousAddTrigger, setPreviousAddTrigger] = useState(addTrigger);
 
     function openAdd() {
         setEditing(null);
@@ -150,6 +139,12 @@ export default function GoalsView({
         setCurrentStr("");
         setErrors({});
         setShowSheet(true);
+    }
+
+    // 부모의 추가 요청이 바뀐 경우에만 새 입력 폼을 연다.
+    if (addTrigger !== previousAddTrigger) {
+      setPreviousAddTrigger(addTrigger);
+      if (addTrigger && addTrigger > 0) openAdd();
     }
 
     function openEdit(g: SavingsGoal) {

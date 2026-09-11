@@ -30,3 +30,10 @@ export function isRecurringDueToday(r: DueCheckFields, today: Date, todayYM: str
   }
   return r.lastAppliedMonth !== todayYM && clampDayToMonth(today, r.dayOfMonth) <= today.getDate()
 }
+
+/** 월말 반복 내역을 실제 존재하는 날짜로 변환한다. */
+export function getRecurringDate(yearMonth: string, dayOfMonth: number): string {
+  const [year, month] = yearMonth.split('-').map(Number)
+  const day = clampDayToMonth(new Date(year, month - 1, 1), dayOfMonth)
+  return `${yearMonth}-${String(day).padStart(2, '0')}`
+}

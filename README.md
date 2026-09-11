@@ -55,6 +55,14 @@ npm run build
 npm run preview
 ```
 
+## 변경사항 검증
+
+```bash
+npm run verify
+```
+
+lint, 전체 테스트, 프로덕션 빌드를 순서대로 실행합니다. 검증 빌드는 `dist2`에 생성하며 Windows에서도 실행할 수 있습니다. PowerShell 실행 정책 때문에 `npm` 실행이 차단되면 `npm.cmd run verify`를 사용하세요.
+
 ## 환경 변수
 
 루트에 `.env` 또는 `.env.local` 파일을 만들고 아래 값을 설정하세요.

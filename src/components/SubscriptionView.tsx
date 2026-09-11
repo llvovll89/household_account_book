@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
@@ -46,13 +46,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   const [amountStr, setAmountStr] = useState('')
   const [colorIdx, setColorIdx] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const mountedTriggerRef = useRef(addTrigger)
-
-  // FAB 트리거 — 마운트 시점 이후 변경됐을 때만 열기
-  useEffect(() => {
-    if (addTrigger && addTrigger > 0 && addTrigger !== mountedTriggerRef.current) openAdd()
-    mountedTriggerRef.current = addTrigger
-  }, [addTrigger])
+  const [previousAddTrigger, setPreviousAddTrigger] = useState(addTrigger)
 
   function openAdd() {
     setEditing(null)
@@ -61,6 +55,12 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
     setColorIdx(subscriptions.length % SERVICE_COLORS.length)
     setErrors({})
     setShowSheet(true)
+  }
+
+  // 부모의 추가 요청이 바뀐 경우에만 새 입력 폼을 연다.
+  if (addTrigger !== previousAddTrigger) {
+    setPreviousAddTrigger(addTrigger)
+    if (addTrigger && addTrigger > 0) openAdd()
   }
 
   function openEdit(sub: Subscription) {

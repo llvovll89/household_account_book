@@ -23,7 +23,7 @@ export default function DonutChart({ data }: Props) {
     </div>
   )
 
-  const active = activeIndex !== null ? data[activeIndex] : data[0]
+  const active = (activeIndex !== null ? data[activeIndex] : undefined) ?? data[0]
   const activeColor = CATEGORY_COLOR[active.cat]?.text ?? '#8B95A1'
 
   return (

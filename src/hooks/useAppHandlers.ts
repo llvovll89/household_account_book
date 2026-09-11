@@ -1,8 +1,9 @@
+import { getRecurringDate } from '../lib/recurringSchedule'
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
 import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, Subscription, SavingsGoal, TransactionType, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
-import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
+import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings, loadTransactions } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { auth } from '../firebase/firebase'
@@ -173,7 +174,7 @@ export function useAppHandlers({
       description: r.description,
       date: (r.frequency === 'weekly' || r.frequency === 'biweekly')
         ? todayStr
-        : `${ym}-${String(r.dayOfMonth).padStart(2, '0')}`,
+        : getRecurringDate(ym, r.dayOfMonth),
       createdAt: Date.now(),
     }))
     const newTxIds = new Set(newTx.map((t) => t.id))
@@ -246,7 +247,6 @@ export function useAppHandlers({
     )
     persist(
       async () => {
-        const { loadTransactions, saveTransactions } = await import('../lib/storage')
         const current = await loadTransactions()
         const updated = current.map((t) =>
           t.tags?.includes(oldName)
@@ -276,7 +276,6 @@ export function useAppHandlers({
         )
         persist(
           async () => {
-            const { loadTransactions, saveTransactions } = await import('../lib/storage')
             const current = await loadTransactions()
             const updated = current.map((t) =>
               t.tags?.includes(name)

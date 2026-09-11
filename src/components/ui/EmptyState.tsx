@@ -24,9 +24,9 @@ export default function EmptyState({ emoji = '📋', icon: Icon, title, descript
       ) : (
         <p className={`select-none ${isCompact ? 'text-3xl' : 'text-5xl mb-4'}`}>{emoji}</p>
       )}
-      <p className={`font-bold text-white ${isCompact ? 'text-sm font-semibold text-[#4E5968]' : 'text-[15px]'}`}>{title}</p>
+      <p className={`font-bold text-white ${isCompact ? 'text-sm font-semibold text-[#9CA6B3]' : 'text-[15px]'}`}>{title}</p>
       {description && (
-        <p className={`text-[#4E5968] ${isCompact ? 'text-xs' : 'text-xs mt-1.5 max-w-[240px] leading-relaxed'}`}>{description}</p>
+        <p className={`text-[#9CA6B3] ${isCompact ? 'text-xs' : 'text-xs mt-1.5 max-w-[240px] leading-relaxed'}`}>{description}</p>
       )}
       {action && (
         <button

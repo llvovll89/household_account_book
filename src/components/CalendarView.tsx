@@ -40,7 +40,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
       result.push({ date, income, expense, isToday: date === today })
     }
     return result
-  }, [transactions, yearMonth])
+  }, [transactions, yearMonth, year, month])
 
   // 선택된 날짜의 거래 내역 (시작일 또는 종료일이 해당 날짜인 내역 포함)
   const selectedTx = useMemo(() => {

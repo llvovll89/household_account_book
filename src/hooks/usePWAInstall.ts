@@ -31,20 +31,23 @@ export function usePWAInstall() {
 
     if (!isMobile) return
 
-    if (isIos) {
-      const iosGuideText = isSafari
-        ? 'Safari 하단 공유 버튼 → 홈 화면에 추가'
-        : isIosChrome
-          ? 'Chrome 메뉴(⋯) → 홈 화면에 추가'
-          : isIosEdge
-            ? 'Edge 메뉴(⋯) → 휴대폰에 추가(홈 화면)'
-            : isIosFirefox
-              ? 'Firefox 메뉴(☰) → 홈 화면에 추가'
-              : '브라우저 메뉴에서 홈 화면에 추가를 선택하세요.'
-      setIsIosManualInstall(true)
-      setInstallGuideText(iosGuideText)
-      setShowInstallBanner(true)
-    }
+    const iosTimer = window.setTimeout(() => {
+      if (isIos) {
+        const iosGuideText = isSafari
+          ? 'Safari 하단 공유 버튼 → 홈 화면에 추가'
+          : isIosChrome
+            ? 'Chrome 메뉴(⋯) → 홈 화면에 추가'
+            : isIosEdge
+              ? 'Edge 메뉴(⋯) → 휴대폰에 추가(홈 화면)'
+              : isIosFirefox
+                ? 'Firefox 메뉴(☰) → 홈 화면에 추가'
+                : '브라우저 메뉴에서 홈 화면에 추가를 선택하세요.'
+        setIsIosManualInstall(true)
+        setInstallGuideText(iosGuideText)
+        setShowInstallBanner(true)
+      }
+
+    }, 0)
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
@@ -73,6 +76,7 @@ export function usePWAInstall() {
     }, 2200)
 
     return () => {
+      window.clearTimeout(iosTimer)
       window.clearTimeout(fallbackTimer)
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
       window.removeEventListener('appinstalled', onInstalled)

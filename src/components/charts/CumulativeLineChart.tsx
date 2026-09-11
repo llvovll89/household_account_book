@@ -30,16 +30,17 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
 
     const monthlyTx = transactions.filter(t => t.date.startsWith(yearMonth))
 
+    const dailyNet = new Map<number, number>()
+    for (const tx of monthlyTx) {
+      const day = Number(tx.date.slice(8, 10))
+      dailyNet.set(day, (dailyNet.get(day) ?? 0) + (tx.type === 'income' ? tx.amount : -tx.amount))
+    }
     let cumulative = 0
-    const actualDays: DayData[] = Array.from({ length: maxDay }, (_, i) => {
-      const day = i + 1
-      const dayStr = `${yearMonth}-${String(day).padStart(2, '0')}`
-      const dayTx = monthlyTx.filter(t => t.date === dayStr)
-      const dayIncome = dayTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-      const dayExpense = dayTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-      cumulative += dayIncome - dayExpense
-      return { day, label: `${day}일`, balance: cumulative, projected: undefined }
-    })
+    const actualDays: DayData[] = []
+    for (let day = 1; day <= maxDay; day++) {
+      cumulative += dailyNet.get(day) ?? 0
+      actualDays.push({ day, label: `${day}일`, balance: cumulative, projected: undefined })
+    }
 
     const lastBalance = actualDays[actualDays.length - 1]?.balance ?? 0
     const color = lastBalance >= 0 ? CHART_COLORS.green : CHART_COLORS.expense

@@ -138,13 +138,6 @@ export default function TransactionList({
     onArchiveDone,
     onOpenTagManager,
 }: Props) {
-    const perfTier =
-        transactions.length >= 10000
-            ? "10k+"
-            : transactions.length >= 5000
-              ? "5k+"
-              : null;
-    const shouldLogPerf = import.meta.env.DEV && perfTier !== null;
     const [filter, setFilter] = useState<FilterType>(() => {
         const saved = localStorage.getItem(FILTER_TYPE_KEY);
         if (saved === "income" || saved === "expense" || saved === "all")
@@ -193,14 +186,11 @@ export default function TransactionList({
         if (typeof window === "undefined") return "";
         return sessionStorage.getItem(SEARCH_SESSION_KEY) ?? "";
     });
-    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [delayedSearch, setDebouncedSearch] = useState(search);
+    const debouncedSearch = search.trim() ? delayedSearch : "";
 
     useEffect(() => {
         const trimmed = search.trim();
-        if (!trimmed) {
-            setDebouncedSearch("");
-            return;
-        }
 
         const delay =
             trimmed.length <= 2 ? 120 : trimmed.length <= 5 ? 220 : 320;
@@ -478,7 +468,6 @@ export default function TransactionList({
     }, [yearMonth]);
 
     const monthly = useMemo(() => {
-        const perfStart = shouldLogPerf ? performance.now() : 0;
         const normalizedSearch = debouncedSearch
             .replace(/^#/, "")
             .toLowerCase();
@@ -591,23 +580,6 @@ export default function TransactionList({
                 );
         }
 
-        if (shouldLogPerf) {
-            const elapsed = performance.now() - perfStart;
-            console.info(
-                `[perf][TransactionList][${perfTier}] monthly-filter ${elapsed.toFixed(1)}ms`,
-                {
-                    sourceCount: monthTx.length,
-                    resultCount: result.length,
-                    periodMode,
-                    filter,
-                    methodFilter,
-                    billingFilter,
-                    statementMonthFilter,
-                    hasSearch,
-                    hasTag: !!activeTag,
-                },
-            );
-        }
 
         return result;
     }, [
@@ -627,12 +599,10 @@ export default function TransactionList({
         sortOption,
         minAmountStr,
         maxAmountStr,
-        shouldLogPerf,
-        perfTier,
+        pendingDeleteIds,
     ]);
 
     const monthlyDerived = useMemo(() => {
-        const perfStart = shouldLogPerf ? performance.now() : 0;
         const groupedMap = new Map<
             string,
             {
@@ -767,17 +737,6 @@ export default function TransactionList({
                     : 0,
         };
 
-        if (shouldLogPerf) {
-            const elapsed = performance.now() - perfStart;
-            console.info(
-                `[perf][TransactionList][${perfTier}] monthly-derived ${elapsed.toFixed(1)}ms`,
-                {
-                    monthlyCount: monthly.length,
-                    groupCount: derived.grouped.length,
-                    tagCount: derived.tagSummary.length,
-                },
-            );
-        }
 
         return derived;
     }, [
@@ -785,8 +744,6 @@ export default function TransactionList({
         userPaymentMethods,
         cardBillingDay,
         yearMonth,
-        shouldLogPerf,
-        perfTier,
     ]);
 
     const grouped = monthlyDerived.grouped;
@@ -808,30 +765,15 @@ export default function TransactionList({
         return {open: 56, close: 24, minHorizontal: 32};
     }, [swipeSensitivity]);
 
-    useEffect(() => {
+    const pageKey = JSON.stringify([yearMonth, filter, methodFilter, billingFilter,
+        periodMode, normalizedBaseDate, weekRange.start, weekRange.end,
+        statementMonthFilter, activeTag, debouncedSearch, viewMode, sortOption, minAmountStr, maxAmountStr]);
+    const [previousPageKey, setPreviousPageKey] = useState(pageKey);
+    if (pageKey !== previousPageKey) {
+        setPreviousPageKey(pageKey);
         setVisibleGroupCount(GROUP_PAGE_SIZE);
         setVisibleItemCountByDate({});
-    }, [
-        yearMonth,
-        filter,
-        methodFilter,
-        billingFilter,
-        periodMode,
-        normalizedBaseDate,
-        weekRange.start,
-        weekRange.end,
-        statementMonthFilter,
-        activeTag,
-        debouncedSearch,
-        viewMode,
-    ]);
-
-    useEffect(() => {
-        if (grouped.length === 0) return;
-        if (visibleGroupCount > grouped.length) {
-            setVisibleGroupCount(Math.max(GROUP_PAGE_SIZE, grouped.length));
-        }
-    }, [grouped.length, visibleGroupCount]);
+    }
 
     const tagSummary = monthlyDerived.tagSummary;
     const filteredIncome = monthlyDerived.filteredIncome;
@@ -857,11 +799,11 @@ export default function TransactionList({
         (search ? 1 : 0) +
         (minAmountStr || maxAmountStr ? 1 : 0);
 
-    useEffect(() => {
-        if (isFiltered) {
-            setIsActiveFiltersSectionOpen(true);
-        }
-    }, [isFiltered]);
+    const [previousIsFiltered, setPreviousIsFiltered] = useState(isFiltered);
+    if (isFiltered !== previousIsFiltered) {
+        setPreviousIsFiltered(isFiltered);
+        if (isFiltered) setIsActiveFiltersSectionOpen(true);
+    }
 
     const methodSummary = monthlyDerived.methodSummary;
 
@@ -1059,7 +1001,7 @@ export default function TransactionList({
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "list"
                                 ? "bg-[#3D8EF8] text-white"
-                                : "text-[#4E5968] hover:text-[#8B95A1]"
+                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
                         }`}
                     >
                         <ListIcon size={13} /> 목록
@@ -1070,7 +1012,7 @@ export default function TransactionList({
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "calendar"
                                 ? "bg-[#3D8EF8] text-white"
-                                : "text-[#4E5968] hover:text-[#8B95A1]"
+                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
                         }`}
                     >
                         <CalendarDays size={13} /> 캘린더
@@ -1113,7 +1055,67 @@ export default function TransactionList({
             {
                 viewMode === "list" && (
                     <>
-                        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden sticky top-2 z-20 shadow-[0_6px_18px_rgba(0,0,0,0.22)] sm:static sm:shadow-none">
+                                    {/* 검색 */}
+                                    <div>
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                            검색
+                                        </p>
+                                        <div role="search" className="relative">
+                                            <Search
+                                                size={16}
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA6B3]"
+                                            />
+                                            <input
+                                                ref={searchInputRef}
+                                                type="text"
+                                                aria-label="내역 검색"
+                                                aria-keyshortcuts="/ Escape"
+                                                value={search}
+                                                onChange={(e) =>
+                                                    setSearch(e.target.value)
+                                                }
+                                                placeholder="카테고리, 설명, #태그로 검색"
+                                                className="w-full bg-[#2C2C2E] text-white placeholder-[#9CA6B3] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                                            />
+                                            {search !== debouncedSearch && (
+                                                <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#3D8EF8]/30 border-t-[#3D8EF8] animate-spin" />
+                                            )}
+                                            {search && (
+                                                <button
+                                                    onClick={() =>
+                                                        setSearch("")
+                                                    }
+                                                    aria-label="검색어 지우기"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2"
+                                                >
+                                                    <X
+                                                        size={14}
+                                                        className="text-[#9CA6B3]"
+                                                    />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="px-1 text-[11px] font-medium">
+                                            {debouncedSearch ? (
+                                                <>
+                                                    <span className="text-[#3D8EF8] font-bold">
+                                                        {monthly.length}건
+                                                    </span>
+                                                    <span className="text-[#9CA6B3]">
+                                                        {" "}
+                                                        검색됨 · Esc 초기화
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="text-[#9CA6B3]">
+                                                    단축키: / 검색, Esc 초기화
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+
+
+                        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                             <div className="flex items-center gap-2 px-3 py-3">
                                 <button
                                     onClick={() =>
@@ -1125,7 +1127,7 @@ export default function TransactionList({
                                 >
                                     <div className="flex items-center gap-2 min-w-0">
                                         <span className="text-sm font-bold text-white">
-                                            필터 컨트롤
+                                            상세 필터
                                         </span>
                                         <span className="text-xs text-[#8B95A1] font-semibold shrink-0">
                                             {periodLabel} 단위
@@ -1139,12 +1141,12 @@ export default function TransactionList({
                                     {isFilterPanelOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     )}
                                 </button>
@@ -1164,7 +1166,7 @@ export default function TransactionList({
                                     className="space-y-4 px-3 pb-4"
                                 >
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             기간
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
@@ -1202,7 +1204,7 @@ export default function TransactionList({
                                                             periodMode ===
                                                             mode.key
                                                                 ? "bg-[#3D8EF8] text-white"
-                                                                : "text-[#4E5968] hover:text-[#8B95A1]"
+                                                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
                                                         }`}
                                                     >
                                                         {mode.label} 단위
@@ -1243,7 +1245,7 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             빠른 필터
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-3 gap-1">
@@ -1297,7 +1299,7 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             정렬
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-2 gap-1">
@@ -1346,7 +1348,7 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             금액 범위
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-2 flex items-center gap-2">
@@ -1361,9 +1363,9 @@ export default function TransactionList({
                                                 }
                                                 placeholder="최소 금액"
                                                 aria-label="최소 금액"
-                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#4E5968] focus:outline-none num"
+                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#9CA6B3] focus:outline-none num"
                                             />
-                                            <span className="text-[#4E5968] text-xs shrink-0">
+                                            <span className="text-[#9CA6B3] text-xs shrink-0">
                                                 ~
                                             </span>
                                             <input
@@ -1377,13 +1379,13 @@ export default function TransactionList({
                                                 }
                                                 placeholder="최대 금액"
                                                 aria-label="최대 금액"
-                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#4E5968] focus:outline-none num"
+                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#9CA6B3] focus:outline-none num"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             제스처
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
@@ -1391,7 +1393,7 @@ export default function TransactionList({
                                                 <span className="text-xs text-[#8B95A1] font-semibold">
                                                     스와이프 민감도
                                                 </span>
-                                                <span className="text-[11px] text-[#4E5968] font-medium">
+                                                <span className="text-[11px] text-[#9CA6B3] font-medium">
                                                     모바일 제스처
                                                 </span>
                                             </div>
@@ -1437,68 +1439,9 @@ export default function TransactionList({
                                         </div>
                                     </div>
 
-                                    {/* 검색 */}
-                                    <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
-                                            검색
-                                        </p>
-                                        <div role="search" className="relative">
-                                            <Search
-                                                size={16}
-                                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4E5968]"
-                                            />
-                                            <input
-                                                ref={searchInputRef}
-                                                type="text"
-                                                aria-label="내역 검색"
-                                                aria-keyshortcuts="/ Escape"
-                                                value={search}
-                                                onChange={(e) =>
-                                                    setSearch(e.target.value)
-                                                }
-                                                placeholder="카테고리, 설명, #태그로 검색"
-                                                className="w-full bg-[#2C2C2E] text-white placeholder-[#4E5968] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
-                                            />
-                                            {search !== debouncedSearch && (
-                                                <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#3D8EF8]/30 border-t-[#3D8EF8] animate-spin" />
-                                            )}
-                                            {search && (
-                                                <button
-                                                    onClick={() =>
-                                                        setSearch("")
-                                                    }
-                                                    aria-label="검색어 지우기"
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2"
-                                                >
-                                                    <X
-                                                        size={14}
-                                                        className="text-[#4E5968]"
-                                                    />
-                                                </button>
-                                            )}
-                                        </div>
-                                        <p className="px-1 text-[11px] font-medium">
-                                            {debouncedSearch ? (
-                                                <>
-                                                    <span className="text-[#3D8EF8] font-bold">
-                                                        {monthly.length}건
-                                                    </span>
-                                                    <span className="text-[#4E5968]">
-                                                        {" "}
-                                                        검색됨 · Esc 초기화
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <span className="text-[#4E5968]">
-                                                    단축키: / 검색, Esc 초기화
-                                                </span>
-                                            )}
-                                        </p>
-                                    </div>
-
                                     {/* 필터 탭 */}
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#4E5968] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
                                             유형 · 결제수단
                                         </p>
                                         <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
@@ -1515,7 +1458,7 @@ export default function TransactionList({
                                                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
                                                         filter === f
                                                             ? "bg-[#3D8EF8] text-white"
-                                                            : "text-[#4E5968] hover:text-[#8B95A1]"
+                                                            : "text-[#9CA6B3] hover:text-[#8B95A1]"
                                                     }`}
                                                 >
                                                     {f === "all"
@@ -1618,7 +1561,7 @@ export default function TransactionList({
                                                     onClick={() =>
                                                         setMethodFilter("all")
                                                     }
-                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-[#3D8EF8] text-white" : "text-[#4E5968] hover:text-[#8B95A1]"}`}
+                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-[#3D8EF8] text-white" : "text-[#9CA6B3] hover:text-[#8B95A1]"}`}
                                                 >
                                                     전체
                                                 </button>
@@ -1642,7 +1585,7 @@ export default function TransactionList({
                                                                             "check"
                                                                           ? "bg-[#6AD3C0]/22 text-[#6AD3C0]"
                                                                           : "bg-[#3D8EF8]/22 text-[#79B2FF]"
-                                                                    : "text-[#4E5968] hover:text-[#8B95A1]"
+                                                                    : "text-[#9CA6B3] hover:text-[#8B95A1]"
                                                             }`}
                                                         >
                                                             {m.label}
@@ -1695,7 +1638,7 @@ export default function TransactionList({
                                                                           "credit"
                                                                         ? "bg-[#3D8EF8]/22 text-[#79B2FF]"
                                                                         : "bg-[#3D8EF8] text-white"
-                                                                : "text-[#4E5968] hover:text-[#8B95A1]"
+                                                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
                                                         }`}
                                                     >
                                                         {f.label}
@@ -1748,7 +1691,7 @@ export default function TransactionList({
                                                                       "later"
                                                                     ? "bg-[#8B95A1]/22 text-[#B9C0C8]"
                                                                     : "bg-[#3D8EF8] text-white"
-                                                            : "text-[#4E5968] hover:text-[#8B95A1]"
+                                                            : "text-[#9CA6B3] hover:text-[#8B95A1]"
                                                     }`}
                                                 >
                                                     {f.label}
@@ -1784,12 +1727,12 @@ export default function TransactionList({
                                 {isBalanceSectionOpen ? (
                                     <ChevronUp
                                         size={14}
-                                        className="text-[#4E5968] shrink-0"
+                                        className="text-[#9CA6B3] shrink-0"
                                     />
                                 ) : (
                                     <ChevronDown
                                         size={14}
-                                        className="text-[#4E5968] shrink-0"
+                                        className="text-[#9CA6B3] shrink-0"
                                     />
                                 )}
                             </button>
@@ -1839,7 +1782,7 @@ export default function TransactionList({
                                                                   : ""}
                                                               {fmt(net)}원
                                                           </p>
-                                                          <p className="text-[10px] text-[#4E5968] mt-1">
+                                                          <p className="text-[10px] text-[#9CA6B3] mt-1">
                                                               수입 +
                                                               {fmt(income)} /
                                                               지출 -
@@ -1879,7 +1822,7 @@ export default function TransactionList({
                                                           {net >= 0 ? "+" : ""}
                                                           {fmt(net)}원
                                                       </p>
-                                                      <p className="text-[10px] text-[#4E5968] mt-1">
+                                                      <p className="text-[10px] text-[#9CA6B3] mt-1">
                                                           수입 +{fmt(income)} /
                                                           지출 -{fmt(expense)}
                                                       </p>
@@ -1931,12 +1874,12 @@ export default function TransactionList({
                                             {showTagSummary ? (
                                                 <ChevronUp
                                                     size={14}
-                                                    className="text-[#4E5968]"
+                                                    className="text-[#9CA6B3]"
                                                 />
                                             ) : (
                                                 <ChevronDown
                                                     size={14}
-                                                    className="text-[#4E5968]"
+                                                    className="text-[#9CA6B3]"
                                                 />
                                             )}
                                         </button>
@@ -1970,7 +1913,7 @@ export default function TransactionList({
                                                         >
                                                             #{tag}
                                                         </span>
-                                                        <span className="text-xs text-[#4E5968] font-medium">
+                                                        <span className="text-xs text-[#9CA6B3] font-medium">
                                                             {stat.count}건
                                                         </span>
                                                     </div>
@@ -2015,7 +1958,7 @@ export default function TransactionList({
                                                 onClick={() =>
                                                     setActiveTag(null)
                                                 }
-                                                className="w-full text-xs font-bold text-[#4E5968] hover:text-[#8B95A1] py-1.5 transition-colors"
+                                                className="w-full text-xs font-bold text-[#9CA6B3] hover:text-[#8B95A1] py-1.5 transition-colors"
                                             >
                                                 필터 해제
                                             </button>
@@ -2047,12 +1990,12 @@ export default function TransactionList({
                                     {isActiveFiltersSectionOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     )}
                                 </button>
@@ -2167,12 +2110,12 @@ export default function TransactionList({
                                     {isInsightsSectionOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#4E5968] shrink-0"
+                                            className="text-[#9CA6B3] shrink-0"
                                         />
                                     )}
                                 </button>
@@ -2212,7 +2155,7 @@ export default function TransactionList({
                                         {insightSummary && (
                                             <div className="flex gap-2 mb-1">
                                                 <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#4E5968] mb-1">
+                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
                                                         최다 지출
                                                     </p>
                                                     <p className="text-[11px] font-bold text-white truncate">
@@ -2234,7 +2177,7 @@ export default function TransactionList({
                                                     </p>
                                                 </div>
                                                 <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#4E5968] mb-1">
+                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
                                                         평균 거래
                                                     </p>
                                                     <p className="text-[12px] font-bold num text-white">
@@ -2242,12 +2185,12 @@ export default function TransactionList({
                                                             insightSummary.avgAmt,
                                                         )}
                                                     </p>
-                                                    <p className="text-[9px] text-[#4E5968]">
+                                                    <p className="text-[9px] text-[#9CA6B3]">
                                                         원/건
                                                     </p>
                                                 </div>
                                                 <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#4E5968] mb-1">
+                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
                                                         최대 단건
                                                     </p>
                                                     <p className="text-[11px] font-bold text-white truncate">
@@ -2385,7 +2328,7 @@ export default function TransactionList({
                                                     </span>
                                                     <ChevronDown
                                                         size={13}
-                                                        className={`text-[#4E5968] transition-transform duration-200 shrink-0 ${collapsedGroups.has(date) ? "-rotate-90" : ""}`}
+                                                        className={`text-[#9CA6B3] transition-transform duration-200 shrink-0 ${collapsedGroups.has(date) ? "-rotate-90" : ""}`}
                                                     />
                                                 </div>
                                             </button>
@@ -2502,15 +2445,8 @@ export default function TransactionList({
                                                                                             new Set(
                                                                                                 prev,
                                                                                             );
-                                                                                        next.has(
-                                                                                            t.id,
-                                                                                        )
-                                                                                            ? next.delete(
-                                                                                                  t.id,
-                                                                                              )
-                                                                                            : next.add(
-                                                                                                  t.id,
-                                                                                              );
+                                                                                        if (next.has(t.id)) next.delete(t.id);
+                                                                                        else next.add(t.id);
                                                                                         return next;
                                                                                     },
                                                                                 );
@@ -2548,15 +2484,8 @@ export default function TransactionList({
                                                                                             new Set(
                                                                                                 prev,
                                                                                             );
-                                                                                        next.has(
-                                                                                            t.id,
-                                                                                        )
-                                                                                            ? next.delete(
-                                                                                                  t.id,
-                                                                                              )
-                                                                                            : next.add(
-                                                                                                  t.id,
-                                                                                              );
+                                                                                        if (next.has(t.id)) next.delete(t.id);
+                                                                                        else next.add(t.id);
                                                                                         return next;
                                                                                     },
                                                                                 );
@@ -2665,7 +2594,7 @@ export default function TransactionList({
                                                                                         size={
                                                                                             20
                                                                                         }
-                                                                                        className="text-[#4E5968]"
+                                                                                        className="text-[#9CA6B3]"
                                                                                     />
                                                                                 )}
                                                                             </div>
@@ -2702,7 +2631,7 @@ export default function TransactionList({
                                                                                     query={
                                                                                         debouncedSearch
                                                                                     }
-                                                                                    className="text-xs text-[#4E5968] truncate mt-0.5 block"
+                                                                                    className="text-xs text-[#9CA6B3] truncate mt-0.5 block"
                                                                                 />
                                                                             )}
                                                                             {(() => {
@@ -2898,7 +2827,7 @@ export default function TransactionList({
                                                                                         );
                                                                                     }}
                                                                                     aria-label={`${t.category} 내역 수정`}
-                                                                                    className="p-2.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
+                                                                                    className="p-2.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#9CA6B3] hover:text-[#3D8EF8] transition-colors"
                                                                                 >
                                                                                     <Pencil
                                                                                         size={
@@ -2916,7 +2845,7 @@ export default function TransactionList({
                                                                                         );
                                                                                     }}
                                                                                     aria-label={`${t.category} 내역 삭제`}
-                                                                                    className="p-2.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
+                                                                                    className="p-2.5 rounded-xl hover:bg-[#F25260]/15 text-[#9CA6B3] hover:text-[#F25260] transition-colors"
                                                                                 >
                                                                                     <Trash2
                                                                                         size={

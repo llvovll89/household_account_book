@@ -1,3 +1,4 @@
+import { getEffectiveBudgets } from '../../lib/budgets'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { Budget, Transaction } from '../../types'
 import { CATEGORY_EMOJI } from '../../types'
@@ -33,7 +34,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 export default function BudgetCompareChart({ transactions, budgets, yearMonth }: Props) {
   const monthTx = transactions.filter((t) => t.date.startsWith(yearMonth) && t.type === 'expense')
 
-  const data = budgets
+  const data = getEffectiveBudgets(budgets, yearMonth)
     .map((b) => {
       const actual = monthTx.filter((t) => t.category === b.category).reduce((s, t) => s + t.amount, 0)
       return { category: b.category, budget: b.limit, actual, over: actual > b.limit }

@@ -9,9 +9,8 @@ function safeSave(key: string, value: unknown): void {
   } catch (e) {
     if (e instanceof DOMException && (e.code === 22 || e.name === 'QuotaExceededError')) {
       showToast('저장 공간이 부족합니다. 오래된 내역을 삭제하거나 CSV로 내보낸 후 정리해주세요.', 5000, 'error')
-    } else {
-      throw e
     }
+    throw e
   }
 }
 
@@ -458,8 +457,8 @@ function mergeUniqueByKey<T>(base: T[], incoming: T[], keyFn: (item: T) => strin
 
 function mergeBudgets(remote: Budget[], local: Budget[]): Budget[] {
   const map = new Map<string, Budget>()
-  for (const item of remote) map.set(item.category, item)
-  for (const item of local) map.set(item.category, item)
+  for (const item of remote) map.set(JSON.stringify([item.category, item.yearMonth ?? null]), item)
+  for (const item of local) map.set(JSON.stringify([item.category, item.yearMonth ?? null]), item)
   return Array.from(map.values())
 }
 

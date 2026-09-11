@@ -1,3 +1,4 @@
+import { getEffectiveBudgets } from '../lib/budgets'
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -92,7 +93,7 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
           ? <span className="text-[18px]">🎉</span>
           : <>
               <p className="text-[15px] font-black num leading-none" style={{ color }}>{daysLeft}</p>
-              <p className="text-[8px] text-[#4E5968] leading-none mt-0.5">일 후</p>
+              <p className="text-[8px] text-[#9CA6B3] leading-none mt-0.5">일 후</p>
             </>
         }
       </div>
@@ -358,12 +359,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   const isFutureMonth = useMemo(() => yearMonth > toLocalDateStr(new Date()).slice(0, 7), [yearMonth])
 
   // 이번 달에 적용되는 유효 예산 (월별 특화 > 전체 기본값)
-  const effectiveBudgets = useMemo(() => {
-    const monthSpecific = budgets.filter((b) => b.yearMonth === yearMonth)
-    if (monthSpecific.length === 0) return budgets.filter((b) => !b.yearMonth)
-    const covered = new Set(monthSpecific.map((b) => b.category))
-    return [...monthSpecific, ...budgets.filter((b) => !b.yearMonth && !covered.has(b.category))]
-  }, [budgets, yearMonth])
+  const effectiveBudgets = useMemo(() => getEffectiveBudgets(budgets, yearMonth), [budgets, yearMonth])
 
   // 이월 금액 계산 (전월 미사용 예산)
   const carryoverAmounts = useMemo(() => {
@@ -418,7 +414,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   }, [yearMonth, overBudget, monthlyExpenseCategoryMap])
 
   // 6개월 스파크라인 데이터
-  const monthlyData = useMonthlyData(transactions)
+  const monthlyData = useMonthlyData(transactions, yearMonth)
   const sparkIncome = monthlyData.map(m => ({ value: m.income }))
   const sparkExpense = monthlyData.map(m => ({ value: m.expense }))
   const sparkBalance = monthlyData.map(m => ({ value: Math.max(0, m.balance) }))
@@ -795,7 +791,177 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   }, [focusedExpenseCategory, monthlyExpenseTx])
 
   return (
-    <div className="space-y-3 tab-content">
+    <div className="space-y-4 tab-content">
+      {/* 메인 잔액 카드 */}
+      <div className="rounded-[24px] p-6 bg-[#1C1C1E] card-enter" style={{ animationDelay: '0ms' }}>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium text-[#8B95A1]">{Number(yearMonth.slice(5))}월 수입에서 남은 돈</p>
+          {onOpenWidgetSettings && (
+            <button
+              onClick={onOpenWidgetSettings}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1] hover:text-white transition-colors"
+              aria-label="위젯 설정"
+            >
+              <SlidersHorizontal size={13} />
+            </button>
+          )}
+          {monthly.length > 0 && noSpendStreak >= 2 ? (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F5BE3A]/15 text-[#F5BE3A]">
+              🔥 {noSpendStreak}일 연속 무지출
+            </span>
+          ) : monthly.length > 0 && noSpendDays > 0 ? (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2ACF6A]/15 text-[#2ACF6A]">
+              🎯 무지출 {noSpendDays}일
+            </span>
+          ) : null}
+        </div>
+        <p className={`text-[clamp(26px,7vw,40px)] font-bold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+          {animatedBalance < 0 ? '-' : ''}{fmt(Math.abs(animatedBalance))}
+          <span className="text-[20px] font-bold ml-1 text-[#8B95A1]">원</span>
+        </p>
+
+        <div className="mt-5 pt-4 border-t border-white/[0.07] grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#2ACF6A]/10 flex items-center justify-center">
+              <TrendingUp size={14} className="text-[#2ACF6A]" />
+            </div>
+            <div>
+              <p className="text-[11px] text-[#8B95A1]">수입</p>
+              <p className="text-sm font-bold text-[#2ACF6A] num">+{fmt(animatedIncome)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-[#F25260]/10 flex items-center justify-center">
+              <TrendingDown size={14} className="text-[#F25260]" />
+            </div>
+            <div>
+              <p className="text-[11px] text-[#8B95A1]">지출</p>
+              <p className="text-sm font-bold text-[#F25260] num">-{fmt(animatedExpense)}</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs leading-relaxed text-[#8B95A1]">기록한 수입 − 지출 기준이에요. 실제 계좌 잔액과 다를 수 있어요.</p>
+        {onAddTransaction && (
+          <button type="button" onClick={onAddTransaction}
+            className="mt-5 w-full min-h-12 rounded-2xl bg-[#3182F6] text-white text-sm font-semibold hover:bg-[#2272EB] active:scale-[0.98] transition-colors">
+            내역 기록하기
+          </button>
+        )}
+        <details className="mt-4 group">
+          <summary className="cursor-pointer py-2 text-sm font-medium text-[#8B95A1]">소비 비율과 결제수단 자세히 보기</summary>
+        {income > 0 && (
+          <div className="mt-4">
+            <div className="h-1.5 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: progressMounted ? `${Math.min((expense / income) * 100, 100)}%` : '0%',
+                  background: expense / income > 0.9 ? '#F25260' : expense / income > 0.7 ? '#F5BE3A' : '#3D8EF8',
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5 text-[11px] text-[#9CA6B3]">
+              <span>지출 {income > 0 ? Math.round((expense / income) * 100) : 0}%</span>
+              {savingsRate !== null && <span>저축률 {savingsRate}%</span>}
+            </div>
+          </div>
+        )}
+
+        {expenseByCategory.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {expenseByCategory.slice(0, 3).map(([cat, amt]) => {
+              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+              const emoji = CATEGORY_EMOJI[cat] ?? '💸'
+              const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
+              const budget = budgets.find((b) => b.category === cat)
+              const budgetPct = budget && budget.limit > 0 ? Math.round((amt / budget.limit) * 100) : null
+              return (
+                <div key={cat} className="flex items-center gap-2">
+                  <span className="text-[11px] shrink-0 w-16 truncate text-[#8B95A1]">{emoji} {cat}</span>
+                  <div className="flex-1 h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, minWidth: pct > 0 ? '4px' : undefined, backgroundColor: color.text }} />
+                  </div>
+                  {budgetPct !== null ? (
+                    <span className={`text-[10px] font-bold num shrink-0 px-1.5 py-0.5 rounded-md ${budgetPct > 100 ? 'bg-[#F25260]/15 text-[#F25260]' : 'bg-white/6 text-[#9CA6B3]'}`}>
+                      {budgetPct}%
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold num text-[#9CA6B3] w-7 text-right shrink-0">{pct}%</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {(monthlyMethodBalance.hasCash || monthlyMethodBalance.hasCheck || monthlyMethodBalance.hasCredit) && (
+          <div className={`mt-4 grid gap-2 ${[monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 1 ? 'grid-cols-1' : [monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {monthlyMethodBalance.hasCash && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
+                </p>
+              </div>
+            )}
+            {monthlyMethodBalance.hasCheck && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
+                </p>
+              </div>
+            )}
+            {monthlyMethodBalance.hasCredit && (
+              <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/14 to-[#2C2C2E]">
+                <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 잔액</p>
+                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.credit >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
+                  {monthlyMethodBalance.credit >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.credit)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showCreditSection ? (
+          <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <p className="text-[10px] text-[#9CC7FF] font-semibold">신용 결제예정</p>
+              <div className="flex items-center gap-2">
+                {creditCards.length > 0 && (
+                  <span className="text-[10px] text-[#9CC7FF]">
+                    {creditCards.length === 1
+                      ? `${creditCards[0].label} · ${effectiveBillingDay}일`
+                      : `${creditCards.length}개 카드 · ${effectiveBillingDay}일 기준`}
+                  </span>
+                )}
+                <button
+                  onClick={onOpenPaymentMethodsModal}
+                  className="text-[10px] font-bold text-[#9CC7FF] hover:text-white transition-colors"
+                >
+                  설정
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
+                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
+                <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
+              </div>
+              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
+                <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
+                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
+                <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        </details>
+      </div>
+
+
       {/* 온보딩 안내 */}
       {showOnboarding && transactions.length === 0 && (
         <div className="bg-gradient-to-br from-[#3D8EF8]/15 to-[#3D8EF8]/5 border border-[#3D8EF8]/25 rounded-2xl px-4 py-4">
@@ -905,7 +1071,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                   {CATEGORY_EMOJI[s.category] ?? '💳'}
                 </div>
                 <span className="text-sm text-[#F1F3F6] flex-1">{s.name}</span>
-                <span className="text-xs text-[#4E5968]">
+                <span className="text-xs text-[#9CA6B3]">
                   {s.daysLeft === 0 ? '오늘' : `${s.daysLeft}일 후`}
                 </span>
                 <span className="text-sm font-bold num text-[#F25260]">
@@ -935,7 +1101,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-[#F1F3F6]">{spike.category}</span>
-                  <span className="text-[10px] text-[#4E5968] ml-2">전월 {fmt(spike.prev)}원</span>
+                  <span className="text-[10px] text-[#9CA6B3] ml-2">전월 {fmt(spike.prev)}원</span>
                 </div>
                 <span className="text-xs font-bold text-[#F25260] shrink-0">▲{spike.pct}%</span>
                 <span className="text-sm font-bold num text-white shrink-0">{fmt(spike.amount)}원</span>
@@ -966,7 +1132,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-[#F1F3F6]">{item.category}</span>
-                  <span className="text-[10px] text-[#4E5968] ml-2">전월 {fmt(item.prev)}원</span>
+                  <span className="text-[10px] text-[#9CA6B3] ml-2">전월 {fmt(item.prev)}원</span>
                 </div>
                 <span className="text-xs font-bold text-[#2ACF6A] shrink-0">▼{item.pct}%</span>
                 <span className="text-sm font-bold num text-[#2ACF6A] shrink-0">-{fmt(item.saved)}원</span>
@@ -1090,7 +1256,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                       {focusedExpensePreview.map((tx) => (
                         <div key={tx.id} className="flex items-center justify-between gap-2 text-[10px]">
                           <span className="text-[#8B95A1] truncate">{tx.description || tx.category}</span>
-                          <span className="text-[#4E5968] shrink-0">{tx.date.slice(5)}</span>
+                          <span className="text-[#9CA6B3] shrink-0">{tx.date.slice(5)}</span>
                           <span className="text-[#FF8D98] font-bold num shrink-0">-{fmt(tx.amount)}</span>
                         </div>
                       ))}
@@ -1143,7 +1309,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             </div>
             <button
               onClick={() => setShowRecurring(true)}
-              className="text-xs text-[#4E5968] hover:text-[#8B95A1] font-semibold transition-colors"
+              className="text-xs text-[#9CA6B3] hover:text-[#8B95A1] font-semibold transition-colors"
             >
               관리
             </button>
@@ -1157,7 +1323,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                     {CATEGORY_EMOJI[r.category] ?? '📦'}
                   </div>
                   <span className="text-sm text-[#8B95A1] flex-1">{r.category}</span>
-                  <span className="text-xs text-[#4E5968]">{formatRecurringSchedule(r)}</span>
+                  <span className="text-xs text-[#9CA6B3]">{formatRecurringSchedule(r)}</span>
                   <span className={`text-sm font-bold num ${r.type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F1F3F6]'}`}>
                     {r.type === 'income' ? '+' : '-'}{r.amount.toLocaleString()}원
                   </span>
@@ -1165,7 +1331,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               )
             })}
             {pendingRecurring.length > 3 && (
-              <p className="text-xs text-[#4E5968] text-center pt-1">외 {pendingRecurring.length - 3}건 더</p>
+              <p className="text-xs text-[#9CA6B3] text-center pt-1">외 {pendingRecurring.length - 3}건 더</p>
             )}
           </div>
           {(() => {
@@ -1174,14 +1340,14 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             return (
               <div className="flex items-center gap-2 mb-3 text-[11px]">
                 {ri > 0 && <span className="text-[#2ACF6A] font-semibold">+{fmt(ri)}원 수입</span>}
-                {ri > 0 && re > 0 && <span className="text-[#4E5968]">·</span>}
+                {ri > 0 && re > 0 && <span className="text-[#9CA6B3]">·</span>}
                 {re > 0 && <span className="text-[#F25260] font-semibold">-{fmt(re)}원 지출</span>}
-                <span className="text-[#4E5968] ml-auto num">{ri > re ? `잔액 +${fmt(ri - re)}` : ri > 0 && re > 0 ? `잔액 -${fmt(re - ri)}` : ''}</span>
+                <span className="text-[#9CA6B3] ml-auto num">{ri > re ? `잔액 +${fmt(ri - re)}` : ri > 0 && re > 0 ? `잔액 -${fmt(re - ri)}` : ''}</span>
               </div>
             )
           })()}
           {isFutureMonth ? (
-            <p className="text-xs text-[#4E5968] text-center py-1.5">
+            <p className="text-xs text-[#9CA6B3] text-center py-1.5">
               아직 오지 않은 달이라 미리 등록할 수 없어요. 실제 그 달이 되면 자동으로 등록돼요.
             </p>
           ) : (
@@ -1195,165 +1361,6 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           )}
         </div>
       )}
-
-      {/* 메인 잔액 카드 */}
-      <div className="rounded-2xl p-6 bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] card-enter" style={{ animationDelay: '0ms' }}>
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-sm font-medium text-[#8B95A1]">이번 달 잔액</p>
-          {onOpenWidgetSettings && (
-            <button
-              onClick={onOpenWidgetSettings}
-              className="w-7 h-7 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] transition-colors"
-              aria-label="위젯 설정"
-            >
-              <SlidersHorizontal size={13} />
-            </button>
-          )}
-          {noSpendStreak >= 2 ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F5BE3A]/15 text-[#F5BE3A]">
-              🔥 {noSpendStreak}일 연속 무지출
-            </span>
-          ) : noSpendDays > 0 ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2ACF6A]/15 text-[#2ACF6A]">
-              🎯 무지출 {noSpendDays}일
-            </span>
-          ) : null}
-        </div>
-        <p className={`text-[40px] font-black leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-          {animatedBalance < 0 ? '-' : ''}{fmt(Math.abs(animatedBalance))}
-          <span className="text-[20px] font-bold ml-1 text-[#8B95A1]">원</span>
-        </p>
-
-        <div className="mt-5 pt-4 border-t border-white/[0.07] grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#2ACF6A]/10 flex items-center justify-center">
-              <TrendingUp size={14} className="text-[#2ACF6A]" />
-            </div>
-            <div>
-              <p className="text-[11px] text-[#8B95A1]">수입</p>
-              <p className="text-sm font-bold text-[#2ACF6A] num">+{fmt(animatedIncome)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#F25260]/10 flex items-center justify-center">
-              <TrendingDown size={14} className="text-[#F25260]" />
-            </div>
-            <div>
-              <p className="text-[11px] text-[#8B95A1]">지출</p>
-              <p className="text-sm font-bold text-[#F25260] num">-{fmt(animatedExpense)}</p>
-            </div>
-          </div>
-        </div>
-
-        {income > 0 && (
-          <div className="mt-4">
-            <div className="h-1.5 bg-[rgba(255,255,255,0.08)] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: progressMounted ? `${Math.min((expense / income) * 100, 100)}%` : '0%',
-                  background: expense / income > 0.9 ? '#F25260' : expense / income > 0.7 ? '#F5BE3A' : '#3D8EF8',
-                }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[11px] text-[#4E5968]">
-              <span>지출 {income > 0 ? Math.round((expense / income) * 100) : 0}%</span>
-              {savingsRate !== null && <span>저축률 {savingsRate}%</span>}
-            </div>
-          </div>
-        )}
-
-        {expenseByCategory.length > 0 && (
-          <div className="mt-3 space-y-1.5">
-            {expenseByCategory.slice(0, 3).map(([cat, amt]) => {
-              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
-              const emoji = CATEGORY_EMOJI[cat] ?? '💸'
-              const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
-              const budget = budgets.find((b) => b.category === cat)
-              const budgetPct = budget && budget.limit > 0 ? Math.round((amt / budget.limit) * 100) : null
-              return (
-                <div key={cat} className="flex items-center gap-2">
-                  <span className="text-[11px] shrink-0 w-16 truncate text-[#8B95A1]">{emoji} {cat}</span>
-                  <div className="flex-1 h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(pct, pct > 0 ? 4 : 0)}%`, minWidth: pct > 0 ? '4px' : undefined, backgroundColor: color.text }} />
-                  </div>
-                  {budgetPct !== null ? (
-                    <span className={`text-[10px] font-bold num shrink-0 px-1.5 py-0.5 rounded-md ${budgetPct > 100 ? 'bg-[#F25260]/15 text-[#F25260]' : 'bg-white/6 text-[#4E5968]'}`}>
-                      {budgetPct}%
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold num text-[#4E5968] w-7 text-right shrink-0">{pct}%</span>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {(monthlyMethodBalance.hasCash || monthlyMethodBalance.hasCheck || monthlyMethodBalance.hasCredit) && (
-          <div className={`mt-4 grid gap-2 ${[monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 1 ? 'grid-cols-1' : [monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-            {monthlyMethodBalance.hasCash && (
-              <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
-                <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
-                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-[#D8FFE8]' : 'text-[#F25260]'}`}>
-                  {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
-                </p>
-              </div>
-            )}
-            {monthlyMethodBalance.hasCheck && (
-              <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/14 to-[#2C2C2E]">
-                <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">💳 체크 잔액</p>
-                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-[#D7FFF7]' : 'text-[#F25260]'}`}>
-                  {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
-                </p>
-              </div>
-            )}
-            {monthlyMethodBalance.hasCredit && (
-              <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/14 to-[#2C2C2E]">
-                <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">💎 신용 잔액</p>
-                <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.credit >= 0 ? 'text-[#DCEBFF]' : 'text-[#F25260]'}`}>
-                  {monthlyMethodBalance.credit >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.credit)}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {showCreditSection ? (
-          <div className="mt-2 rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/20 bg-[#3D8EF8]/10">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <p className="text-[10px] text-[#9CC7FF] font-semibold">신용 결제예정</p>
-              <div className="flex items-center gap-2">
-                {creditCards.length > 0 && (
-                  <span className="text-[10px] text-[#9CC7FF]">
-                    {creditCards.length === 1
-                      ? `${creditCards[0].label} · ${effectiveBillingDay}일`
-                      : `${creditCards.length}개 카드 · ${effectiveBillingDay}일 기준`}
-                  </span>
-                )}
-                <button
-                  onClick={onOpenPaymentMethodsModal}
-                  className="text-[10px] font-bold text-[#9CC7FF] hover:text-white transition-colors"
-                >
-                  설정
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-                <p className="text-[10px] text-[#F5BE3A] font-semibold">이번 청구</p>
-                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(monthlyCardDue)}원</p>
-                <p className="text-[10px] text-[#8B95A1] mt-0.5">{cardBillingRangeLabel}</p>
-              </div>
-              <div className="rounded-xl bg-[#2C2C2E] px-2.5 py-2">
-                <p className="text-[10px] text-[#79B2FF] font-semibold">다음 청구</p>
-                <p className="text-[13px] font-extrabold text-[#DCEBFF] num">{fmt(nextMonthlyCardDue)}원</p>
-                <p className="text-[10px] text-[#8B95A1] mt-0.5">{nextCardBillingRangeLabel}</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
 
       {/* 6개월 스파크라인 요약 */}
       {!hide('sparkline-summary') && <div className="flex gap-2">
@@ -1385,9 +1392,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           <div className="flex items-center gap-3 px-4 py-3.5 bg-[#2ACF6A]/10 rounded-2xl border border-[#2ACF6A]/20">
             <span className="text-2xl">🎯</span>
             <div>
-              <p className="text-sm font-bold text-[#2ACF6A]">오늘 무지출!</p>
-              <p className="text-[11px] text-[#4E5968]">
-                {noSpendStreak >= 2 ? `🔥 ${noSpendStreak}일 연속 무지출 스트릭` : '좋은 시작이에요, 계속 유지해보세요'}
+              <p className="text-sm font-bold text-[#2ACF6A]">오늘 기록된 지출이 없어요</p>
+              <p className="text-[11px] text-[#9CA6B3]">
+                {noSpendStreak >= 2 ? `🔥 ${noSpendStreak}일 연속 무지출 스트릭` : '빠뜨린 내역이 있다면 기록해보세요'}
               </p>
             </div>
           </div>
@@ -1395,7 +1402,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       ) : (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-2.5">
-            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">오늘 지출</p>
+            <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide">오늘 지출</p>
             {todaySpending.yesterdayExpense > 0 && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${todaySpending.todayExpense > todaySpending.yesterdayExpense ? 'bg-[#F25260]/15 text-[#F25260]' : todaySpending.todayExpense < todaySpending.yesterdayExpense ? 'bg-[#2ACF6A]/15 text-[#2ACF6A]' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}>
                 {todaySpending.todayExpense > todaySpending.yesterdayExpense ? '▲' : todaySpending.todayExpense < todaySpending.yesterdayExpense ? '▼' : '='} 어제 대비 {todaySpending.todayExpense !== todaySpending.yesterdayExpense ? `${fmtShort(Math.abs(todaySpending.todayExpense - todaySpending.yesterdayExpense))}원` : '동일'}
@@ -1406,7 +1413,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             <p className="text-[26px] font-black num text-[#F25260] leading-none">
               -{fmtShort(todaySpending.todayExpense)}
             </p>
-            <span className="text-sm text-[#4E5968] font-semibold">원</span>
+            <span className="text-sm text-[#9CA6B3] font-semibold">원</span>
             {todaySpending.todayIncome > 0 && (
               <span className="text-sm font-bold text-[#2ACF6A] num ml-1">+{fmtShort(todaySpending.todayIncome)}</span>
             )}
@@ -1422,7 +1429,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-semibold text-white leading-none truncate">{t.description || t.category}</p>
-                      {t.description && <p className="text-[10px] text-[#4E5968] mt-0.5">{t.category}</p>}
+                      {t.description && <p className="text-[10px] text-[#9CA6B3] mt-0.5">{t.category}</p>}
                     </div>
                     <span className="text-[13px] font-bold num text-[#F25260] shrink-0">-{fmt(t.amount)}원</span>
                   </div>
@@ -1438,7 +1445,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         <div className="bg-[#1C1C1E] rounded-2xl p-5 card-enter" style={{ animationDelay: '50ms' }}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[15px] font-bold text-white">재정 건강도</p>
-            <span className="text-[10px] text-[#4E5968]">이번 달 기준</span>
+            <span className="text-[10px] text-[#9CA6B3]">이번 달 기준</span>
           </div>
           <div className="flex items-center gap-4">
             <HealthArc score={healthScore} />
@@ -1452,7 +1459,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                 <div key={label} className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-[11px] text-[#4E5968]">{label}</span>
+                    <span className="text-[11px] text-[#9CA6B3]">{label}</span>
                   </div>
                   <span className="text-[11px] font-bold num" style={{ color }}>{value}</span>
                 </div>
@@ -1466,7 +1473,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {!hide('spending-pace') && spendingPace && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">소비 페이스</p>
+            <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide">소비 페이스</p>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${spendingPace.onTrack ? 'bg-[#2ACF6A]/15 text-[#2ACF6A]' : 'bg-[#F25260]/15 text-[#F25260]'}`}>
               {spendingPace.onTrack ? '✓ 정상' : '⚡ 초과'}
             </span>
@@ -1503,14 +1510,14 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           })()}
           <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-white/5">
             <div>
-              <p className="text-[10px] text-[#4E5968]">월말 예상 지출</p>
+              <p className="text-[10px] text-[#9CA6B3]">월말 예상 지출</p>
               <p className={`text-sm font-bold num ${spendingPace.onTrack ? 'text-[#F1F3F6]' : 'text-[#F25260]'}`}>{fmt(spendingPace.projected)}원</p>
             </div>
             {income > 0 && (() => {
               const projBalance = income - spendingPace.projected
               return (
                 <div className="text-right">
-                  <p className="text-[10px] text-[#4E5968]">월말 예상 잔고</p>
+                  <p className="text-[10px] text-[#9CA6B3]">월말 예상 잔고</p>
                   <p className={`text-sm font-bold num ${projBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>{projBalance >= 0 ? '+' : ''}{fmt(projBalance)}원</p>
                 </div>
               )
@@ -1523,7 +1530,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {!hide('weekly-comparison') && (weeklySpending.thisWeek > 0 || weeklySpending.lastWeek > 0) && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">주간 지출</p>
+            <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide">주간 지출</p>
             {weeklySpending.lastWeek > 0 && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${weeklySpending.diff > 0 ? 'bg-[#F25260]/15 text-[#F25260]' : weeklySpending.diff < 0 ? 'bg-[#2ACF6A]/15 text-[#2ACF6A]' : 'bg-[#2C2C2E] text-[#8B95A1]'}`}>
                 {weeklySpending.diff > 0 ? '▲' : weeklySpending.diff < 0 ? '▼' : '='} {weeklySpending.diff !== 0 ? `${fmt(Math.abs(weeklySpending.diff))}원` : '동일'}
@@ -1563,8 +1570,8 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                           <div className="absolute bottom-0 inset-x-0 h-0.5 rounded-full bg-[#2C2C2E]" />
                         )}
                       </div>
-                      <span className={`text-[9px] font-bold ${day.isToday ? 'text-[#3D8EF8]' : isUnavailable ? 'text-[#2C2C2E]' : 'text-[#4E5968]'}`}>{day.label}</span>
-                      <span className="text-[8px] num text-[#4E5968]">
+                      <span className={`text-[9px] font-bold ${day.isToday ? 'text-[#3D8EF8]' : isUnavailable ? 'text-[#2C2C2E]' : 'text-[#9CA6B3]'}`}>{day.label}</span>
+                      <span className="text-[8px] num text-[#9CA6B3]">
                         {day.amount !== null && day.amount > 0 ? fmtShort(day.amount) : ''}
                       </span>
                     </div>
@@ -1580,17 +1587,17 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                 <div className="w-2 h-2 rounded-sm bg-[#F25260]" />
                 <p className="text-[10px] text-[#8B95A1]">이번 주</p>
               </div>
-              <p className="text-sm font-bold text-white num">{fmt(weeklySpending.thisWeek)}<span className="text-[10px] text-[#4E5968] ml-0.5">원</span></p>
+              <p className="text-sm font-bold text-white num">{fmt(weeklySpending.thisWeek)}<span className="text-[10px] text-[#9CA6B3] ml-0.5">원</span></p>
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-1.5 mb-0.5">
                 <div className="w-2 h-2 rounded-sm bg-[#4E5968]/50" />
                 <p className="text-[10px] text-[#8B95A1]">지난 주</p>
               </div>
-              <p className="text-sm font-bold text-[#8B95A1] num">{fmt(weeklySpending.lastWeek)}<span className="text-[10px] text-[#4E5968] ml-0.5">원</span></p>
+              <p className="text-sm font-bold text-[#8B95A1] num">{fmt(weeklySpending.lastWeek)}<span className="text-[10px] text-[#9CA6B3] ml-0.5">원</span></p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] text-[#4E5968]">{['일', '월', '화', '수', '목', '금', '토'][weeklySpending.dayOfWeek]}요일 기준</p>
+              <p className="text-[10px] text-[#9CA6B3]">{['일', '월', '화', '수', '목', '금', '토'][weeklySpending.dayOfWeek]}요일 기준</p>
             </div>
           </div>
         </div>
@@ -1600,7 +1607,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {!hide('timeofday-spending') && expense > 0 && timeOfDaySpending.some(s => s.amount > 0) && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">시간대별 지출</p>
+            <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide">시간대별 지출</p>
             {(() => {
               const peak = timeOfDaySpending.reduce((a, b) => b.amount > a.amount ? b : a, timeOfDaySpending[0])
               if (!peak.amount) return null
@@ -1631,7 +1638,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                   />
                 </div>
                 <span className="text-sm leading-none">{slot.emoji}</span>
-                <span className="text-[9px] text-[#4E5968]">{slot.label}</span>
+                <span className="text-[9px] text-[#9CA6B3]">{slot.label}</span>
                 {slot.amount > 0
                   ? <span className="text-[9px] font-bold num text-[#F25260]">-{fmtShort(slot.amount)}</span>
                   : <span className="text-[9px] text-[#2C2C2E]">-</span>}
@@ -1647,7 +1654,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {/* 이달 최대 지출 TOP3 */}
       {!hide('top3-expenses') && top3Expenses.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
-          <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-3">이달 최대 지출</p>
+          <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide mb-3">이달 최대 지출</p>
           <div className="space-y-2.5">
             {top3Expenses.map((t, i) => {
               const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
@@ -1656,13 +1663,13 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               return (
                 <div key={t.id} className="list-item-enter" style={{ animationDelay: `${i * 60}ms` }}>
                   <div className="flex items-center gap-3 mb-1">
-                    <span className="text-[10px] font-bold text-[#4E5968] w-3 shrink-0">{i + 1}</span>
+                    <span className="text-[10px] font-bold text-[#9CA6B3] w-3 shrink-0">{i + 1}</span>
                     <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-sm" style={{ backgroundColor: color.bg }}>
                       {CATEGORY_EMOJI[t.category] ?? '📦'}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-semibold text-white leading-none">{t.category}</p>
-                      {t.description && <p className="text-[10px] text-[#4E5968] truncate mt-0.5">{t.description}</p>}
+                      {t.description && <p className="text-[10px] text-[#9CA6B3] truncate mt-0.5">{t.description}</p>}
                     </div>
                     <span className="text-[13px] font-bold num text-[#F25260] shrink-0">{fmt(t.amount)}원</span>
                   </div>
@@ -1680,7 +1687,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {!hide('payday-countdown') && !payday && !editingPayday && (
         <button
           onClick={() => { setEditingPayday(true); setPaydayInput('') }}
-          className="w-full flex items-center gap-2 justify-center py-3 rounded-2xl border border-dashed border-white/10 text-xs font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
+          className="w-full flex items-center gap-2 justify-center py-3 rounded-2xl border border-dashed border-white/10 text-xs font-semibold text-[#9CA6B3] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
         >
           💰 월급날 설정하기
         </button>
@@ -1746,14 +1753,14 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                     ? '오늘이 월급날이에요!'
                     : `월급까지 D-${paydayInfo.daysLeft}`}
                 </span>
-                <p className="text-[11px] text-[#4E5968]">
+                <p className="text-[11px] text-[#9CA6B3]">
                   {payday === 'last' ? '매월 말일 기준' : `매월 ${payday}일 기준`}
                 </p>
               </div>
             </div>
             <button
               onClick={() => { setEditingPayday(true); setPaydayInput(payday === 'last' ? 'last' : String(payday)) }}
-              className="p-1.5 rounded-lg text-[#4E5968] hover:text-[#8B95A1] transition-colors"
+              className="p-1.5 rounded-lg text-[#9CA6B3] hover:text-[#8B95A1] transition-colors"
             >
               <Pencil size={12} />
             </button>
@@ -1762,33 +1769,33 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             <>
               <div className="flex items-center gap-2 mt-1">
                 <div className="h-px flex-1 bg-white/5" />
-                <span className="text-xs text-[#4E5968]">오늘 쓸 수 있는 금액</span>
+                <span className="text-xs text-[#9CA6B3]">오늘 쓸 수 있는 금액</span>
                 <div className="h-px flex-1 bg-white/5" />
               </div>
               {paydayInfo.dailyBudget > 0 && (
                 <p className="text-center text-[24px] font-black text-[#3D8EF8] num mt-1.5">
                   {paydayInfo.dailyBudget.toLocaleString()}
-                  <span className="text-sm font-semibold text-[#4E5968] ml-1">원</span>
+                  <span className="text-sm font-semibold text-[#9CA6B3] ml-1">원</span>
                 </p>
               )}
               <div className="mt-2 rounded-xl bg-[#2C2C2E] px-3 py-2 space-y-1">
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-[#4E5968]">이월잔액</span>
+                  <span className="text-[#9CA6B3]">이월잔액</span>
                   <span className={`num font-semibold ${paydayInfo.openingBalance >= 0 ? 'text-[#8B95A1]' : 'text-[#F25260]'}`}>
                     {paydayInfo.openingBalance >= 0 ? '+' : ''}{paydayInfo.openingBalance.toLocaleString()}원
                   </span>
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-[#4E5968]">이번 달 수입</span>
+                  <span className="text-[#9CA6B3]">이번 달 수입</span>
                   <span className="num font-semibold text-[#2ACF6A]">+{paydayInfo.income.toLocaleString()}원</span>
                 </div>
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-[#4E5968]">이번 달 지출</span>
+                  <span className="text-[#9CA6B3]">이번 달 지출</span>
                   <span className="num font-semibold text-[#F25260]">-{paydayInfo.expense.toLocaleString()}원</span>
                 </div>
                 <div className="h-px bg-white/5 my-0.5" />
                 <div className="flex justify-between text-[11px]">
-                  <span className="text-[#4E5968]">잔액 ÷ 남은 {paydayInfo.daysRemaining}일</span>
+                  <span className="text-[#9CA6B3]">잔액 ÷ 남은 {paydayInfo.daysRemaining}일</span>
                   <span className="num font-semibold text-[#8B95A1]">{paydayInfo.remaining.toLocaleString()}원</span>
                 </div>
               </div>
@@ -1862,7 +1869,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         {budgets.length === 0 ? (
           <button
             onClick={() => setShowBudget(true)}
-            className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-sm text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
+            className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-sm text-[#9CA6B3] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
           >
             + 카테고리별 예산을 설정해보세요
           </button>
@@ -1877,10 +1884,10 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               {totalBudget > 0 && (
                 <div className="mb-4 p-3 rounded-2xl bg-[#2C2C2E]">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] text-[#4E5968]">전체 예산</span>
+                    <span className="text-[11px] text-[#9CA6B3]">전체 예산</span>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] num text-white font-bold">{fmt(totalSpent)}</span>
-                      <span className="text-[10px] text-[#4E5968]">/ {fmt(totalBudget)}원</span>
+                      <span className="text-[10px] text-[#9CA6B3]">/ {fmt(totalBudget)}원</span>
                       {!isOver && totalRemaining > 0 && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-[#2ACF6A]/15 text-[#2ACF6A]">
                           {fmt(totalRemaining)}원 남음
@@ -1954,7 +1961,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                       <span className={`text-sm font-bold num ${isOver ? 'text-[#F25260]' : 'text-white'}`}>
                         {fmt(spent)}
                       </span>
-                      <span className="text-xs text-[#4E5968] num"> / {fmt(effectiveLimit)}원</span>
+                      <span className="text-xs text-[#9CA6B3] num"> / {fmt(effectiveLimit)}원</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
@@ -1997,7 +2004,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             className="w-full flex items-center justify-between px-5 py-4"
           >
             <p className="text-[15px] font-bold text-white">이번 달 지출 TOP</p>
-            {showSpendingTop ? <ChevronUp size={16} className="text-[#4E5968]" /> : <ChevronDown size={16} className="text-[#4E5968]" />}
+            {showSpendingTop ? <ChevronUp size={16} className="text-[#9CA6B3]" /> : <ChevronDown size={16} className="text-[#9CA6B3]" />}
           </button>
           {showSpendingTop && (
             <div className="px-5 pb-5 space-y-3">
@@ -2039,7 +2046,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                         />
                       </div>
                     </div>
-                    <span className={`text-xs w-7 text-right shrink-0 ${isFocused ? 'text-[#9CC7FF] font-bold' : 'text-[#4E5968]'}`}>{pct}%</span>
+                    <span className={`text-xs w-7 text-right shrink-0 ${isFocused ? 'text-[#9CC7FF] font-bold' : 'text-[#9CA6B3]'}`}>{pct}%</span>
                   </button>
                 )
               })}
@@ -2057,7 +2064,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
           <div className="flex items-end gap-2 mb-2.5">
             <p className={`text-[22px] font-extrabold num tracking-tight ${netWorth.total >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
-              {netWorth.total >= 0 ? '' : '-'}{fmt(Math.abs(netWorth.total))}<span className="text-sm font-medium text-[#4E5968] ml-1">원</span>
+              {netWorth.total >= 0 ? '' : '-'}{fmt(Math.abs(netWorth.total))}<span className="text-sm font-medium text-[#9CA6B3] ml-1">원</span>
             </p>
             {(() => {
               const delta = netWorthTrend[5].value - netWorthTrend[4].value
@@ -2072,24 +2079,24 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">누적 잔액</p>
+              <p className="text-[10px] text-[#9CA6B3] font-semibold mb-1">누적 잔액</p>
               <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
                 {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
               </p>
             </div>
             <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1">저축 목표</p>
+              <p className="text-[10px] text-[#9CA6B3] font-semibold mb-1">저축 목표</p>
               <p className="text-[13px] font-extrabold text-[#3D8EF8] num">
                 {netWorth.goalsSaved > 0 ? fmtShort(netWorth.goalsSaved) : '-'}
               </p>
               {netWorth.goalCount > 0 && (
-                <p className="text-[9px] text-[#4E5968] mt-0.5">{netWorth.goalCount}개 목표</p>
+                <p className="text-[9px] text-[#9CA6B3] mt-0.5">{netWorth.goalCount}개 목표</p>
               )}
             </div>
           </div>
           {netWorthTrend.some(d => d.value !== 0) && (
             <div className="mt-3">
-              <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">6개월 추이</p>
+              <p className="text-[10px] text-[#9CA6B3] font-semibold mb-1.5">6개월 추이</p>
               <ResponsiveContainer width="100%" height={56}>
                 <LineChart data={netWorthTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
                   <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#4E5968' }} axisLine={false} tickLine={false} />
@@ -2113,7 +2120,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           <span className="text-2xl">{goalsDailyNeeded.nearest.emoji}</span>
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-[11px] text-[#4E5968]">목표 {goalsDailyNeeded.count}개 달성하려면</p>
+              <p className="text-[11px] text-[#9CA6B3]">목표 {goalsDailyNeeded.count}개 달성하려면</p>
               {goalsDailyNeeded.nearestDays <= 30 && (
                 <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${goalsDailyNeeded.nearestDays <= 7 ? 'bg-[#F25260]/15 text-[#F25260]' : 'bg-[#F5BE3A]/15 text-[#F5BE3A]'}`}>
                   D-{goalsDailyNeeded.nearestDays}
@@ -2121,7 +2128,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               )}
             </div>
             <p className="text-[15px] font-bold text-white">하루 <span className="text-[#3D8EF8] num">{fmt(goalsDailyNeeded.total)}원</span> 저금 필요</p>
-            {goalsDailyNeeded.count === 1 && <p className="text-[10px] text-[#4E5968] mt-0.5 truncate">{goalsDailyNeeded.nearest.name}</p>}
+            {goalsDailyNeeded.count === 1 && <p className="text-[10px] text-[#9CA6B3] mt-0.5 truncate">{goalsDailyNeeded.nearest.name}</p>}
           </div>
         </div>
       )}
@@ -2136,7 +2143,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           >
             <div className="flex justify-center gap-3 mt-5">
               {['식비', '교통비', '급여'].map(cat => (
-                <div key={cat} className="px-2.5 py-1.5 bg-[#2C2C2E] rounded-xl text-[11px] text-[#4E5968]">
+                <div key={cat} className="px-2.5 py-1.5 bg-[#2C2C2E] rounded-xl text-[11px] text-[#9CA6B3]">
                   {CATEGORY_EMOJI[cat]} {cat}
                 </div>
               ))}

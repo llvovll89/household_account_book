@@ -17,7 +17,7 @@ const HEADERS = ['날짜', '유형', '카테고리', '설명', '금액(원)', '�
 
 export function exportTransactionsCSV(transactions: Transaction[], filename: string) {
   const BOM = '\uFEFF' // Excel이 한글 깨지지 않도록 BOM 추가
-  const rows = transactions
+  const rows = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map(toRow)
 
@@ -36,7 +36,7 @@ export function exportTransactionsCSV(transactions: Transaction[], filename: str
 
 export async function exportTransactionsXLSX(transactions: Transaction[], filename: string) {
   const XLSX = await import('xlsx')
-  const rows = transactions
+  const rows = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date))
     .map(toRow)
 

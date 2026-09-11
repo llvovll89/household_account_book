@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatRecurringSchedule, isRecurringDueToday } from './recurringSchedule'
+import { formatRecurringSchedule, isRecurringDueToday, getRecurringDate } from './recurringSchedule'
 
 describe('formatRecurringSchedule', () => {
   it('frequency가 없으면 매월 며칠로 표기한다', () => {
@@ -75,5 +75,16 @@ describe('isRecurringDueToday', () => {
   it('monthly: dayOfMonth가 31일이고 30일짜리 달(4월)이면 30일에 적용된다', () => {
     const r = { dayOfMonth: 31, lastAppliedMonth: '2026-03' }
     expect(isRecurringDueToday(r, new Date(2026, 3, 30), '2026-04')).toBe(true)
+  })
+})
+
+describe('getRecurringDate', () => {
+  it.each([
+    ['2026-02', 31, '2026-02-28'],
+    ['2028-02', 31, '2028-02-29'],
+    ['2026-04', 31, '2026-04-30'],
+    ['2026-12', 15, '2026-12-15'],
+  ])('clamps %s day %i to %s', (month, day, expected) => {
+    expect(getRecurringDate(month, day)).toBe(expected)
   })
 })

@@ -19,7 +19,13 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
   const closeTimerRef = useRef<number | null>(null)
   const isClosingRef = useRef(false)
   const modalIdRef = useRef<number>(0)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
+  // onClose는 매 렌더마다 새 함수로 넘어오는 경우가 많다(인라인 콜백).
+  // handleClose를 그 identity에 묶으면 아래 useEffect가 애니메이션 도중
+  // 재실행되어 예약된 close 타이머가 취소되고, isClosingRef만 true로 남아
+  // 모달이 다시는 닫히지 않는 채로 백드롭만 화면을 가리는 버그가 생긴다.
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return
     isClosingRef.current = true
@@ -27,9 +33,12 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
     closeTimerRef.current = window.setTimeout(() => {
       setClosing(false)
       isClosingRef.current = false
-      onClose()
+      onCloseRef.current()
     }, duration)
-  }, [onClose, duration])
+  }, [duration])
+
+  const handleCloseRef = useRef(handleClose)
+  handleCloseRef.current = handleClose
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') return
@@ -77,7 +86,7 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
 
       if (event.key === 'Escape') {
         event.preventDefault()
-        handleClose()
+        handleCloseRef.current()
         return
       }
 
@@ -139,7 +148,10 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
         triggerRef.current.focus({ preventScroll: true })
       }
     }
-  }, [handleClose, initialFocusRef])
+    // handleClose는 위 handleCloseRef를 통해 참조하므로 의도적으로 deps에서 제외한다.
+    // 이 effect는 모달이 실제로 마운트/언마운트될 때만 실행되어야 한다 — 그렇지 않으면
+    // 애니메이션 도중 재실행되어 예약된 close 타이머가 취소되는 버그가 재발한다.
+  }, [initialFocusRef])
 
   return { closing, handleClose, modalRef }
 }

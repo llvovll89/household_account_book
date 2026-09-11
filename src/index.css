@@ -13,6 +13,10 @@ body {
   background-color: #111111;
   color: #F1F3F6;
   overscroll-behavior: none;
+  color-scheme: dark;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 button, input {
@@ -316,11 +320,11 @@ select option {
 }
 
 .bottom-fab-dial-1 {
-  bottom: calc(4.5rem + 4rem + 0.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(5.25rem + 4rem + 0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-fab-dial-2 {
-  bottom: calc(4.5rem + 4rem + 0.75rem + 3rem + 0.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(5.25rem + 4rem + 0.75rem + 3rem + 0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── 에러 shake ── */
@@ -338,7 +342,7 @@ select option {
 
 /* ── Safe Area (iPhone 홈 인디케이터 영역 보호) ── */
 .pb-nav-safe {
-  padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
 }
 
 .pt-header-safe {
@@ -346,7 +350,7 @@ select option {
 }
 
 .bottom-fab-safe {
-  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 .bottom-banner-safe {
@@ -382,5 +386,20 @@ textarea:focus-visible {
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+/* Shared touch and safe-area behavior for the ledger app. */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+input, textarea { cursor: text; }
+button:disabled { cursor: not-allowed; }
+button { touch-action: manipulation; }
+summary:focus-visible, a:focus-visible {
+  outline: 2px solid #3D8EF8;
+  outline-offset: 4px;
+}
+@media (max-width: 640px) {
+  :is(input, select, textarea):is(.text-xs, .text-sm) {
+    font-size: 16px;
   }
 }

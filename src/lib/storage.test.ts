@@ -120,6 +120,8 @@ describe('storage util', () => {
     localStorage.setItem('hb_transactions', JSON.stringify([TX]))
     localStorage.setItem('hb_memos', JSON.stringify([MEMO]))
     writeDefaultSettings({ customExpenseCategories: ['간식'] })
+    const monthBudget = { category: '식비', limit: 400000, yearMonth: '2026-09' }
+    localStorage.setItem('hb_budgets', JSON.stringify([monthBudget]))
 
     const remote = {
       transactions: [
@@ -186,6 +188,7 @@ describe('storage util', () => {
     const payloadRecord = committedPayload as Record<string, unknown>
     expect((payloadRecord['transactions'] as unknown[]).length).toBe(2)
     expect((payloadRecord['memos'] as unknown[]).length).toBe(1)
+    expect(payloadRecord['budgets']).toEqual([{ category: '식비', limit: 300000 }, monthBudget])
     expect(((payloadRecord['settings'] as Record<string, unknown>)['customExpenseCategories'] as unknown[])).toEqual(['간식'])
 
     expect(localStorage.getItem('hb_transactions')).toBeNull()
@@ -419,4 +422,18 @@ describe('storage util', () => {
     expect(localStorage.getItem('hb_transactions')).toBeNull()
     expect(localStorage.getItem('hb_settings')).toBeNull()
   })
+})
+
+it('rejects a quota failure and preserves previously saved transactions', async () => {
+  setStorageContext('local')
+  localStorage.setItem('hb_transactions', JSON.stringify([TX]))
+  const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('Storage full', 'QuotaExceededError')
+  })
+  try {
+    await expect(saveTransactions([])).rejects.toThrow('Storage full')
+    expect(JSON.parse(localStorage.getItem('hb_transactions')!)).toEqual([TX])
+  } finally {
+    spy.mockRestore()
+  }
 })

@@ -1,27 +1,23 @@
 import { useMemo } from 'react'
-import type { Transaction } from '../types'
-import type { MonthlyDataPoint } from '../types'
+import type { Transaction, MonthlyDataPoint } from '../types'
+import { toLocalDateStr } from './format'
 
-function getRelativeYM(offset: number): string {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getMonthLabel(ym: string) {
-  return `${parseInt(ym.split('-')[1])}월`
-}
-
-/** 최근 6개월치 월별 수입/지출/잔액 데이터를 반환하는 훅 */
-export function useMonthlyData(transactions: Transaction[]): MonthlyDataPoint[] {
+/** 선택한 달까지 최근 6개월의 수입·지출을 한 번에 집계한다. */
+export function useMonthlyData(transactions: Transaction[], yearMonth = toLocalDateStr().slice(0, 7)): MonthlyDataPoint[] {
   return useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => {
-      const ym = getRelativeYM(i - 5)
-      const monthly = transactions.filter((t) => t.date.startsWith(ym))
-      const income = monthly.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-      const expense = monthly.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-      return { ym, label: getMonthLabel(ym), income, expense, balance: income - expense }
+    const [year, month] = yearMonth.split('-').map(Number)
+    const points = Array.from({ length: 6 }, (_, i) => {
+      const date = new Date(year, month - 6 + i, 1)
+      const ym = toLocalDateStr(date).slice(0, 7)
+      return { ym, label: `${date.getMonth() + 1}월`, income: 0, expense: 0, balance: 0 }
     })
-  }, [transactions])
+    const byMonth = new Map(points.map(point => [point.ym, point]))
+    for (const transaction of transactions) {
+      const point = byMonth.get(transaction.date.slice(0, 7))
+      if (!point) continue
+      point[transaction.type] += transaction.amount
+      point.balance = point.income - point.expense
+    }
+    return points
+  }, [transactions, yearMonth])
 }
