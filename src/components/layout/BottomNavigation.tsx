@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import type { Tab } from '../../types/navigation'
+import { Wallet } from 'lucide-react'
 
 interface LedgerTabItem {
   id: Tab
@@ -21,9 +22,11 @@ export default function BottomNavigation({
   onLedgerTabHover,
 }: Props) {
   return (
-    <nav aria-label="하단 탭 메뉴" className="fixed bottom-0 left-0 right-0 z-40">
-      <div className="max-w-lg mx-auto bg-[#1C1C1E]/95 backdrop-blur-xl border-t border-[rgba(255,255,255,0.06)]">
-        <div aria-label="가계부 하단 탭" className="relative flex pb-safe">
+    <nav aria-label="가계부 메뉴" className="ledger-navigation">
+      <div className="ledger-navigation-surface">
+        <div className="ledger-navigation-brand"><Wallet size={24} /><span>잔고플랜</span></div>
+        <p className="ledger-navigation-caption">매일의 기록, 가벼운 돈 관리</p>
+        <div className="ledger-navigation-items pb-safe">
           {ledgerTabs.map(({ id, label, Icon }) => {
             const isActive = activeTab === id
             return (
@@ -36,16 +39,17 @@ export default function BottomNavigation({
                 onTouchStart={() => onLedgerTabHover?.(id)}
                 aria-label={`${label} 탭`}
                 aria-current={isActive ? 'page' : undefined}
-                className="flex-1 flex flex-col items-center gap-1 pt-3 pb-3 min-h-[68px] transition-colors"
+                className={`ledger-navigation-item ${isActive ? 'is-active' : ''}`}
               >
                 <div className={`flex items-center justify-center w-7 h-7 transition-colors duration-200`}>
                   <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} className={`transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`} />
                 </div>
-                <span className={`text-[11px] font-bold transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`}>{label}</span>
+                <span className="ledger-navigation-label">{label === '내역' ? '거래 내역' : label}</span>
               </button>
             )
           })}
         </div>
+        <p className="ledger-navigation-footer">차곡차곡 쌓이는 나의 금융 기록</p>
       </div>
     </nav>
   )

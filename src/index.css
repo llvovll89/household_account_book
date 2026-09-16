@@ -1,6 +1,55 @@
 @import "tailwindcss";
 @import "react-datepicker/dist/react-datepicker.css";
 
+/* Responsive workspace: compact navigation on phones, persistent rail on desktop. */
+.skip-link { position: fixed; top: -80px; left: 16px; z-index: 100; padding: 12px 20px; border-radius: 12px; background: #fff; color: #111; }
+.skip-link:focus { top: 12px; }
+.workspace-heading { margin: 4px 0 22px; }
+.workspace-heading h2 { font-size: 23px; font-weight: 750; letter-spacing: -.7px; }
+.workspace-heading p { margin-top: 6px; color: #9ca6b3; font-size: 13px; line-height: 1.7; }
+.ledger-navigation { position: fixed; inset: auto 0 0; z-index: 40; }
+.ledger-navigation-surface { max-width: 512px; margin: auto; background: #1c1c1ef5; backdrop-filter: blur(20px); border-top: 1px solid #ffffff12; }
+.ledger-navigation-items { display: flex; }
+.ledger-navigation-item { flex: 1; min-width: 0; min-height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #9ca6b3; transition: background .15s, color .15s; }
+.ledger-navigation-item.is-active { color: #80b8ff; }
+.ledger-navigation-label { font-size: 11px; font-weight: 650; white-space: nowrap; }
+.ledger-navigation-item:hover { background: #ffffff06; }
+.ledger-navigation-brand, .ledger-navigation-caption, .ledger-navigation-footer { display: none; }
+.dashboard-summary { border: 1px solid #ffffff0c; }
+.num { font-variant-numeric: tabular-nums; }
+@media (min-width: 1024px) {
+  .ledger-app { padding-left: 224px; }
+  .ledger-header { border-bottom: 1px solid #ffffff0a; }
+  .ledger-header-inner { max-width: 1104px; padding: 20px 32px 16px; }
+  .ledger-header-brand { visibility: hidden; }
+  .ledger-month-picker { margin-top: -38px; width: fit-content; position: relative; }
+  .ledger-header > div:last-child { display: none; }
+  .ledger-main { max-width: 1104px; padding: 32px; }
+  .workspace-heading { margin: 0 0 28px; }
+  .workspace-heading h2 { font-size: 28px; }
+  .workspace-heading p { font-size: 14px; }
+  .ledger-navigation { inset: 0 auto 0 0; width: 224px; }
+  .ledger-navigation-surface { height: 100%; padding: 28px 16px; border-top: 0; border-right: 1px solid #ffffff0a; background: #171719; display: flex; flex-direction: column; }
+  .ledger-navigation-brand { display: flex; align-items: center; gap: 10px; padding: 0 12px; color: #f1f3f6; font-size: 22px; font-weight: 800; letter-spacing: -.6px; }
+  .ledger-navigation-brand svg { color: #80b8ff; }
+  .ledger-navigation-caption { display: block; margin: 10px 12px 36px; color: #9ca6b3; font-size: 11px; }
+  .ledger-navigation-items { flex-direction: column; gap: 7px; }
+  .ledger-navigation-item { flex: initial; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 0 14px; min-height: 50px; border-radius: 12px; }
+  .ledger-navigation-item.is-active { background: #3d8ef819; box-shadow: inset 3px 0 #3d8ef8; }
+  .ledger-navigation-label { font-size: 14px; }
+  .ledger-navigation-footer { display: block; margin: auto 12px 0; color: #9ca6b3; font-size: 11px; line-height: 1.7; }
+  .ledger-floating-actions { max-width: 1104px; margin-left: max(224px, calc((100vw - 1104px + 224px) / 2)); margin-right: 0; }
+  .ledger-floating-actions .bottom-fab-safe { bottom: 28px; }
+  .ledger-floating-actions .bottom-fab-dial-1 { bottom: 88px; }
+  .ledger-floating-actions .bottom-fab-dial-2 { bottom: 148px; }
+  .dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+  .dashboard-grid > * { min-width: 0; margin-block: 0 !important; }
+  .dashboard-summary, .dashboard-wide { grid-column: 1 / -1; }
+  .dashboard-summary { padding: 28px 32px; }
+  .dashboard-summary > button { max-width: 280px; }
+  .dashboard-summary > .grid { max-width: 600px; }
+}
+
 * {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
     'Noto Sans KR', sans-serif;

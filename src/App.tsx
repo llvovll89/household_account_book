@@ -1545,7 +1545,8 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen bg-[#111111] pb-nav-safe">
+        <div className="ledger-app min-h-dvh bg-[#111111] pb-nav-safe">
+            <a href="#ledger-main" className="skip-link">본문으로 건너뛰기</a>
             {needRefresh && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
                     <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
@@ -1567,10 +1568,10 @@ export default function App() {
                 </div>
             )}
 
-            <header className="bg-[#111111] sticky top-0 z-40">
-                <div className="max-w-lg mx-auto px-5 pt-header-safe pb-3">
+            <header className="ledger-header bg-[#111111] sticky top-0 z-40">
+                <div className="ledger-header-inner max-w-lg mx-auto px-5 pt-header-safe pb-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="ledger-header-brand flex items-center gap-2">
                             <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
                                 <Wallet size={14} className="text-[#3D8EF8]" />
                             </span>
@@ -1779,7 +1780,7 @@ export default function App() {
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-center gap-3 mt-3">
+                    <div className="ledger-month-picker flex items-center justify-center gap-2 mt-3">
                                 <button
                                     aria-label="이전 달 보기"
                                     onClick={prevMonth}
@@ -1809,6 +1810,12 @@ export default function App() {
                                         className="text-[#8B95A1]"
                                     />
                                 </button>
+                                {!isCurrentMonth() && (
+                                    <button type="button" onClick={() => setCurrentDate(new Date())}
+                                        className="min-h-11 px-3 rounded-xl bg-[#3D8EF8]/10 text-[#9CC7FF] text-xs font-semibold shrink-0">
+                                        이번 달
+                                    </button>
+                                )}
                             </div>
 
                             {(monthIncome > 0 || monthExpense > 0) && (
@@ -2083,7 +2090,13 @@ export default function App() {
                 <div className="h-px bg-white/4 mx-5" />
             </header>
 
-            <main className="max-w-lg mx-auto px-4 py-4">
+            <main id="ledger-main" tabIndex={-1} className="ledger-main max-w-lg mx-auto px-4 py-4">
+                <div className="workspace-heading">
+                    <div>
+                        <h2>{({home: '한눈에 보는 가계부', transactions: '거래 내역', analytics: '소비 분석', subscriptions: '구독 관리', goals: '저축 목표', memos: '나의 메모'})[activeTab]}</h2>
+                        <p>{({home: '수입과 지출을 살펴보고 오늘의 기록을 남겨보세요.', transactions: '필요한 내역을 찾고 수입과 지출을 관리하세요.', analytics: '기록 속에서 나의 소비 습관을 발견해보세요.', subscriptions: '정기 결제와 다음 청구일을 함께 확인하세요.', goals: '이루고 싶은 목표를 향해 조금씩 모아보세요.', memos: '기억할 내용과 돈 관리 계획을 남겨보세요.'})[activeTab]}</p>
+                    </div>
+                </div>
                 <Suspense fallback={<WorkspaceSkeleton />}>
                         <LedgerWorkspace
                             activeTab={activeTab}
@@ -2154,7 +2167,7 @@ export default function App() {
             )}
 
             <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none">
-                <div className="max-w-lg mx-auto relative h-0">
+                <div className="ledger-floating-actions max-w-lg mx-auto relative h-0">
                     {showFAB &&
                         (() => {
                             const isSpeedDialTab = !(
@@ -2242,7 +2255,7 @@ export default function App() {
                                             }
                                         }}
                                         aria-label={
-                                            fabExpanded ? "닫기" : "내역 추가"
+                                            fabExpanded ? "추가 메뉴 닫기" : activeTab === "memos" ? "메모 추가" : activeTab === "subscriptions" ? "구독 추가" : activeTab === "goals" ? "목표 추가" : "내역 추가"
                                         }
                                         aria-expanded={fabExpanded}
                                         className={`pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
@@ -2251,7 +2264,7 @@ export default function App() {
                                             size={20}
                                             className={`transition-transform duration-200 ${fabExpanded ? "rotate-45" : ""}`}
                                         />
-                                        <span className="text-sm font-semibold">{fabExpanded ? "닫기" : "추가"}</span>
+                                        <span className="text-sm font-semibold">{fabExpanded ? "닫기" : activeTab === "memos" ? "메모 추가" : activeTab === "subscriptions" ? "구독 추가" : activeTab === "goals" ? "목표 추가" : "내역 추가"}</span>
                                     </button>
                                 </>
                             );

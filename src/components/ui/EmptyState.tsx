@@ -20,7 +20,7 @@ export default function EmptyState({ emoji = '📋', icon: Icon, title, descript
   return (
     <div className={`flex flex-col items-center justify-center text-center ${isCompact ? 'py-6 gap-2' : 'py-12 px-6'} ${className}`}>
       {Icon ? (
-        <Icon size={isCompact ? 28 : 40} className="text-[#2C2C2E]" />
+        <Icon size={isCompact ? 28 : 40} className="text-[#8B95A1] mb-3" />
       ) : (
         <p className={`select-none ${isCompact ? 'text-3xl' : 'text-5xl mb-4'}`}>{emoji}</p>
       )}
@@ -31,7 +31,7 @@ export default function EmptyState({ emoji = '📋', icon: Icon, title, descript
       {action && (
         <button
           onClick={action.onClick}
-          className={`text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors ${isCompact ? 'mt-3' : 'mt-4'}`}
+          className={`min-h-11 text-sm font-semibold px-4 py-2 rounded-xl bg-[#244268] text-[#DCEBFF] hover:bg-[#315780] transition-colors ${isCompact ? 'mt-3' : 'mt-4'}`}
         >
           {action.label}
         </button>

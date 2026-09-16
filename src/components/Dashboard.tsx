@@ -791,9 +791,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   }, [focusedExpenseCategory, monthlyExpenseTx])
 
   return (
-    <div className="space-y-4 tab-content">
+    <div className="dashboard-grid space-y-4 tab-content">
       {/* 메인 잔액 카드 */}
-      <div className="rounded-[24px] p-6 bg-[#1C1C1E] card-enter" style={{ animationDelay: '0ms' }}>
+      <div className="dashboard-summary rounded-[24px] p-6 bg-[#1C1C1E] card-enter" style={{ animationDelay: '0ms' }}>
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-medium text-[#8B95A1]">{Number(yearMonth.slice(5))}월 수입에서 남은 돈</p>
           {onOpenWidgetSettings && (
@@ -848,7 +848,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             내역 기록하기
           </button>
         )}
-        <details className="mt-4 group">
+        {monthly.length > 0 && <details className="mt-4 group">
           <summary className="cursor-pointer py-2 text-sm font-medium text-[#8B95A1]">소비 비율과 결제수단 자세히 보기</summary>
         {income > 0 && (
           <div className="mt-4">
@@ -958,7 +958,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             </div>
           </div>
         ) : null}
-        </details>
+        </details>}
       </div>
 
 
@@ -982,14 +982,6 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             내역을 추가하면 예산, 분석, 저축 목표 같은 기능이 바로 살아나요. 사용법이 궁금하면 도움말을 확인해보세요.
           </p>
           <div className="flex gap-2 mt-3">
-            {onAddTransaction && (
-              <button
-                onClick={onAddTransaction}
-                className="flex-1 py-2 rounded-xl text-xs font-bold bg-[#3D8EF8] text-white hover:bg-[#5AA0FF] transition-colors"
-              >
-                내역 추가
-              </button>
-            )}
             {onOpenHelp && (
               <button
                 onClick={onOpenHelp}
@@ -1363,7 +1355,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       )}
 
       {/* 6개월 스파크라인 요약 */}
-      {!hide('sparkline-summary') && <div className="flex gap-2">
+      {!hide('sparkline-summary') && transactions.length > 0 && <div className="dashboard-wide flex gap-2">
         <SparklineCard
           data={sparkIncome}
           color="#3D8EF8"
@@ -1387,7 +1379,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       </div>}
 
       {/* 오늘 지출 카드 */}
-      {!hide('today-spending') && todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
+      {!hide('today-spending') && transactions.length > 0 && todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
         noSpendStreak >= 1 && (
           <div className="flex items-center gap-3 px-4 py-3.5 bg-[#2ACF6A]/10 rounded-2xl border border-[#2ACF6A]/20">
             <span className="text-2xl">🎯</span>
@@ -1808,7 +1800,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       )}
 
       {/* 예산 관리 카드 */}
-      <div className="bg-[#1C1C1E] rounded-2xl p-5">
+      <div className="dashboard-wide bg-[#1C1C1E] rounded-2xl p-5">
         <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[15px] font-bold text-white">예산 관리</p>
           <div className="w-full grid grid-cols-2 gap-2 sm:w-auto sm:flex sm:gap-2">
@@ -2133,11 +2125,11 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         </div>
       )}
 
-      {monthly.length === 0 && (
+      {monthly.length === 0 && transactions.length > 0 && (
         <div className="bg-[#1C1C1E] rounded-2xl card-enter">
           <EmptyState
             emoji="💸"
-            title="이번 달 내역이 없어요"
+            title={`${Number(yearMonth.slice(5))}월 내역이 없어요`}
             description="내역 추가 버튼으로 첫 내역을 입력해보세요"
             action={onAddTransaction ? { label: '내역 추가', onClick: onAddTransaction } : undefined}
           >
