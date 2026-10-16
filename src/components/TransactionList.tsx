@@ -1,3 +1,4 @@
+import CategoryIcon from './ui/CategoryIcon'
 import {useEffect, useMemo, useState, useRef} from "react";
 import {
     Pencil,
@@ -1455,6 +1456,7 @@ export default function TransactionList({
                                                 <button
                                                     key={f}
                                                     onClick={() => setFilter(f)}
+                                                    aria-pressed={filter === f}
                                                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
                                                         filter === f
                                                             ? "bg-[#3D8EF8] text-white"
@@ -2606,11 +2608,7 @@ export default function TransactionList({
                                                                                     color.bg,
                                                                             }}
                                                                         >
-                                                                            {CATEGORY_EMOJI[
-                                                                                t
-                                                                                    .category
-                                                                            ] ??
-                                                                                "📦"}
+                                                                            <CategoryIcon category={t.category} />
                                                                         </div>
 
                                                                         <div className="flex-1 min-w-0">

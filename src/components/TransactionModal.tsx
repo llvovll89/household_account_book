@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useEffectEvent } from 'react'
 import { useModalClose } from '../hooks/useModalClose'
-import { X, Plus, CalendarRange, BookmarkPlus, Bookmark } from 'lucide-react'
+import { X, Plus, CalendarRange, BookmarkPlus, Bookmark, ArrowDownLeft, ArrowUpRight, Banknote, CreditCard, Wallet } from 'lucide-react'
 import type { AutoCategoryRule, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
 import { showToast } from '../lib/toast'
@@ -12,6 +12,7 @@ import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
 import { applyAutoCategory } from '../lib/autoCategoryRules'
 import EmptyState from './ui/EmptyState'
+import CategoryIcon from './ui/CategoryIcon'
 
 interface Props {
   transaction?: Transaction | null
@@ -340,7 +341,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      className="transaction-dialog fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-modal-title"
@@ -394,7 +395,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 {transactionTemplates.map((tmpl) => (
                   <div key={tmpl.id} className="flex items-center gap-1 bg-[#2C2C2E] rounded-2xl pl-3 pr-1.5 py-1.5">
                     <button type="button" onClick={() => applyTemplate(tmpl)} className="flex items-center gap-1.5">
-                      <span className="text-sm">{CATEGORY_EMOJI[tmpl.category] ?? '📦'}</span>
+                      <span className="text-sm"><CategoryIcon category={tmpl.category} size={16} /></span>
                       <span className="text-[12px] font-semibold text-white">{tmpl.label}</span>
                       <span className="text-[11px] text-[#9CA6B3] num">{fmt(tmpl.amount)}원</span>
                     </button>
@@ -420,7 +421,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 return (
                   <div key={idx} className={`flex items-center gap-2.5 px-3 py-2.5 ${idx < queue.length - 1 ? 'border-b border-white/4' : ''}`}>
                     <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: qColor.bg }}>
-                      {CATEGORY_EMOJI[item.category] ?? '📦'}
+                      <CategoryIcon category={item.category} size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-[13px] font-bold" style={{ color: item.type === 'income' ? '#2ACF6A' : '#F25260' }}>
@@ -449,18 +450,18 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
           <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
-            <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
-              <button type="button" onClick={() => setType('income')}
+            <div role="group" aria-label="거래 유형" className="transaction-type-switch flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
+              <button type="button" onClick={() => setType('income')} data-kind="income"
                 aria-pressed={type === 'income'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'income' ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/50 text-[#2ACF6A]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
-                수입
+                <ArrowDownLeft size={17} aria-hidden="true" /> 수입
               </button>
-              <button type="button" onClick={() => setType('expense')}
+              <button type="button" onClick={() => setType('expense')} data-kind="expense"
                 aria-pressed={type === 'expense'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'expense' ? 'bg-[#F25260]/15 border-[#F25260]/50 text-[#F25260]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
-                지출
+                <ArrowUpRight size={17} aria-hidden="true" /> 지출
               </button>
             </div>
 
@@ -485,7 +486,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 >
                 {userPaymentMethods.map((m) => {
                   const isSelected = selectedMethodId === m.id
-                  const emoji = m.type === 'cash' ? '💵' : m.type === 'check' ? '💳' : '💎'
+                  const MethodIcon = m.type === 'cash' ? Banknote : m.type === 'check' ? Wallet : CreditCard
                   return (
                     <button
                       key={m.id}
@@ -505,7 +506,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         : 'text-[#9CA6B3] border-transparent'
                       }`}
                     >
-                      {emoji} {m.label}
+                      <MethodIcon size={15} aria-hidden="true" /> {m.label}
                     </button>
                   )
                 })}
@@ -525,7 +526,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         : 'text-[#9CA6B3] border-transparent'
                       }`}
                     >
-                      {method.emoji} {method.label}
+                      {method.value === 'cash' ? <Banknote size={15} aria-hidden="true" /> : <CreditCard size={15} aria-hidden="true" />} {method.label}
                     </button>
                   ))}
                 </div>
@@ -657,12 +658,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {categories.map((c) => {
-                  const cColor = CATEGORY_COLOR[c] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
                   const isSelected = category === c
                   return (
                     <button
                       key={c}
                       type="button"
+                      aria-pressed={isSelected}
+                      data-category-choice=""
                       onClick={() => {
                         setCategory(c)
                         categoryManuallySet.current = true
@@ -674,12 +676,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all border ${
                         isSelected ? 'border-current' : 'border-transparent bg-[#1C1C1E] hover:bg-[#1E2438]'
                       }`}
-                      style={isSelected ? { backgroundColor: cColor.bg, borderColor: `${cColor.text}50` } : {}}
                     >
-                      <span className="text-[22px] leading-none">{CATEGORY_EMOJI[c] ?? '📦'}</span>
+                      <CategoryIcon category={c} />
                       <span
-                        className="text-[10px] font-bold leading-tight text-center w-full px-0.5 truncate"
-                        style={{ color: isSelected ? cColor.text : '#8B95A1' }}
+                        className="category-choice-label text-[11px] font-medium leading-tight text-center w-full px-0.5 truncate"
                       >
                         {c}
                       </span>

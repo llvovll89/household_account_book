@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
-	<defs>
-		<linearGradient id="bg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
-			<stop stop-color="#24345B" />
-			<stop offset="1" stop-color="#13213F" />
-		</linearGradient>
-	</defs>
-	<rect x="4" y="4" width="56" height="56" rx="16" fill="url(#bg)" />
-	<path d="M18 25c0-3.866 3.134-7 7-7h17c3.866 0 7 3.134 7 7v3h-8.5A5.5 5.5 0 0 0 35 33.5v1A5.5 5.5 0 0 0 40.5 40H49v1c0 3.866-3.134 7-7 7H25c-3.866 0-7-3.134-7-7V25Z" fill="#3D8EF8"/>
-	<path d="M35.5 33.5A5.5 5.5 0 0 1 41 28h8v12h-8a5.5 5.5 0 0 1-5.5-5.5v-1Z" fill="#1E2236"/>
-	<circle cx="41.5" cy="34" r="2.5" fill="#F5BE3A"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#17212D"/><g fill="#91B8ED"><path d="M24 10H44C50.627 10 56 15.373 56 22V30C56 36.627 50.627 42 44 42H34V32H44C45.105 32 46 31.105 46 30V22C46 20.895 45.105 20 44 20H24Z"/><path d="M40 54H20C13.373 54 8 48.627 8 42V34C8 27.373 13.373 22 20 22H30V32H20C18.895 32 18 32.895 18 34V42C18 43.105 18.895 44 20 44H40Z"/></g></svg>

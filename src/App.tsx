@@ -10,6 +10,8 @@ import {
 } from "react";
 import {useRegisterSW} from "virtual:pwa-register/react";
 import {
+    ArrowDownLeft,
+    ArrowUpRight,
     ChevronLeft,
     ChevronRight,
     Plus,
@@ -23,7 +25,6 @@ import {
     AlertTriangle,
     Info,
     LogOut,
-    Wallet,
     CreditCard,
     Target,
     WifiOff,
@@ -60,6 +61,8 @@ import {
     type ToastVariant,
     type ToastAction,
 } from "./lib/toast";
+import BrandMark from "./components/ui/BrandMark";
+import ThemeToggle from "./components/layout/ThemeToggle";
 import BottomNavigation from "./components/layout/BottomNavigation";
 import WorkspaceSkeleton from "./components/layout/WorkspaceSkeleton";
 
@@ -1526,7 +1529,7 @@ export default function App() {
             <div className="min-h-screen bg-[#111111] flex items-center justify-center px-6">
                 <div className="w-full max-w-sm rounded-3xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 p-6 text-center">
                     <div className="mx-auto w-11 h-11 rounded-2xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
-                        <Wallet size={20} className="text-[#3D8EF8]" />
+                        <BrandMark className="brand-mark-loading" />
                     </div>
                     <h2 className="mt-4 text-[17px] font-extrabold text-white tracking-tight">
                         잔고플랜 준비 중
@@ -1572,14 +1575,15 @@ export default function App() {
                 <div className="ledger-header-inner max-w-lg mx-auto px-5 pt-header-safe pb-3">
                     <div className="flex items-center justify-between">
                         <div className="ledger-header-brand flex items-center gap-2">
-                            <span className="w-7 h-7 rounded-xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
-                                <Wallet size={14} className="text-[#3D8EF8]" />
+                            <span className="brand-header-symbol flex items-center justify-center">
+                                <BrandMark />
                             </span>
-                            <h1 className="text-[20px] font-extrabold text-white tracking-tight">
+                            <h1 className="brand-wordmark text-[20px] font-extrabold text-white tracking-tight">
                                 잔고플랜
                             </h1>
                         </div>
                         <div className="flex items-center gap-2">
+                            <ThemeToggle />
                             {/* 오프라인 / 미동기화 상태 배지 */}
                             {(!isOnline || hasPendingSync) && (
                                 <div
@@ -2178,13 +2182,8 @@ export default function App() {
                                     {/* Speed Dial: 수입 버튼 */}
                                     {fabExpanded && isSpeedDialTab && (
                                         <button
-                                            className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-2 w-10 h-10 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[10px] text-white transition-all active:scale-95"
-                                            style={{
-                                                backgroundColor: "#1A8C4E",
-                                                animationDelay: "0.07s",
-                                                boxShadow:
-                                                    "0 4px 16px rgba(26,140,78,0.45)",
-                                            }}
+                                            className="quick-entry quick-entry-income speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-2"
+                                            style={{ animationDelay: "0.07s" }}
                                             onClick={() => {
                                                 setTxInitialType("income");
                                                 setFabExpanded(false);
@@ -2194,22 +2193,15 @@ export default function App() {
                                             }}
                                             aria-label="수입 추가"
                                         >
-                                            <span className="text-sm leading-none">
-                                                ↑
-                                            </span>
+                                            <ArrowDownLeft size={18} aria-hidden="true" />
                                             <span>수입</span>
                                         </button>
                                     )}
                                     {/* Speed Dial: 지출 버튼 */}
                                     {fabExpanded && isSpeedDialTab && (
                                         <button
-                                            className="speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-1 w-10 h-10 rounded-full shadow-xl flex flex-col items-center justify-center gap-0.5 font-bold text-[10px] text-white transition-all active:scale-95"
-                                            style={{
-                                                backgroundColor: "#C0394A",
-                                                animationDelay: "0s",
-                                                boxShadow:
-                                                    "0 4px 16px rgba(192,57,74,0.45)",
-                                            }}
+                                            className="quick-entry quick-entry-expense speed-dial-item pointer-events-auto absolute right-5 bottom-fab-dial-1"
+                                            style={{ animationDelay: "0s" }}
                                             onClick={() => {
                                                 setTxInitialType("expense");
                                                 setFabExpanded(false);
@@ -2219,9 +2211,7 @@ export default function App() {
                                             }}
                                             aria-label="지출 추가"
                                         >
-                                            <span className="text-sm leading-none">
-                                                ↓
-                                            </span>
+                                            <ArrowUpRight size={18} aria-hidden="true" />
                                             <span>지출</span>
                                         </button>
                                     )}
@@ -2258,7 +2248,7 @@ export default function App() {
                                             fabExpanded ? "추가 메뉴 닫기" : activeTab === "memos" ? "메모 추가" : activeTab === "subscriptions" ? "구독 추가" : activeTab === "goals" ? "목표 추가" : "내역 추가"
                                         }
                                         aria-expanded={fabExpanded}
-                                        className={`pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
+                                        className={`ledger-add-button pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
                                     >
                                         <Plus
                                             size={20}

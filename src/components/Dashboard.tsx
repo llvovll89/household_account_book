@@ -794,7 +794,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     <div className="dashboard-grid space-y-4 tab-content">
       {/* 메인 잔액 카드 */}
       <div className="dashboard-summary rounded-[24px] p-6 bg-[#1C1C1E] card-enter" style={{ animationDelay: '0ms' }}>
-        <div className="flex items-center justify-between mb-1">
+        <div className="summary-heading flex items-center justify-between mb-1">
           <p className="text-sm font-medium text-[#8B95A1]">{Number(yearMonth.slice(5))}월 수입에서 남은 돈</p>
           {onOpenWidgetSettings && (
             <button
@@ -815,12 +815,12 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             </span>
           ) : null}
         </div>
-        <p className={`text-[clamp(26px,7vw,40px)] font-bold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
+        <p className={`summary-balance text-[clamp(26px,7vw,40px)] font-bold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
           {animatedBalance < 0 ? '-' : ''}{fmt(Math.abs(animatedBalance))}
           <span className="text-[20px] font-bold ml-1 text-[#8B95A1]">원</span>
         </p>
 
-        <div className="mt-5 pt-4 border-t border-white/[0.07] grid grid-cols-2 gap-4">
+        <div className="summary-totals mt-5 pt-4 border-t border-white/[0.07] grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#2ACF6A]/10 flex items-center justify-center">
               <TrendingUp size={14} className="text-[#2ACF6A]" />
@@ -841,10 +841,10 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
         </div>
 
-        <p className="mt-2 text-xs leading-relaxed text-[#8B95A1]">기록한 수입 − 지출 기준이에요. 실제 계좌 잔액과 다를 수 있어요.</p>
+        <p className="summary-note mt-2 text-xs leading-relaxed text-[#8B95A1]">기록한 수입 − 지출 기준이에요. 실제 계좌 잔액과 다를 수 있어요.</p>
         {onAddTransaction && (
           <button type="button" onClick={onAddTransaction}
-            className="mt-5 w-full min-h-12 rounded-2xl bg-[#3182F6] text-white text-sm font-semibold hover:bg-[#2272EB] active:scale-[0.98] transition-colors">
+            className="summary-record mt-5 w-full min-h-12 rounded-2xl bg-[#3182F6] text-white text-sm font-semibold hover:bg-[#2272EB] active:scale-[0.98] transition-colors">
             내역 기록하기
           </button>
         )}

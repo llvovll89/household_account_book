@@ -1,0 +1,181 @@
+﻿/* Ledger interface: graphite surfaces, blue actions, semantic money colors.
+   Shape: panels 18px, controls 10px, compact badges 6px.
+   Layers remain owned by index.css: navigation 40, dialog 50, date popover 80. */
+:root {
+  --page: #131619; --surface: #1c2024; --raised: #272d33;
+  --rail: #171b1f; --text: #edf0f3; --muted: #a4adb7;
+  --line: #ffffff12; --accent: #91b8ed; --action: #356bb3;
+  --action-hover: #407bc6; --selection: #91b8ed12;
+  --income: #86c9b1; --expense: #eea3a3; --on-action: #f8fafc;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --page: #f0f2f4; --surface: #fcfcfd; --raised: #e9edf1;
+  --rail: #e9edf0; --text: #222930; --muted: #596674;
+  --line: #22334420; --accent: #315f9e; --action: #315f9e;
+  --action-hover: #254c83; --selection: #315f9e0e;
+  --income: #24694f; --expense: #a33e46;
+  color-scheme: light;
+}
+html, body { background: var(--page); color: var(--text); color-scheme: inherit; }
+body { letter-spacing: -.015em; }
+button { white-space: nowrap; transition: background-color .15s, color .15s, border-color .15s, transform .15s; }
+button:active:not(:disabled) { transform: scale(.98); }
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 3px;
+}
+svg { stroke-width: 1.7; }
+[class~="bg-[#111111]"], [class~="bg-[#111]"] { background-color: var(--page); }
+[class~="bg-[#1C1C1E]"], [class~="bg-[#1c1c1e]"] { background-color: var(--surface); }
+[class~="bg-[#2C2C2E]"], [class~="bg-[#2c2c2e]"], [class~="bg-[#3A3A3C]"] { background-color: var(--raised); }
+[class~="text-white"], [class~="text-[#F1F3F6]"], [class~="text-[#E8EDF5]"], [class~="text-[#C8D1DC]"], [class~="text-[#d9deea]"] { color: var(--text); }
+[class~="text-[#8B95A1]"], [class~="text-[#9CA6B3]"], [class~="text-[#4E5968]"], [class~="text-[#B6C0CE]"] { color: var(--muted); }
+[class~="text-[#3D8EF8]"], [class~="text-[#79B2FF]"], [class~="text-[#80b8ff]"] { color: var(--accent); }
+[class~="text-[#2ACF6A]"] { color: var(--income); }
+[class~="text-[#F25260]"] { color: var(--expense); }
+[class~="bg-[#3D8EF8]"], [class~="bg-[#3182F6]"], [class~="bg-[#244268]"] { background-color: var(--action); color: var(--on-action); }
+button:is([class~="bg-[#3D8EF8]"], [class~="bg-[#3182F6]"], [class~="bg-[#244268]"]):hover { background-color: var(--action-hover); }
+button[class~="bg-white"] { background-color: var(--raised); color: var(--text); }
+[class*="border-white/"], [class*="border-[rgba(255,255,255,"] { border-color: var(--line); }
+[class~="rounded-2xl"], [class~="rounded-3xl"], [class~="rounded-[24px]"] { border-radius: 18px; }
+button:is([class~="rounded-2xl"], [class~="rounded-xl"], [class~="rounded-full"]), input, select, textarea { border-radius: 10px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .85; }
+input, select, textarea { accent-color: var(--action); }
+select option { background: var(--surface); color: var(--text); }
+.ledger-header { background: var(--page); border-bottom: 1px solid var(--line); }
+.ledger-header-inner { padding-bottom: 16px; }
+.ledger-header-brand h1 { font-weight: 700; font-size: 19px; }
+.ledger-header-brand > span { background: transparent; border: 0; }
+.ledger-header button { min-height: 36px; min-width: 36px; }
+.ledger-month-picker { gap: 8px; }
+.ledger-month-picker > button { border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.workspace-heading h2 { color: var(--text); font-weight: 650; letter-spacing: -.045em; }
+.workspace-heading p { color: var(--muted); }
+.theme-toggle { display: inline-flex; justify-content: center; align-items: center; width: 36px; height: 36px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); border-radius: 10px; }
+.theme-toggle:hover { color: var(--text); background: var(--raised); }
+.ledger-navigation-surface { background: var(--rail); border-color: var(--line); backdrop-filter: none; }
+.ledger-navigation-item { color: var(--muted); }
+.ledger-navigation-item svg { color: inherit; }
+.ledger-navigation-item.is-active { color: var(--accent); }
+.ledger-navigation-item:hover { background: var(--selection); }
+.ledger-navigation-brand { color: var(--text); font-weight: 700; }
+.ledger-navigation-brand svg { color: var(--accent); }
+.ledger-navigation-caption, .ledger-navigation-footer { color: var(--muted); }
+.dashboard-grid > [class*="bg-[#1C1C1E]"] { border: 1px solid var(--line); box-shadow: none; }
+.dashboard-summary { background: var(--surface); border: 1px solid var(--line); }
+.summary-heading > p { font-size: 13px; font-weight: 500; }
+.summary-heading button { width: 36px; height: 36px; background: transparent; border: 1px solid var(--line); border-radius: 10px; }
+.summary-balance { font-weight: 600; letter-spacing: -.055em; margin-top: 12px; }
+.summary-balance > span { font-weight: 500; font-size: 17px; }
+.summary-totals { padding-top: 22px; margin-top: 26px; border-color: var(--line); }
+.summary-totals > div { gap: 12px; }
+.summary-totals > div > div:first-child { background: transparent; border: 1px solid var(--line); width: 34px; height: 34px; border-radius: 10px; }
+.summary-totals p:first-child { font-size: 12px; margin-bottom: 3px; }
+.summary-totals p:last-child { font-size: 20px; letter-spacing: -.035em; font-weight: 600; }
+.summary-note { margin-top: 22px; font-size: 11px; }
+.summary-record { border-radius: 10px; background: var(--action); color: var(--on-action); font-weight: 600; }
+.ledger-add-button { background: var(--action); color: var(--on-action); border: 1px solid #ffffff1f; border-radius: 12px; box-shadow: 0 6px 20px #10182026; }
+.ledger-add-button:hover { background: var(--action-hover); }
+.quick-entry { display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 0 17px; min-width: 126px; height: 48px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 6px 20px #10182020; font-size: 14px; font-weight: 600; }
+.quick-entry-income { color: var(--income); }
+.quick-entry-expense { color: var(--expense); }
+.quick-entry:hover { background: var(--raised); }
+.bottom-fab-dial-1 { bottom: calc(8.75rem + env(safe-area-inset-bottom, 0px)); }
+.bottom-fab-dial-2 { bottom: calc(12.25rem + env(safe-area-inset-bottom, 0px)); }
+.modal-backdrop { background-color: #0a101ab3; }
+.modal-panel { background-color: var(--surface); border-color: var(--line); border-radius: 22px 22px 0 0; }
+.modal-panel input:not([class*="bg-transparent"]), .modal-panel textarea, .modal-panel select { background: var(--raised); color: var(--text); }
+.transaction-type-switch { padding: 5px; gap: 5px; background: var(--page); border: 1px solid var(--line); border-radius: 12px; }
+.transaction-type-switch > button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border-radius: 8px; color: var(--muted); background: transparent; border: 1px solid transparent; font-weight: 600; }
+.transaction-type-switch > button[aria-pressed="true"] { background: var(--raised); border-color: var(--line); color: var(--text); box-shadow: 0 1px 3px #10182015; }
+.transaction-type-switch > button[aria-pressed="true"][data-kind="income"] svg { color: var(--income); }
+.transaction-type-switch > button[aria-pressed="true"][data-kind="expense"] svg { color: var(--expense); }
+[aria-label="결제 수단"] > button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; font-size: 12px; }
+[aria-label="결제 수단"] > button[aria-pressed="true"] { background: var(--surface); color: var(--text); border-color: var(--line); }
+.transaction-dialog form { padding-top: 8px; }
+.transaction-dialog form > div { margin-bottom: 18px; }
+.transaction-dialog input[aria-label="금액 (원)"] { color: var(--text); font-weight: 600; letter-spacing: -.045em; }
+.transaction-dialog form [class*="uppercase"] { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.card-enter, .list-item-enter, .tab-content { animation: none; }
+.goal-done-shimmer::after, .pulse-glow { animation: none; }
+:root[data-theme="light"] .fancy-date-calendar { background: var(--surface) !important; border-color: var(--line) !important; color: var(--text) !important; }
+:root[data-theme="light"] .fancy-date-calendar .react-datepicker__header { background: var(--surface) !important; border-color: var(--line) !important; }
+:root[data-theme="light"] .fancy-date-calendar :is(.react-datepicker__day,.react-datepicker__current-month) { color: var(--text); }
+:root[data-theme="light"] .fancy-date-calendar .react-datepicker__day--selected { background: var(--action); color: var(--on-action); }
+@media (min-width: 768px) {
+  .modal-backdrop { align-items: center; padding: 32px; }
+  .modal-panel { border: 1px solid var(--line); border-radius: 22px; max-height: calc(100dvh - 64px); box-shadow: 0 24px 80px #0a101a40; }
+}
+@media (min-width: 1024px) {
+  .ledger-navigation-surface { padding: 34px 18px 28px; }
+  .ledger-navigation-caption { margin-top: 12px; margin-bottom: 44px; font-size: 11px; }
+  .ledger-navigation-brand { font-size: 21px; gap: 12px; }
+  .ledger-navigation-item { border-radius: 10px; min-height: 48px; gap: 10px; }
+  .ledger-navigation-item.is-active { background: var(--selection); box-shadow: none; border: 1px solid var(--line); }
+  .ledger-navigation-label { font-size: 13px; font-weight: 550; }
+  .ledger-header-inner { padding-block: 22px; }
+  .ledger-main { padding-top: 36px; }
+  .workspace-heading { margin-bottom: 30px; }
+  .workspace-heading h2 { font-size: 25px; }
+  .workspace-heading p { margin-top: 8px; font-size: 13px; }
+  .dashboard-grid { gap: 22px; }
+  .dashboard-summary { display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 48px; padding: 28px 30px; }
+  .summary-heading { grid-column: 1 / -1; }
+  .summary-balance { grid-column: 1; grid-row: 2; align-self: center; font-size: 44px; margin-block: 20px; }
+  .summary-totals { grid-column: 2; grid-row: 2; align-self: center; margin: 0; padding: 16px 0 16px 28px; border-top: 0; border-left: 1px solid var(--line); }
+  .summary-note { grid-column: 1; margin: 0; align-self: center; max-width: 40ch; line-height: 1.7; }
+  .dashboard-summary > .summary-record { grid-column: 2; max-width: none; margin: 0; min-height: 44px; }
+  .dashboard-summary > details { grid-column: 1 / -1; }
+  .ledger-floating-actions .bottom-fab-dial-1 { bottom: 88px; }
+  .ledger-floating-actions .bottom-fab-dial-2 { bottom: 148px; }
+}
+@media (max-width: 767px) {
+  .ledger-main { padding: 24px 18px; }
+  .workspace-heading h2 { font-size: 22px; }
+  .workspace-heading p { font-size: 12px; line-height: 1.65; max-width: 34ch; }
+  .dashboard-summary { padding: 22px; }
+  .summary-balance { font-size: 36px; }
+  .summary-totals { gap: 12px; }
+  .summary-totals p:last-child { font-size: clamp(15px, 4.6vw, 20px); }
+  .summary-record { margin-top: 18px; }
+  .ledger-navigation-surface { max-width: 512px; box-shadow: 0 -1px 0 var(--line); }
+  .ledger-navigation-item { min-height: 66px; gap: 4px; }
+  .ledger-navigation-item.is-active { background: var(--selection); }
+  .ledger-navigation-label { font-size: 10px; }
+  .transaction-dialog .modal-panel form { padding-inline: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+/* Shared empty states and pressed filters keep quieter secondary surfaces. */
+.empty-state-mark { width: 58px; height: 58px; display: grid; place-items: center; margin-bottom: 18px; color: var(--muted); border: 1px solid var(--line); border-radius: 16px; background: var(--raised); }
+.ledger-empty-state p { max-width: 34ch; }
+button[aria-pressed="true"] { border-color: var(--line); }
+.ledger-main [class*="uppercase"] { text-transform: none; letter-spacing: 0; }
+:root[data-theme="light"] [class~="text-[#F5BE3A]"] { color: #836015; }
+:root[data-theme="light"] [class~="text-[#DCEBFF]"] { color: var(--text); }
+:root[data-theme="light"] [class~="bg-white/5"], :root[data-theme="light"] [class~="bg-white/4"] { background-color: var(--raised); }
+:root[data-theme="light"] [class~="bg-[#244268]"] { color: var(--on-action); }
+/* Date picker, chart labels and secondary controls share the active theme. */
+[class~="bg-[#0D0F14]"], [class~="bg-[#151923]"], [class~="bg-[#161D2C]"] { background-color: var(--raised); }
+[class~="text-[#A8EEC4]"], [class~="text-[#92E6D9]"], [class~="text-[#9CC7FF]"], [class~="text-[#B8DCFF]"] { color: var(--accent); }
+.recharts-default-tooltip { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; border-radius: 10px; }
+.recharts-tooltip-label { color: var(--muted) !important; }
+:root[data-theme="light"] .recharts-cartesian-axis-tick text { fill: var(--muted); }
+:root[data-theme="light"] [class~="text-[#FFD5D9]"] { color: var(--expense); }
+.transaction-dialog [class*="rounded-t-"] > div:first-child { display: none; }
+[data-category-choice] { color: var(--muted); min-height: 72px; }
+[data-category-choice][aria-pressed="true"] { background: var(--selection); border-color: var(--accent); color: var(--accent); }
+.category-choice-label { color: inherit; }
+.category-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+[data-category-choice]:hover { background: var(--surface); }
+/* Two interlocking ledger pages form the brand mark. */
+.brand-mark { display: inline-block; width: 36px; height: 36px; flex: 0 0 36px; background: var(--accent); -webkit-mask: url('/brand/symbol.svg') center / contain no-repeat; mask: url('/brand/symbol.svg') center / contain no-repeat; }
+.brand-wordmark { font-weight: 750; letter-spacing: -.045em; line-height: 1.1; }
+.ledger-header-brand { gap: 7px; }
+.ledger-header-brand h1.brand-wordmark { font-weight: 750; font-size: 20px; }
+.ledger-navigation-brand { gap: 8px; padding-inline: 8px; }
+.ledger-navigation-brand .brand-mark { width: 39px; height: 39px; flex-basis: 39px; }
+.ledger-navigation-brand .brand-wordmark { font-size: 22px; }
+.brand-mark-loading { width: 42px; height: 42px; flex-basis: 42px; }
+@media (max-width: 380px) { .ledger-header-brand h1.brand-wordmark { font-size: 18px; } .ledger-header-brand .brand-mark { width: 30px; height: 30px; flex-basis: 30px; } }

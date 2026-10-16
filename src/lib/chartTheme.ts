@@ -11,7 +11,7 @@ export const CHART_COLORS = {
   teal:         '#1FD9B4',
   bg:           '#0D0F14',
   cardBg:       '#1E2236',
-  surface:      '#252A3F',
+  surface:      'var(--raised)',
   border:       'rgba(255,255,255,0.06)',
   textPrimary:  '#F1F3F6',
   textSecondary:'#8B95A1',
@@ -19,25 +19,25 @@ export const CHART_COLORS = {
 }
 
 export const TOOLTIP_CONTENT_STYLE = {
-  backgroundColor: '#252A3F',
-  border: '1px solid rgba(255,255,255,0.08)',
+  backgroundColor: 'var(--surface)',
+  border: '1px solid var(--line)',
   borderRadius: 12,
-  color: '#F1F3F6',
+  color: 'var(--text)',
   fontSize: 12,
   padding: '8px 12px',
 }
 
 export const TOOLTIP_CURSOR_STYLE = { fill: 'rgba(255,255,255,0.04)' }
-export const TOOLTIP_LABEL_STYLE = { color: '#8B95A1', fontSize: 11 }
+export const TOOLTIP_LABEL_STYLE = { color: 'var(--muted)', fontSize: 11 }
 
 export const GRID_PROPS = {
   strokeDasharray: '3 3' as const,
-  stroke: 'rgba(255,255,255,0.05)',
+  stroke: 'var(--line)',
   vertical: false,
 }
 
 export const AXIS_TICK_STYLE = {
-  fill: '#4E5968',
+  fill: 'var(--muted)',
   fontSize: 10,
 }
 

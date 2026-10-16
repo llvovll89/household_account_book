@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react'
 import type { Tab } from '../../types/navigation'
-import { Wallet } from 'lucide-react'
+import BrandMark from '../ui/BrandMark'
 
 interface LedgerTabItem {
   id: Tab
@@ -24,7 +24,7 @@ export default function BottomNavigation({
   return (
     <nav aria-label="가계부 메뉴" className="ledger-navigation">
       <div className="ledger-navigation-surface">
-        <div className="ledger-navigation-brand"><Wallet size={24} /><span>잔고플랜</span></div>
+        <div className="ledger-navigation-brand"><BrandMark /><span className="brand-wordmark">잔고플랜</span></div>
         <p className="ledger-navigation-caption">매일의 기록, 가벼운 돈 관리</p>
         <div className="ledger-navigation-items pb-safe">
           {ledgerTabs.map(({ id, label, Icon }) => {
@@ -37,12 +37,12 @@ export default function BottomNavigation({
                 onMouseEnter={() => onLedgerTabHover?.(id)}
                 onFocus={() => onLedgerTabHover?.(id)}
                 onTouchStart={() => onLedgerTabHover?.(id)}
-                aria-label={`${label} 탭`}
+                aria-label={`${label === '내역' ? '거래 내역' : label} 탭`}
                 aria-current={isActive ? 'page' : undefined}
                 className={`ledger-navigation-item ${isActive ? 'is-active' : ''}`}
               >
                 <div className={`flex items-center justify-center w-7 h-7 transition-colors duration-200`}>
-                  <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} className={`transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`} />
+                  <Icon size={20} strokeWidth={1.7} className={`transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`} />
                 </div>
                 <span className="ledger-navigation-label">{label === '내역' ? '거래 내역' : label}</span>
               </button>
