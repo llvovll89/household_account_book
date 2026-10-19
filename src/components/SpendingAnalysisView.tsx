@@ -715,7 +715,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                         style={
                                                             isSelected
                                                                 ? {
-                                                                      backgroundColor: `${color}25`,
+                                                                      backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
                                                                       borderColor:
                                                                           color,
                                                                       color,

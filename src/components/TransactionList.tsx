@@ -153,6 +153,7 @@ export default function TransactionList({
             saved === "cash" ||
             saved === "check" ||
             saved === "credit" ||
+            saved === "transfer" ||
             saved === "all"
         )
             return saved;
@@ -1749,10 +1750,12 @@ export default function TransactionList({
                                 >
                                     {userPaymentMethods.length > 0
                                         ? (["cash", "check", "credit", "transfer"] as const)
-                                              .filter((t) =>
-                                                  userPaymentMethods.some(
-                                                      (m) => m.type === t || t === "transfer",
-                                                  ),
+                                              .filter(
+                                                  (t) =>
+                                                      t === "transfer" ||
+                                                      userPaymentMethods.some(
+                                                          (m) => m.type === t,
+                                                      ),
                                               )
                                               .map((methodType) => {
                                                   const label =

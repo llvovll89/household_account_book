@@ -75,6 +75,7 @@ export function useAppHandlers({
             if (items[0].loanInterest !== undefined) updated.loanInterest = items[0].loanInterest
             if (!items[0].paymentMethodId) delete updated.paymentMethodId
             if (!items[0].creditBillingDay) delete updated.creditBillingDay
+            if (!items[0].dateEnd) delete updated.dateEnd
             return updated
           })
           const extra = items.slice(1).map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))
@@ -358,11 +359,13 @@ export function useAppHandlers({
       return next
     })
 
+    // 실제로 바뀐 항목이 있을 때만 저장 (불필요한 원격 쓰기·버전 충돌 방지)
     setSubscriptions(prev => {
       const next = prev.map(s => {
         const category = getCategoryDestination(moves.expense, s.category)
         return category ? { ...s, category } : s
       })
+      if (next.every((s, i) => s === prev[i])) return prev
       persist(() => saveSubscriptions(next), '구독 카테고리 저장에 실패했습니다.', 'subscriptions')
       return next
     })
@@ -371,6 +374,7 @@ export function useAppHandlers({
         const category = g.linkedCategory && (getCategoryDestination(moves.expense, g.linkedCategory) ?? getCategoryDestination(moves.income, g.linkedCategory))
         return category ? { ...g, linkedCategory: category } : g
       })
+      if (next.every((g, i) => g === prev[i])) return prev
       persist(() => saveGoals(next), '목표 연결 저장에 실패했습니다.', 'goals')
       return next
     })

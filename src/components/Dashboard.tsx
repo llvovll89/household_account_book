@@ -1900,7 +1900,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               {budgetView === 'gauge' ? (
           /* 게이지 뷰 */
           <div className="grid grid-cols-3 gap-4">
-            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat) => {
+            {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat) => {
               const budget = effectiveBudgets.find((b) => b.category === cat)!
               const spent = spentByCategory[cat] ?? 0
               const effectiveLimit = budget.limit + (carryoverAmounts[cat] ?? 0)
@@ -1920,7 +1920,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         ) : (
           /* 리스트 뷰 */
           <div className="space-y-3.5">
-            {[...EXPENSE_CATEGORIES, ...customExpenseCategories].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat, catIdx) => {
+            {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])].filter(cat => effectiveBudgets.find(b => b.category === cat)).map((cat, catIdx) => {
               const budget = effectiveBudgets.find((b) => b.category === cat)!
               const spent = monthly
                 .filter((t) => t.type === 'expense' && t.category === cat)

@@ -40,7 +40,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
   const [newWeekday, setNewWeekday] = useState(1)
   const [methodKey, setMethodKey] = useState('cash')
   const [amountError, setAmountError] = useState('')
-  const methods = [...PAYMENT_METHODS.filter(m => !userPaymentMethods.some(custom => custom.id === m.value)).map(m => ({ key: m.value, type: m.value, label: m.label })), ...userPaymentMethods.map(m => ({ key: m.id, type: m.type, label: m.label, billingDay: m.billingDay }))]
+  // 같은 종류의 사용자 결제수단이 있으면 기본 결제수단은 숨겨 '신용카드'가 두 번 보이지 않게 한다
+  const methods = [...PAYMENT_METHODS.filter(m => !userPaymentMethods.some(custom => custom.id === m.value || custom.type === m.value)).map(m => ({ key: m.value, type: m.value, label: m.label })), ...userPaymentMethods.map(m => ({ key: m.id, type: m.type, label: m.label, billingDay: m.billingDay }))]
 
   const categories = newType === 'income' ? INCOME_CATEGORIES : [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])]
 
@@ -186,7 +187,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                     <p className="text-xs text-[#4E5968] truncate mt-0.5">{item.description}</p>
                   )}
                   <label className="text-xs text-[#8B95A1] block mt-1">결제수단
-                    <select aria-label={`${item.category} 정기 내역 결제수단`} className="w-full mt-1 p-1.5" value={methods.some(m => m.key === item.paymentMethodId) ? item.paymentMethodId : item.paymentMethod ?? 'cash'} onChange={e => changeItemMethod(item.id, e.target.value)}>
+                    <select aria-label={`${item.category} 정기 내역 결제수단`} className="w-full mt-1 p-1.5" value={methods.some(m => m.key === item.paymentMethodId) ? item.paymentMethodId : (methods.find(m => m.key === (item.paymentMethod ?? 'cash')) ?? methods.find(m => m.type === (item.paymentMethod ?? 'cash')))?.key ?? item.paymentMethod ?? 'cash'} onChange={e => changeItemMethod(item.id, e.target.value)}>
                       {methods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
                     </select>
                   </label>

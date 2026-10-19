@@ -823,7 +823,7 @@ export default function Analytics({
                 · {TAB_HINTS[viewMode]}
             </p>
 
-            <ExpenseBreakdown transactions={transactions} yearMonth={yearMonth} />
+            <ExpenseBreakdown expenses={currentExpense} yearMonth={yearMonth} />
             <div key={viewMode} className="space-y-3 tab-content">
             {/* ──── 월간 뷰 ──── */}
             {viewMode === "monthly" && (
