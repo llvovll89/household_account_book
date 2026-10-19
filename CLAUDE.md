@@ -99,7 +99,8 @@ loadSettings() / saveSettings()
 
 ## UI 컨벤션
 
-- **다크 테마 고정** (라이트 모드 없음)
+- **다크 테마 기본**, 라이트 모드는 `ThemeToggle`로 전환 (`:root[data-theme="light"]`, `src/interface.css`)
+- 색상은 CSS 변수(`var(--accent)`, `var(--category-*)` 등) 사용. hex 뒤에 알파를 붙이는 `${color}25` 대신 `color-mix(in srgb, ${color} 15%, transparent)` 사용
 - **배경 팔레트**: `#111111` (앱 배경), `#1C1C1E` (카드), `#2C2C2E` (입력/칩)
 - **강조색**: `#3D8EF8` (파랑/기본), `#2ACF6A` (수입), `#F25260` (지출)
 - **텍스트**: `#F1F3F6` (기본), `#8B95A1` (보조), `#4E5968` (비활성)
@@ -110,6 +111,6 @@ loadSettings() / saveSettings()
 ## 하지 말 것
 
 - 새 상태관리 라이브러리(Redux, Zustand 등) 추가 금지
-- 라이트 모드 구현 금지
+- 새 색상을 하드코딩할 때 라이트 테마 값(`:root[data-theme="light"]`)도 함께 정의할 것
 - Tailwind config 파일 생성 금지 (v4는 설정 파일 불필요)
 - `description` 직접 파싱 대신 `tags` 필드 사용 (이미 분리됨)
