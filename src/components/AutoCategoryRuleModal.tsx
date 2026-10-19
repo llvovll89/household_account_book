@@ -28,8 +28,8 @@ export default function AutoCategoryRuleModal({
   const [ruleCategory, setRuleCategory] = useState('')
   const keywordInputRef = useRef<HTMLInputElement>(null)
 
-  const expenseCategories = [...EXPENSE_CATEGORIES, ...customExpenseCategories]
-  const incomeCategories = [...INCOME_CATEGORIES, ...customIncomeCategories]
+  const expenseCategories = [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])]
+  const incomeCategories = [...new Set([...INCOME_CATEGORIES, ...customIncomeCategories])]
   const categories = ruleType === 'expense' ? expenseCategories : incomeCategories
 
   function addRule() {

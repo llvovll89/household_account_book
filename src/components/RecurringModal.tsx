@@ -1,16 +1,17 @@
 import { useRef, useState } from 'react'
 import { X, Plus, Trash2, ChevronDown } from 'lucide-react'
-import type { RecurringFrequency, RecurringTransaction, TransactionType } from '../types'
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
-import { fmt, generateId } from '../lib/format'
+import type { RecurringFrequency, RecurringTransaction, TransactionType, UserPaymentMethod } from '../types'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
+import { fmt } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { useModalClose } from '../hooks/useModalClose'
-import { formatRecurringSchedule } from '../lib/recurringSchedule'
+import { formatRecurringSchedule, createRecurringItem } from '../lib/recurringSchedule'
 import EmptyState from './ui/EmptyState'
 
 interface Props {
   recurring: RecurringTransaction[]
   customExpenseCategories?: string[]
+  userPaymentMethods?: UserPaymentMethod[]
   onSave: (items: RecurringTransaction[]) => void
   onClose: () => void
 }
@@ -23,7 +24,7 @@ const FREQUENCIES: { key: RecurringFrequency; label: string }[] = [
   { key: 'biweekly', label: '격주' },
 ]
 
-export default function RecurringModal({ recurring, customExpenseCategories = [], onSave, onClose }: Props) {
+export default function RecurringModal({ recurring, customExpenseCategories = [], userPaymentMethods = [], onSave, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [items, setItems] = useState<RecurringTransaction[]>(recurring)
   const [adding, setAdding] = useState(false)
@@ -37,8 +38,11 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
   const [newDay, setNewDay] = useState(1)
   const [newFrequency, setNewFrequency] = useState<RecurringFrequency>('monthly')
   const [newWeekday, setNewWeekday] = useState(1)
+  const [methodKey, setMethodKey] = useState('cash')
+  const [amountError, setAmountError] = useState('')
+  const methods = [...PAYMENT_METHODS.filter(m => !userPaymentMethods.some(custom => custom.id === m.value)).map(m => ({ key: m.value, type: m.value, label: m.label })), ...userPaymentMethods.map(m => ({ key: m.id, type: m.type, label: m.label, billingDay: m.billingDay }))]
 
-  const categories = newType === 'income' ? INCOME_CATEGORIES : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
+  const categories = newType === 'income' ? INCOME_CATEGORIES : [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])]
 
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
@@ -47,12 +51,16 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
   function handleAdd() {
     const amount = parseInt(newAmount.replace(/,/g, ''), 10)
-    if (!amount || amount <= 0) return
+    if (!amount || amount <= 0) { setAmountError('0원보다 큰 금액을 입력하세요.'); return }
+    setAmountError('')
+    const method = methods.find(m => m.key === methodKey) ?? methods[0]
+    const customMethod = userPaymentMethods.find(m => m.id === method.key)
     const isDuplicate = items.some(
       (i) =>
         i.type === newType &&
         i.category === newCategory &&
         i.amount === amount &&
+        (i.paymentMethodId ?? i.paymentMethod ?? 'cash') === methodKey &&
         (i.frequency ?? 'monthly') === newFrequency &&
         (newFrequency === 'monthly' ? i.dayOfMonth === newDay : i.weekday === newWeekday)
     )
@@ -60,8 +68,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
       showToast('동일한 정기 항목이 이미 있어요.', 2500, 'warning')
       return
     }
-    const item: RecurringTransaction = {
-      id: generateId(),
+    const item = createRecurringItem({
       type: newType,
       amount,
       category: newCategory,
@@ -71,8 +78,10 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
       weekday: newWeekday,
       lastAppliedMonth: '',
       lastAppliedDate: '',
-      createdAt: Date.now(),
-    }
+      paymentMethod: method.type,
+      ...(customMethod ? { paymentMethodId: customMethod.id } : {}),
+      ...(customMethod?.type === 'credit' && customMethod.billingDay ? { creditBillingDay: customMethod.billingDay } : {}),
+    })
     setItems((prev) => [...prev, item])
     setAdding(false)
     setNewAmount('')
@@ -99,6 +108,21 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
     })
   }
 
+  function changeItemMethod(id: string, key: string) {
+    const method = methods.find(m => m.key === key)
+    if (!method) return
+    const custom = userPaymentMethods.find(m => m.id === key)
+    setItems(prev => prev.map(item => {
+      if (item.id !== id) return item
+      const next = { ...item, paymentMethod: method.type }
+      delete next.paymentMethodId
+      delete next.creditBillingDay
+      if (custom) next.paymentMethodId = custom.id
+      if (custom?.type === 'credit' && custom.billingDay) next.creditBillingDay = custom.billingDay
+      return next
+    }))
+  }
+
   function handleSave() {
     onSave(items)
     handleClose()
@@ -120,7 +144,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
             <h2 id="recurring-modal-title" className="text-[18px] font-bold text-white">정기 지출 관리</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">매달 반복되는 고정 수입/지출</p>
+            <p className="text-xs text-[#4E5968] mt-0.5">반복되는 수입·지출과 결제수단을 관리하세요.</p>
           </div>
           <button aria-label="정기 지출 관리 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
@@ -142,7 +166,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
           )}
 
           {items.map((item) => {
-            const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+            const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
               <div key={item.id} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
                 <div
@@ -161,6 +185,11 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                   {item.description && (
                     <p className="text-xs text-[#4E5968] truncate mt-0.5">{item.description}</p>
                   )}
+                  <label className="text-xs text-[#8B95A1] block mt-1">결제수단
+                    <select aria-label={`${item.category} 정기 내역 결제수단`} className="w-full mt-1 p-1.5" value={methods.some(m => m.key === item.paymentMethodId) ? item.paymentMethodId : item.paymentMethod ?? 'cash'} onChange={e => changeItemMethod(item.id, e.target.value)}>
+                      {methods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+                    </select>
+                  </label>
                 </div>
                 <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
                   {item.type === 'income' ? '+' : '-'}{fmt(item.amount)}원
@@ -284,6 +313,13 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="recurring-method" className="text-xs text-[#8B95A1] block mb-2">결제수단</label>
+                <select id="recurring-method" value={methodKey} onChange={e => setMethodKey(e.target.value)} className="w-full p-3 rounded-xl bg-[#1C1C1E] text-sm">
+                  {methods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+                </select>
+              </div>
+              {amountError && <p role="alert" className="text-xs text-[#F25260]">{amountError}</p>}
               {/* 메모 */}
               <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
                 <label htmlFor="recurring-note" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">메모 (선택)</label>
@@ -310,7 +346,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
             </div>
           )}
 
-          {!adding && (
+          {!adding && items.length > 0 && (
             <button
               onClick={() => setAdding(true)}
               className="w-full flex items-center gap-2 justify-center py-3.5 rounded-2xl border border-dashed border-white/10 text-sm font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
@@ -324,6 +360,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
         <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0">
           <button
             onClick={handleSave}
+            disabled={adding}
             className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
           >
             저장하기

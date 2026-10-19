@@ -2394,6 +2394,7 @@ export default function App() {
                         customExpenseCategories={customExpenseCategories}
                         customIncomeCategories={customIncomeCategories}
                         userPaymentMethods={userPaymentMethods}
+                        recentTransactions={transactions}
                         transactionTemplates={transactionTemplates}
                         onSaveTemplates={handleSaveTemplates}
                         onOpenCategoryModal={() =>
@@ -2417,6 +2418,7 @@ export default function App() {
                     <CategoryModal
                         customExpenseCategories={customExpenseCategories}
                         customIncomeCategories={customIncomeCategories}
+                        usage={{ transactions, recurring, budgets, subscriptions, goals, templates: transactionTemplates, rules: autoCategoryRules }}
                         onSave={handleSaveCategories}
                         onClose={() =>
                             dispatchUI({type: "SET_CATEGORY", value: false})

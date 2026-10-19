@@ -1,4 +1,9 @@
-import type { RecurringTransaction } from '../types'
+import type { RecurringTransaction, Transaction } from '../types'
+import { generateId } from './format'
+
+export function createRecurringItem(draft: Omit<RecurringTransaction, 'id' | 'createdAt'>): RecurringTransaction {
+  return { ...draft, id: generateId(), createdAt: Date.now() }
+}
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -36,4 +41,15 @@ export function getRecurringDate(yearMonth: string, dayOfMonth: number): string 
   const [year, month] = yearMonth.split('-').map(Number)
   const day = clampDayToMonth(new Date(year, month - 1, 1), dayOfMonth)
   return `${yearMonth}-${String(day).padStart(2, '0')}`
+}
+
+export function createRecurringTransaction(r: RecurringTransaction, yearMonth: string, today: string, id: string): Transaction {
+  return {
+    id, type: r.type, amount: r.amount, category: r.category, description: r.description,
+    paymentMethod: r.paymentMethod ?? 'cash',
+    ...(r.paymentMethodId ? { paymentMethodId: r.paymentMethodId } : {}),
+    ...(r.creditBillingDay ? { creditBillingDay: r.creditBillingDay } : {}),
+    date: r.frequency === 'weekly' || r.frequency === 'biweekly' ? today : getRecurringDate(yearMonth, r.dayOfMonth),
+    createdAt: Date.now(),
+  }
 }

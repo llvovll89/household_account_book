@@ -1,21 +1,21 @@
 // 다크 테마 차트 공용 설정
 
 export const CHART_COLORS = {
-  income:       '#3D8EF8',
+  income:       'var(--accent)',
   incomeLight:  'rgba(61,142,248,0.15)',
-  expense:      '#F25260',
+  expense:      'var(--expense)',
   expenseLight: 'rgba(242,82,96,0.15)',
-  green:        '#2ACF6A',
-  yellow:       '#F5BE3A',
-  purple:       '#9B7EFF',
-  teal:         '#1FD9B4',
-  bg:           '#0D0F14',
-  cardBg:       '#1E2236',
+  green:        'var(--income)',
+  yellow:       'var(--category-gold)',
+  purple:       'var(--category-violet)',
+  teal:         'var(--category-teal)',
+  bg:           'var(--page)',
+  cardBg:       'var(--surface)',
   surface:      'var(--raised)',
-  border:       'rgba(255,255,255,0.06)',
-  textPrimary:  '#F1F3F6',
-  textSecondary:'#8B95A1',
-  textMuted:    '#4E5968',
+  border:       'var(--line)',
+  textPrimary:  'var(--text)',
+  textSecondary:'var(--muted)',
+  textMuted:    'var(--muted)',
 }
 
 export const TOOLTIP_CONTENT_STYLE = {

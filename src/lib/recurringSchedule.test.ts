@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { formatRecurringSchedule, isRecurringDueToday, getRecurringDate } from './recurringSchedule'
+import { formatRecurringSchedule, isRecurringDueToday, getRecurringDate, createRecurringTransaction } from './recurringSchedule'
+
+it('preserves transfer account details when applying a recurring payment and defaults old records to cash', () => {
+  const legacy = { id: 'r', type: 'expense' as const, category: '보험', amount: 1000, description: '보험료', dayOfMonth: 31, lastAppliedMonth: '', createdAt: 1 }
+  const result = createRecurringTransaction({ ...legacy, paymentMethod: 'transfer', paymentMethodId: 'bank' }, '2026-02', '2026-02-28', 'new')
+  expect(result).toMatchObject({ paymentMethod: 'transfer', paymentMethodId: 'bank', date: '2026-02-28', amount: 1000 })
+  expect(createRecurringTransaction(legacy, '2026-02', '2026-02-28', 'old')).toMatchObject({ paymentMethod: 'cash' })
+  expect(Object.values(result)).not.toContain(undefined)
+})
 
 describe('formatRecurringSchedule', () => {
   it('frequency가 없으면 매월 며칠로 표기한다', () => {

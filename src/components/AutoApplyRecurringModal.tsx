@@ -54,7 +54,7 @@ export default function AutoApplyRecurringModal({ pending, mode, onModeChange, o
 
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 space-y-2.5">
           {pending.map((r) => {
-            const color = CATEGORY_COLOR[r.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+            const color = CATEGORY_COLOR[r.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
               <div key={r.id} className="flex items-center gap-2.5">
                 <div

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X, Pencil, Trash2 } from 'lucide-react'
+import PaymentMethodIcon from './ui/PaymentMethodIcon'
 import type { Transaction, UserPaymentMethod } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt, parseYmdLocal } from '../lib/format'
@@ -26,10 +27,10 @@ function formatShortDate(dateStr: string) {
 }
 
 export default function TransactionDetailModal({ transaction: t, userPaymentMethods = [], onEdit, onDelete, onClose }: Props) {
-  const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+  const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
   const tags = t.tags ?? []
   const isIncome = t.type === 'income'
-  const amountColor = isIncome ? '#2ACF6A' : '#F25260'
+  const amountColor = isIncome ? 'var(--income)' : 'var(--expense)'
   const [cardBillingDay, setCardBillingDay] = useState(25)
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[13px] font-bold" style={{ color: color.text }}>{t.category}</span>
                 <span className="text-[11px] px-2 py-0.5 rounded-lg bg-black/20 font-bold" style={{ color: color.text }}>
-                  {resolvedMethod.type === 'cash' ? '💵' : resolvedMethod.type === 'check' ? '💳' : '💎'} {resolvedMethod.label}
+                  <PaymentMethodIcon method={resolvedMethod.type} /> {resolvedMethod.label}
                 </span>
               </div>
               <p className="text-[30px] font-extrabold num leading-tight mt-1" style={{ color: amountColor }}>
@@ -110,6 +111,10 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
             </div>
           </div>
 
+          {t.type === 'expense' && t.category === '대출' && <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 text-sm">
+            <h3 className="font-semibold mb-2">대출 상환 구분</h3>
+            {t.loanPrincipal !== undefined && t.loanInterest !== undefined ? <p>원금 {fmt(t.loanPrincipal)}원 / 이자 {fmt(t.loanInterest)}원</p> : <p className="text-[#8B95A1]">원금·이자를 구분하지 않은 내역이에요. 수정에서 입력할 수 있어요.</p>}
+          </div>}
           {/* 메모 */}
           {t.description && (
             <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-1.5">

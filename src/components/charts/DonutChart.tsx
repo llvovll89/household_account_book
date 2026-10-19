@@ -24,7 +24,7 @@ export default function DonutChart({ data }: Props) {
   )
 
   const active = (activeIndex !== null ? data[activeIndex] : undefined) ?? data[0]
-  const activeColor = CATEGORY_COLOR[active.cat]?.text ?? '#8B95A1'
+  const activeColor = CATEGORY_COLOR[active.cat]?.text ?? 'var(--muted)'
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -43,12 +43,12 @@ export default function DonutChart({ data }: Props) {
               outerRadius="75%"
               paddingAngle={3}
               dataKey="amt"
-              animationDuration={600}
+              isAnimationActive={false}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onClick={(_, index) => setActiveIndex(activeIndex === index ? null : index)}
             >
               {data.map((item, i) => {
-                const color = CATEGORY_COLOR[item.cat]?.text ?? '#8B95A1'
+                const color = CATEGORY_COLOR[item.cat]?.text ?? 'var(--muted)'
                 return (
                   <Cell
                     key={item.cat}
@@ -82,23 +82,24 @@ export default function DonutChart({ data }: Props) {
         >
           <div style={{ fontSize: 22 }}>{CATEGORY_EMOJI[active.cat] ?? '📦'}</div>
           <div style={{ fontSize: 11, color: activeColor, fontWeight: 700, marginTop: 2 }}>{active.cat}</div>
-          <div style={{ fontSize: 12, color: '#F1F3F6', fontWeight: 800 }}>{active.pct}%</div>
+          <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 800 }}>{active.pct}%</div>
         </div>
       </div>
 
       {/* 범례 */}
       <div className="w-full grid grid-cols-2 gap-1.5">
         {data.map((item, i) => {
-          const color = CATEGORY_COLOR[item.cat]?.text ?? '#8B95A1'
+          const color = CATEGORY_COLOR[item.cat]?.text ?? 'var(--muted)'
           const isActive = activeIndex === i || activeIndex === null
           return (
             <button
               key={item.cat}
+              aria-pressed={activeIndex === i}
               onClick={() => setActiveIndex(activeIndex === i ? null : i)}
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-all text-left"
               style={{
                 backgroundColor: activeIndex === i ? CATEGORY_COLOR[item.cat]?.bg ?? 'rgba(139,149,161,0.12)' : 'transparent',
-                opacity: isActive ? 1 : 0.45,
+                opacity: isActive ? 1 : 0.85,
               }}
             >
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />

@@ -105,8 +105,8 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
-          {[...EXPENSE_CATEGORIES, ...customExpenseCategories].map((cat) => {
-            const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+          {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])].map((cat) => {
+            const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
               <div key={cat} className="bg-[#2C2C2E] rounded-2xl px-4 py-3 space-y-2.5">
                 <div className="flex items-center gap-3">

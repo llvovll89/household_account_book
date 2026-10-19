@@ -1,7 +1,9 @@
-import { getRecurringDate } from '../lib/recurringSchedule'
+import { createRecurringTransaction } from '../lib/recurringSchedule'
+import { getCategoryDestination, migrateBudgets, migrateTypedCategory } from '../lib/categoryMigration'
+import type { CategoryMoves } from '../lib/categoryMigration'
 import { useCallback } from 'react'
 import type { Dispatch } from 'react'
-import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, Subscription, SavingsGoal, TransactionType, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings, loadTransactions } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
@@ -64,7 +66,17 @@ export function useAppHandlers({
       setTransactions((prev) => {
         let next = prev
         if (editingTransaction && items.length > 0) {
-          next = prev.map((t) => t.id === editingTransaction.id ? { ...t, ...items[0] } : t)
+          next = prev.map(t => {
+            if (t.id !== editingTransaction.id) return t
+            const updated = { ...t, ...items[0] }
+            delete updated.loanPrincipal
+            delete updated.loanInterest
+            if (items[0].loanPrincipal !== undefined) updated.loanPrincipal = items[0].loanPrincipal
+            if (items[0].loanInterest !== undefined) updated.loanInterest = items[0].loanInterest
+            if (!items[0].paymentMethodId) delete updated.paymentMethodId
+            if (!items[0].creditBillingDay) delete updated.creditBillingDay
+            return updated
+          })
           const extra = items.slice(1).map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))
           next = [...next, ...extra]
         } else {
@@ -165,18 +177,7 @@ export function useAppHandlers({
   const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
     const ym = targetYM ?? yearMonth
     const todayStr = toLocalDateStr()
-    const newTx: Transaction[] = pending.map((r) => ({
-      id: generateId(),
-      type: r.type,
-      amount: r.amount,
-      paymentMethod: 'cash',
-      category: r.category,
-      description: r.description,
-      date: (r.frequency === 'weekly' || r.frequency === 'biweekly')
-        ? todayStr
-        : getRecurringDate(ym, r.dayOfMonth),
-      createdAt: Date.now(),
-    }))
+    const newTx: Transaction[] = pending.map(r => createRecurringTransaction(r, ym, todayStr, generateId()))
     const newTxIds = new Set(newTx.map((t) => t.id))
     const nextTxs = [...transactions, ...newTx]
     setTransactions(nextTxs)
@@ -303,11 +304,14 @@ export function useAppHandlers({
     )
   }, [persist, setHiddenWidgets])
 
-  const handleSaveCategories = useCallback((expense: string[], income: string[]) => {
+  const handleSaveCategories = useCallback((expense: string[], income: string[], requestedMoves: CategoryMoves = { expense: {}, income: {} }) => {
     const removedExpense = customExpenseCategories.filter((c) => !expense.includes(c))
     const removedIncome = customIncomeCategories.filter((c) => !income.includes(c))
     const removed = new Set([...removedExpense, ...removedIncome])
-    const fallbackFor = (type: TransactionType) => (type === 'income' ? '기타수입' : '기타지출')
+    const moves: CategoryMoves = {
+      expense: Object.fromEntries(removedExpense.map(c => [c, getCategoryDestination(requestedMoves.expense, c) ?? '기타지출'])),
+      income: Object.fromEntries(removedIncome.map(c => [c, getCategoryDestination(requestedMoves.income, c) ?? '기타수입'])),
+    }
 
     setCustomExpenseCategories(expense)
     setCustomIncomeCategories(income)
@@ -315,10 +319,10 @@ export function useAppHandlers({
     // 삭제된 카테고리를 쓰던 템플릿/자동분류규칙은 폴백 카테고리로 재매핑
     const nextTemplates = removed.size === 0
       ? transactionTemplates
-      : transactionTemplates.map((tpl) => (removed.has(tpl.category) ? { ...tpl, category: fallbackFor(tpl.type) } : tpl))
+      : transactionTemplates.map((tpl) => migrateTypedCategory(tpl, moves))
     const nextRules = removed.size === 0
       ? autoCategoryRules
-      : autoCategoryRules.map((rule) => (removed.has(rule.category) ? { ...rule, category: fallbackFor(rule.type) } : rule))
+      : autoCategoryRules.map((rule) => migrateTypedCategory(rule, moves))
     if (removed.size > 0) {
       setTransactionTemplates(nextTemplates)
       setAutoCategoryRules(nextRules)
@@ -343,21 +347,37 @@ export function useAppHandlers({
 
     // 삭제된 카테고리를 쓰던 거래/반복거래도 폴백 카테고리로 재매핑 (데이터 보존)
     setTransactions((prev) => {
-      const next = prev.map((t) => (removed.has(t.category) ? { ...t, category: fallbackFor(t.type) } : t))
+      const next = prev.map((t) => migrateTypedCategory(t, moves))
       persist(() => saveTransactions(next), '거래 카테고리 정리에 실패했습니다.', 'transactions')
       return next
     })
 
     setRecurring((prev) => {
-      const next = prev.map((r) => (removed.has(r.category) ? { ...r, category: fallbackFor(r.type) } : r))
+      const next = prev.map((r) => migrateTypedCategory(r, moves))
       persist(() => saveRecurring(next), '반복거래 카테고리 정리에 실패했습니다.', 'recurring')
       return next
     })
 
-    // 예산은 재분류 개념이 없으므로, 삭제된 지출 카테고리의 항목(월별 오버라이드 포함)은 제거
+    setSubscriptions(prev => {
+      const next = prev.map(s => {
+        const category = getCategoryDestination(moves.expense, s.category)
+        return category ? { ...s, category } : s
+      })
+      persist(() => saveSubscriptions(next), '구독 카테고리 저장에 실패했습니다.', 'subscriptions')
+      return next
+    })
+    setGoals(prev => {
+      const next = prev.map(g => {
+        const category = g.linkedCategory && (getCategoryDestination(moves.expense, g.linkedCategory) ?? getCategoryDestination(moves.income, g.linkedCategory))
+        return category ? { ...g, linkedCategory: category } : g
+      })
+      persist(() => saveGoals(next), '목표 연결 저장에 실패했습니다.', 'goals')
+      return next
+    })
+    // Preserve monthly overrides and combine budgets when the destination already exists.
     if (removedExpense.length > 0) {
       setBudgets((prev) => {
-        const next = prev.filter((b) => !removedExpense.includes(b.category))
+        const next = migrateBudgets(prev, moves.expense)
         persist(() => saveBudgets(next), '예산 정리에 실패했습니다.', 'budgets')
         return next
       })
@@ -375,6 +395,8 @@ export function useAppHandlers({
     setTransactions,
     setRecurring,
     setBudgets,
+    setSubscriptions,
+    setGoals,
   ])
 
   const handleAddMemo = useCallback((title: string, content: string, category?: string, date?: string, dateEnd?: string) => {

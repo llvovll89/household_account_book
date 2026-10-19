@@ -112,13 +112,14 @@ export function getBillingStage(currentYM: string, statementYM: string): Billing
 export function resolvePaymentMethod(
   tx: Transaction,
   methods: UserPaymentMethod[]
-): { type: 'cash' | 'check' | 'credit'; label: string; billingDay?: number } {
+): { type: 'cash' | 'check' | 'credit' | 'transfer'; label: string; billingDay?: number } {
   if (tx.paymentMethodId) {
     const found = methods.find((m) => m.id === tx.paymentMethodId)
     if (found) return { type: found.type, label: found.label, billingDay: found.billingDay }
   }
-  const type: 'cash' | 'check' | 'credit' =
+  const type: 'cash' | 'check' | 'credit' | 'transfer' =
     isCreditPaymentMethod(tx.paymentMethod) ? 'credit'
+    : tx.paymentMethod === 'transfer' ? 'transfer'
     : tx.paymentMethod === 'check' ? 'check'
     : 'cash'
   const label = PAYMENT_METHOD_LABEL[tx.paymentMethod ?? 'cash']

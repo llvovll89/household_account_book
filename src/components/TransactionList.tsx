@@ -1,4 +1,5 @@
 import CategoryIcon from './ui/CategoryIcon'
+import PaymentMethodIcon from './ui/PaymentMethodIcon'
 import {useEffect, useMemo, useState, useRef} from "react";
 import {
     Pencil,
@@ -55,7 +56,7 @@ interface Props {
 type ViewMode = "list" | "calendar";
 
 type FilterType = "all" | "income" | "expense";
-type MethodFilterType = "all" | "cash" | "check" | "credit" | string;
+type MethodFilterType = "all" | "cash" | "check" | "credit" | "transfer" | string;
 type BillingFilterType = "all" | "current" | "next" | "later";
 type SortOption = "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 type PeriodMode = "day" | "week" | "month";
@@ -620,10 +621,11 @@ export default function TransactionList({
         >();
         const monthlyExpenseCategoryMap: Record<string, number> = {};
         const methodSummary: Record<
-            "cash" | "check" | "credit",
+            "cash" | "check" | "credit" | "transfer",
             {income: number; expense: number}
         > = {
             cash: {income: 0, expense: 0},
+            transfer: {income: 0, expense: 0},
             check: {income: 0, expense: 0},
             credit: {income: 0, expense: 0},
         };
@@ -809,7 +811,7 @@ export default function TransactionList({
     const methodSummary = monthlyDerived.methodSummary;
 
     const methodsNetTotal = useMemo(() => {
-        return (["cash", "check", "credit"] as const).reduce(
+        return (["cash", "check", "credit", "transfer"] as const).reduce(
             (sum, method) =>
                 sum +
                 methodSummary[method].income -
@@ -1567,7 +1569,7 @@ export default function TransactionList({
                                                 >
                                                     전체
                                                 </button>
-                                                {userPaymentMethods.map((m) => {
+                                                {[...userPaymentMethods, ...(!userPaymentMethods.some(m => m.type === "transfer") ? [{ id: "transfer", type: "transfer" as const, label: "계좌이체" }] : [])].map((m) => {
                                                     const isSelected =
                                                         methodFilter === m.id;
                                                     return (
@@ -1615,6 +1617,7 @@ export default function TransactionList({
                                                             key: "credit",
                                                             label: "신용카드",
                                                         },
+                                                        { key: "transfer", label: "계좌이체" },
                                                     ] as {
                                                         key: MethodFilterType;
                                                         label: string;
@@ -1745,10 +1748,10 @@ export default function TransactionList({
                                     className="grid grid-cols-1 sm:grid-cols-3 gap-2 px-3 pb-3"
                                 >
                                     {userPaymentMethods.length > 0
-                                        ? (["cash", "check", "credit"] as const)
+                                        ? (["cash", "check", "credit", "transfer"] as const)
                                               .filter((t) =>
                                                   userPaymentMethods.some(
-                                                      (m) => m.type === t,
+                                                      (m) => m.type === t || t === "transfer",
                                                   ),
                                               )
                                               .map((methodType) => {
@@ -1798,6 +1801,7 @@ export default function TransactionList({
                                                   "cash",
                                                   "check",
                                                   "credit",
+                                                  "transfer",
                                               ] as const
                                           ).map((method) => {
                                               const income =
@@ -2641,14 +2645,7 @@ export default function TransactionList({
                                                                                         t,
                                                                                         userPaymentMethods,
                                                                                     );
-                                                                                const emoji =
-                                                                                    resolved.type ===
-                                                                                    "cash"
-                                                                                        ? "💵"
-                                                                                        : resolved.type ===
-                                                                                            "check"
-                                                                                          ? "💳"
-                                                                                          : "💎";
+                                                                                const emoji = <PaymentMethodIcon method={resolved.type} size={12} />;
                                                                                 return (
                                                                                     <span
                                                                                         className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${

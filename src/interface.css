@@ -168,6 +168,61 @@ button[aria-pressed="true"] { border-color: var(--line); }
 [data-category-choice][aria-pressed="true"] { background: var(--selection); border-color: var(--accent); color: var(--accent); }
 .category-choice-label { color: inherit; }
 .category-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+
+/* Product controls share one semantic palette in both themes. */
+:root { --category-blue: #91b8ed; --category-violet: #b4a1ed; --category-pink: #e7a4cf; --category-green: #86c9b1; --category-teal: #79c9bc; --category-orange: #e8b47b; --category-gold: #dac083; --category-red: #eea3a3; --category-cyan: #7dc7d4; --category-muted: #a4adb7; }
+:root[data-theme="light"] { --category-blue: #315f9e; --category-violet: #6a4ba2; --category-pink: #963e78; --category-green: #24694f; --category-teal: #24665c; --category-orange: #83501d; --category-gold: #76591b; --category-red: #a33e46; --category-cyan: #206574; --category-muted: #596674; }
+.transaction-dialog { overflow: hidden; }
+.transaction-scroll { scroll-padding-block: 20px; overscroll-behavior: contain; }
+.transaction-scroll :is(input, textarea, select, .loan-split) { scroll-margin-block: 20px; }
+.transaction-dialog .modal-panel { max-height: 100%; }
+.transaction-footer, .dialog-footer { flex-shrink: 0; padding: 14px 24px max(16px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); border-radius: 0 0 22px 22px; }
+.transaction-footer > .flex { margin-bottom: 0; }
+.transaction-footer > button { margin-top: 8px; }
+.category-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 12px; }
+.category-search input { min-width: 0; width: 100%; min-height: 44px; background: transparent !important; font-size: 14px; }
+.category-choice-label { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+[data-category-choice] { min-width: 0; height: auto; }
+.recent-categories { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; font-size: 12px; }
+.recent-categories > span { color: var(--muted); margin-right: 4px; }
+.recent-categories button { padding: 8px 10px; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); white-space: normal; }
+.recent-categories button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.primary-action, .secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 650; }
+.primary-action { background: var(--action); color: var(--on-action); }
+.primary-action:hover { background: var(--action-hover); }
+.secondary-action { background: var(--raised); color: var(--text); border: 1px solid var(--line); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.dialog-icon-button { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--raised); color: var(--muted); flex-shrink: 0; }
+.category-usage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin-top: 12px; font-size: 12px; }
+.category-usage-grid > div { display: flex; justify-content: space-between; gap: 8px; }
+.category-usage-grid dt { color: var(--muted); }
+.category-usage-grid dd { color: var(--text); font-variant-numeric: tabular-nums; }
+.category-tab { flex: 1; min-height: 44px; border: 1px solid var(--line); background: var(--raised); color: var(--muted); border-radius: 10px; font-size: 13px; }
+.category-tab[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.category-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-chips > span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: 8px; background: var(--raised); font-size: 13px; overflow-wrap: anywhere; }
+.category-chips button { min-width: 36px; min-height: 36px; display: grid; place-items: center; color: var(--expense); }
+.category-delete-preview { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--raised); line-height: 1.7; }
+.payment-method-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--raised); border-radius: 12px; margin-bottom: 8px; font-size: 13px; }
+.loan-split input:not([type="checkbox"]) { width: 100%; min-width: 0; padding: 10px; margin-top: 8px; border: 1px solid var(--line); background: var(--surface) !important; }
+.expense-view-switch { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-block: 16px; }
+.expense-view-switch button { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 12px; border: 1px solid var(--line); background: var(--raised); border-radius: 10px; color: var(--muted); font-size: 12px; white-space: normal; text-align: left; }
+.expense-view-switch button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--selection); }
+.expense-view-switch strong { font-size: 14px; color: var(--text); overflow-wrap: anywhere; }
+.fancy-date-trigger { background: var(--surface); color: var(--text); border-color: var(--line); }
+.fancy-date-trigger:hover { background: var(--raised); border-color: var(--accent); }
+.fancy-date-trigger svg { color: var(--muted); }
+.fancy-date-calendar, .fancy-date-calendar .react-datepicker__header { background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; }
+.fancy-date-calendar :is(.react-datepicker__day, .react-datepicker__day-name, .react-datepicker__current-month) { color: var(--text); }
+.fancy-date-calendar .react-datepicker__day--disabled { color: var(--muted); opacity: .6; }
+.fancy-date-calendar :is(.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected) { background: var(--action); color: var(--on-action); }
+.fancy-date-calendar .react-datepicker__day:not(.react-datepicker__day--disabled):hover { background: var(--selection); color: var(--text); }
+@media (max-width: 767px) {
+  .transaction-dialog { padding: 0; }
+  .transaction-dialog .modal-panel { max-height: 100%; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .transaction-footer { padding: 12px 20px max(12px, env(safe-area-inset-bottom)); }
+  .expense-view-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 [data-category-choice]:hover { background: var(--surface); }
 /* Two interlocking ledger pages form the brand mark. */
 .brand-mark { display: inline-block; width: 36px; height: 36px; flex: 0 0 36px; background: var(--accent); -webkit-mask: url('/brand/symbol.svg') center / contain no-repeat; mask: url('/brand/symbol.svg') center / contain no-repeat; }

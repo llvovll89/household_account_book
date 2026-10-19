@@ -1,4 +1,5 @@
 import Papa from 'papaparse'
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../types'
 
 export interface ParsedRow {
   date: string        // YYYY-MM-DD
@@ -76,6 +77,9 @@ function parseAmount(raw: string): number {
 //  설명 기반 자동 카테고리 추천
 // ────────────────────────────────────────────
 const CATEGORY_KEYWORDS: [string, string[]][] = [
+  // Specific financial terms take precedence over generic words such as 의료/주거.
+  ['보험', ['보험', '화재해상', '생명보험', '손해보험']],
+  ['대출', ['대출', '원리금', '원금상환', '이자납입', '이자납부', '이자상환']],
   ['식비', ['편의점', 'gs25', 'cu', 'seven', '세븐', '카페', '스타벅스', '이디야', '맥도날드',
             '버거킹', '롯데리아', '배달', '배민', '요기요', '쿠팡이츠', '마트', '이마트',
             '홈플러스', '롯데마트', '수퍼', '슈퍼', '식당', '음식', '치킨', '피자']],
@@ -89,22 +93,17 @@ const CATEGORY_KEYWORDS: [string, string[]][] = [
   ['문화/여가', ['넷플릭스', '유튜브', '왓챠', '웨이브', '영화', 'cgv', '롯데시네마', '메가박스',
                 '게임', '스팀', '헬스', '수영', '독서실']],
   ['교육', ['학원', '교육', '도서', '책', '강의', '과외', '인강']],
-  ['저축', ['적금', '저축', '펀드', '보험', 'isa']],
+  ['저축', ['적금', '저축', '펀드', 'isa']],
   ['급여', ['급여', '월급', '임금', '봉급']],
 ]
 
 export function guessCategory(description: string, type: 'income' | 'expense'): string {
   const lower = description.toLowerCase()
-  if (type === 'income') {
-    for (const [cat, keywords] of CATEGORY_KEYWORDS) {
-      if (keywords.some((k) => lower.includes(k))) return cat
-    }
-    return '기타수입'
-  }
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   for (const [cat, keywords] of CATEGORY_KEYWORDS) {
-    if (keywords.some((k) => lower.includes(k))) return cat
+    if (categories.includes(cat) && keywords.some((k) => lower.includes(k.toLowerCase()))) return cat
   }
-  return '기타지출'
+  return type === 'income' ? '기타수입' : '기타지출'
 }
 
 // ────────────────────────────────────────────

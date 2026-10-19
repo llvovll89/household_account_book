@@ -18,6 +18,9 @@ import {
   getLocalStorageUsageBytes,
   hasLocalMigratableData,
   loadSettings,
+  loadTransactions,
+  loadRecurring,
+  saveRecurring,
   mergeLocalIntoFirebase,
   resetAllData,
   StorageConflictError,
@@ -57,6 +60,17 @@ function writeDefaultSettings(overrides?: Record<string, unknown>) {
 }
 
 describe('storage util', () => {
+  it('round-trips transfers and optional loan splits while legacy records remain readable', async () => {
+    setStorageContext('local')
+    const transfer = { ...TX, paymentMethod: 'transfer' as const, paymentMethodId: 'bank', category: '대출', loanPrincipal: 10000, loanInterest: 2000 }
+    await saveTransactions([TX, transfer])
+    expect(await loadTransactions()).toEqual([TX, transfer])
+    const recurring = { id: 'r-bank', type: 'expense' as const, amount: 1000, category: '보험', description: '', dayOfMonth: 1, lastAppliedMonth: '', createdAt: 1, paymentMethod: 'transfer' as const, paymentMethodId: 'bank' }
+    await saveRecurring([recurring])
+    expect(await loadRecurring()).toEqual([recurring])
+    writeDefaultSettings({ userPaymentMethods: [{ id: 'bank', type: 'transfer', label: '자동이체 계좌' }] })
+    expect((await loadSettings()).userPaymentMethods[0]).toMatchObject({ type: 'transfer', label: '자동이체 계좌' })
+  })
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()

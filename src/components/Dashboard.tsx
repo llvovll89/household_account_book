@@ -261,12 +261,15 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     let hasCash = false
     let hasCheck = false
     let hasCredit = false
+    let transfer = 0
+    let hasTransfer = false
 
     for (const t of monthly) {
       const method = t.paymentMethod ?? 'cash'
       const isIncome = t.type === 'income'
       const amount = t.amount
 
+      if (method === 'transfer') { hasTransfer = true; transfer += isIncome ? amount : -amount; continue }
       if (method === 'cash') {
         hasCash = true
         if (isIncome) cashIncome += amount
@@ -294,7 +297,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       credit: creditIncome - creditExpense,
       hasCash,
       hasCheck,
-      hasCredit,
+      hasCredit, transfer, hasTransfer,
     }
   }, [monthly])
 
@@ -871,7 +874,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         {expenseByCategory.length > 0 && (
           <div className="mt-3 space-y-1.5">
             {expenseByCategory.slice(0, 3).map(([cat, amt]) => {
-              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
               const emoji = CATEGORY_EMOJI[cat] ?? '💸'
               const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
               const budget = budgets.find((b) => b.category === cat)
@@ -895,8 +898,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
         )}
 
-        {(monthlyMethodBalance.hasCash || monthlyMethodBalance.hasCheck || monthlyMethodBalance.hasCredit) && (
-          <div className={`mt-4 grid gap-2 ${[monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 1 ? 'grid-cols-1' : [monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {(monthlyMethodBalance.hasTransfer || monthlyMethodBalance.hasCash || monthlyMethodBalance.hasCheck || monthlyMethodBalance.hasCredit) && (
+          <div className={`mt-4 grid gap-2 ${[monthlyMethodBalance.hasTransfer, monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 1 ? 'grid-cols-1' : [monthlyMethodBalance.hasTransfer, monthlyMethodBalance.hasCash, monthlyMethodBalance.hasCheck, monthlyMethodBalance.hasCredit].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+            {monthlyMethodBalance.hasTransfer && <div className="rounded-2xl px-3 py-2.5 bg-[#2C2C2E]"><p className="text-[10px] text-[#8B95A1] mb-1">계좌이체 순유입</p><p className="text-[13px] font-bold num">{fmt(monthlyMethodBalance.transfer)}원</p></div>}
             {monthlyMethodBalance.hasCash && (
               <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/14 to-[#2C2C2E]">
                 <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">💵 현금 잔액</p>
@@ -1308,7 +1312,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
           <div className="space-y-2 mb-3">
             {pendingRecurring.slice(0, 3).map((r) => {
-              const color = CATEGORY_COLOR[r.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+              const color = CATEGORY_COLOR[r.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
               return (
                 <div key={r.id} className="flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: color.bg }}>
@@ -1413,7 +1417,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           {todaySpending.recentTx.length > 0 && (
             <div className="space-y-2 pt-2.5 border-t border-white/5">
               {todaySpending.recentTx.map(t => {
-                const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
                 return (
                   <div key={t.id} className="flex items-center gap-2.5">
                     <div className="w-7 h-7 rounded-xl flex items-center justify-center text-sm shrink-0" style={{ backgroundColor: color.bg }}>
@@ -1649,7 +1653,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide mb-3">이달 최대 지출</p>
           <div className="space-y-2.5">
             {top3Expenses.map((t, i) => {
-              const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+              const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
               const maxAmt = top3Expenses[0].amount
               const barPct = maxAmt > 0 ? (t.amount / maxAmt) * 100 : 0
               return (
@@ -1925,7 +1929,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               const effectiveLimit = budget.limit + carryover
               const pct = Math.min((spent / effectiveLimit) * 100, 100)
               const isOver = spent > effectiveLimit
-              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+              const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
               return (
                 <div key={cat} className="list-item-enter" style={{ animationDelay: `${catIdx * 35}ms` }}>
                   <div className="flex items-center justify-between mb-1.5">
@@ -2001,7 +2005,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           {showSpendingTop && (
             <div className="px-5 pb-5 space-y-3">
               {expenseByCategory.map(([cat, amt]) => {
-                const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
                 const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
                 const prevAmt = prevMonthCategorySpend[cat] ?? 0
                 const trendPct = prevAmt > 0 ? Math.round(((amt - prevAmt) / prevAmt) * 100) : null
@@ -2167,6 +2171,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {showRecurring && (
         <RecurringModal
           recurring={recurring}
+          userPaymentMethods={userPaymentMethods}
           customExpenseCategories={customExpenseCategories}
           onSave={onRecurringSave}
           onClose={() => setShowRecurring(false)}

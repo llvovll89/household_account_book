@@ -5,6 +5,7 @@ import {
   getCardBillingRange,
   getStatementYMForCardExpense,
   resolveCardBillingDay,
+  resolvePaymentMethod,
   shiftYM,
 } from './cardBilling'
 import type { Transaction, UserPaymentMethod } from '../types'
@@ -24,6 +25,11 @@ function tx(overrides: Partial<Transaction>): Transaction {
 }
 
 describe('cardBilling', () => {
+  it('keeps account transfers out of credit card charges and resolves a deleted account by its stored type', () => {
+    const transfer = tx({ paymentMethod: 'transfer', paymentMethodId: 'deleted-bank' })
+    expect(resolvePaymentMethod(transfer, [])).toMatchObject({ type: 'transfer', label: '계좌이체' })
+    expect(calculateCardDueAmount([transfer], '2026-07', 25)).toBe(0)
+  })
   it('statement 월의 청구 기간 시작/종료일을 계산한다', () => {
     const range = getCardBillingRange('2026-07', 25)
 

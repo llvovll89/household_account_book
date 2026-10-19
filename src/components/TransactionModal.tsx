@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useEffectEvent } from 'react'
 import { useModalClose } from '../hooks/useModalClose'
-import { X, Plus, CalendarRange, BookmarkPlus, Bookmark, ArrowDownLeft, ArrowUpRight, Banknote, CreditCard, Wallet } from 'lucide-react'
+import { X, Plus, CalendarRange, BookmarkPlus, Bookmark, ArrowDownLeft, ArrowUpRight, Banknote, CreditCard, Wallet, Landmark, Search } from 'lucide-react'
 import type { AutoCategoryRule, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_COLOR, PAYMENT_METHODS } from '../types'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_COLOR, PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
 import { showToast } from '../lib/toast'
@@ -26,6 +26,7 @@ interface Props {
   onOpenCategoryModal?: () => void
   onOpenPaymentMethodsModal?: () => void
   autoCategoryRules?: AutoCategoryRule[]
+  recentTransactions?: Transaction[]
   initialType?: TransactionType
 }
 
@@ -42,7 +43,7 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], initialType }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], recentTransactions = [], initialType }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
@@ -67,16 +68,44 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(!!transaction)
-  const [fieldErrors, setFieldErrors] = useState<{ amount?: string; category?: string; billingDay?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{ amount?: string; category?: string; billingDay?: string; loan?: string }>({})
 
+  const [categoryQuery, setCategoryQuery] = useState('')
+  const [loanPrincipal, setLoanPrincipal] = useState(transaction?.loanPrincipal?.toString() ?? '')
+  const [loanInterest, setLoanInterest] = useState(transaction?.loanInterest?.toString() ?? '')
+  const [splitLoan, setSplitLoan] = useState(transaction?.loanPrincipal !== undefined)
   const isEditMode = !!transaction
   const { closing, handleClose, modalRef } = useModalClose(onClose, { initialFocusRef: amountInputRef })
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const dialog = modalRef.current?.parentElement
+    if (!viewport || !dialog) return
+    const resize = () => {
+      dialog.style.height = viewport.height + 'px'
+      dialog.style.top = viewport.offsetTop + 'px'
+      dialog.style.bottom = 'auto'
+    }
+    resize()
+    viewport.addEventListener('resize', resize)
+    viewport.addEventListener('scroll', resize)
+    return () => { viewport.removeEventListener('resize', resize); viewport.removeEventListener('scroll', resize) }
+  }, [modalRef])
   const tags = parseHashtags(description)
   const errorTextClass = 'mt-2 text-xs font-semibold text-[#F25260]'
 
   const categories = type === 'income'
-    ? [...INCOME_CATEGORIES, ...customIncomeCategories]
-    : [...EXPENSE_CATEGORIES, ...customExpenseCategories]
+    ? [...new Set([...INCOME_CATEGORIES, ...customIncomeCategories])]
+    : [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])]
+
+  const visibleCategories = categories.filter(c => c.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase()))
+  const recentCategoryNames = useMemo(() => {
+    const latest = new Map<string, number>()
+    for (const t of recentTransactions) {
+      if (t.type === type) latest.set(t.category, Math.max(latest.get(t.category) ?? 0, t.createdAt))
+    }
+    return [...latest].sort((a, b) => b[1] - a[1]).map(([name]) => name)
+  }, [recentTransactions, type])
+  const recentCategories = recentCategoryNames.filter(c => categories.includes(c)).slice(0, 4)
 
   useEffect(() => {
     if (!transaction && !paymentMethodInitialized.current && userPaymentMethods.length > 0) {
@@ -172,6 +201,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     if (!parsed || parsed <= 0) return null
     const item: QueueItem = { type, amount: parsed, paymentMethod, category, description, tags, date, receiptImageUrl }
     if (selectedMethodId) item.paymentMethodId = selectedMethodId
+    if (type === 'expense' && category === '대출' && splitLoan) {
+      item.loanPrincipal = Number(loanPrincipal.replaceAll(',', ''))
+      item.loanInterest = Number(loanInterest.replaceAll(',', ''))
+    }
     if (type === 'expense' && isCreditPaymentMethod(paymentMethod) && billingPreview) {
       item.creditBillingDay = billingPreview.effectiveBillingDay
     }
@@ -180,7 +213,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }
 
   function validateCurrent(requiredAmount = true) {
-    const nextErrors: { amount?: string; category?: string; billingDay?: string } = {}
+    const nextErrors: { amount?: string; category?: string; billingDay?: string; loan?: string } = {}
     const parsed = parseInt(amount.replace(/,/g, ''), 10)
     const parsedBillingDay = parseInt(creditBillingDayInput, 10)
 
@@ -197,8 +230,16 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       }
     }
 
+    if (type === 'expense' && category === '대출' && splitLoan) {
+      const principal = Number(loanPrincipal.replaceAll(',', ''))
+      const interest = Number(loanInterest.replaceAll(',', ''))
+      if (!loanPrincipal.trim() || !loanInterest.trim() || !Number.isSafeInteger(principal) || !Number.isSafeInteger(interest) || principal < 0 || interest < 0 || principal + interest !== parsed) {
+        nextErrors.loan = '원금과 이자를 0원 이상으로 입력하고 합계를 거래 금액과 맞춰주세요.'
+      }
+    }
     setFieldErrors(nextErrors)
     if (nextErrors.amount) amountInputRef.current?.focus()
+    else if (nextErrors.loan) modalRef.current?.querySelector('.loan-split')?.scrollIntoView?.({ block: 'center' })
     return Object.keys(nextErrors).length === 0
   }
 
@@ -209,6 +250,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     setQueue((prev) => [...prev, item])
     // 금액·설명·영수증만 리셋, 날짜·타입·카테고리 유지
     setAmount('')
+    setLoanPrincipal('')
+    setLoanInterest('')
     setDescription('')
     setDateEnd('')
     setShowDateEnd(false)
@@ -309,7 +352,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     categoryManuallySet.current = true
     setDescription(tmpl.description)
     if (tmpl.paymentMethod) setPaymentMethod(tmpl.paymentMethod)
-    if (tmpl.paymentMethodId) setSelectedMethodId(tmpl.paymentMethodId)
+    setSelectedMethodId(tmpl.paymentMethodId ?? null)
     setShowTemplates(false)
   }
 
@@ -360,7 +403,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               {transaction ? '내역 수정' : '내역 추가'}
             </h2>
             {queue.length > 0 && (
-              <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">대기 중 {queue.length}건</p>
+              <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">저장 전 {queue.length}건</p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -409,12 +452,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
           </div>
         )}
 
-        <div className="overflow-y-auto flex-1">
+        <div className="transaction-scroll overflow-y-auto flex-1 min-h-0">
           {/* 대기열 */}
           {queue.length > 0 && (
             <div className="mx-6 mb-3 bg-[#2C2C2E] rounded-2xl overflow-hidden">
               {queue.map((item, idx) => {
-                const qColor = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                const qColor = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
                 const dateLabel = item.dateEnd
                   ? `${fmtShortDate(item.date)}~${fmtShortDate(item.dateEnd)}`
                   : fmtShortDate(item.date)
@@ -424,11 +467,11 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       <CategoryIcon category={item.category} size={16} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[13px] font-bold" style={{ color: item.type === 'income' ? '#2ACF6A' : '#F25260' }}>
+                      <span className="text-[13px] font-bold" style={{ color: item.type === 'income' ? 'var(--income)' : 'var(--expense)' }}>
                         {item.type === 'income' ? '+' : '-'}{fmt(item.amount)}원
                       </span>
                       <span className="text-[11px] text-[#9CA6B3] ml-1.5">{item.category}</span>
-                      <span className="text-[11px] text-[#9CA6B3] ml-1">· {item.paymentMethod === 'cash' ? '현금' : item.paymentMethod === 'check' ? '체크카드' : '신용카드'}</span>
+                      <span className="text-[11px] text-[#9CA6B3] ml-1">· {PAYMENT_METHOD_LABEL[item.paymentMethod ?? 'cash']}</span>
                       {item.description && (
                         <span className="text-[11px] text-[#9CA6B3] ml-1 truncate"> · {item.description}</span>
                       )}
@@ -448,16 +491,16 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
+          <form id="transaction-entry-form" onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
             <div role="group" aria-label="거래 유형" className="transaction-type-switch flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
-              <button type="button" onClick={() => setType('income')} data-kind="income"
+              <button type="button" onClick={() => { setType('income'); setCategoryQuery('') }} data-kind="income"
                 aria-pressed={type === 'income'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'income' ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/50 text-[#2ACF6A]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
                 <ArrowDownLeft size={17} aria-hidden="true" /> 수입
               </button>
-              <button type="button" onClick={() => setType('expense')} data-kind="expense"
+              <button type="button" onClick={() => { setType('expense'); setCategoryQuery('') }} data-kind="expense"
                 aria-pressed={type === 'expense'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'expense' ? 'bg-[#F25260]/15 border-[#F25260]/50 text-[#F25260]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
@@ -482,17 +525,17 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <div
                   role="group"
                   aria-label="결제 수단"
-                  className={`bg-[#2C2C2E] p-1 rounded-xl ${userPaymentMethods.length > 4 ? 'grid grid-cols-3 gap-1' : 'flex gap-1'}`}
+                  className="bg-[#2C2C2E] p-1 rounded-xl grid grid-cols-2 sm:grid-cols-3 gap-1"
                 >
-                {userPaymentMethods.map((m) => {
-                  const isSelected = selectedMethodId === m.id
-                  const MethodIcon = m.type === 'cash' ? Banknote : m.type === 'check' ? Wallet : CreditCard
+                {[...userPaymentMethods, ...(!userPaymentMethods.some(m => m.type === 'transfer') ? [{ id: 'builtin-transfer', type: 'transfer' as const, label: '계좌이체' }] : [])].map((m) => {
+                  const isSelected = selectedMethodId === m.id || (m.id === 'builtin-transfer' && paymentMethod === 'transfer' && !selectedMethodId)
+                  const MethodIcon = m.type === 'transfer' ? Landmark : m.type === 'cash' ? Banknote : m.type === 'check' ? Wallet : CreditCard
                   return (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => {
-                        setSelectedMethodId(m.id)
+                        setSelectedMethodId(m.id === 'builtin-transfer' ? null : m.id)
                         setPaymentMethod(m.type as PaymentMethod)
                         if (m.type === 'credit' && m.billingDay) {
                           setCreditBillingDayInput(String(m.billingDay))
@@ -512,7 +555,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 })}
                 </div>
               ) : (
-                <div role="group" aria-label="결제 수단" className="flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
+                <div role="group" aria-label="결제 수단" className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#2C2C2E] p-1 rounded-xl">
                   {PAYMENT_METHODS.map((method) => (
                     <button
                       key={method.value}
@@ -526,7 +569,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                         : 'text-[#9CA6B3] border-transparent'
                       }`}
                     >
-                      {method.value === 'cash' ? <Banknote size={15} aria-hidden="true" /> : <CreditCard size={15} aria-hidden="true" />} {method.label}
+                      {method.value === 'transfer' ? <Landmark size={15} aria-hidden="true" /> : method.value === 'cash' ? <Banknote size={15} aria-hidden="true" /> : <CreditCard size={15} aria-hidden="true" />} {method.label}
                     </button>
                   ))}
                 </div>
@@ -656,8 +699,11 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   </button>
                 )}
               </div>
+              <label htmlFor="category-search" className="text-xs text-[#8B95A1] block mb-2">카테고리 검색</label>
+              <div className="category-search"><Search size={16} aria-hidden="true" /><input id="category-search" type="search" value={categoryQuery} onChange={e => setCategoryQuery(e.target.value)} placeholder="이름으로 찾기" /></div>
+              {!categoryQuery && recentCategories.length > 0 && <div className="recent-categories" role="group" aria-label="최근 사용 카테고리"><span>최근 사용</span>{recentCategories.map(c => <button type="button" key={c} aria-pressed={category === c} onClick={() => { setCategory(c); categoryManuallySet.current = true; setAutoCategoryApplied(false) }}>{c}</button>)}</div>}
               <div className="grid grid-cols-4 gap-2">
-                {categories.map((c) => {
+                {visibleCategories.map((c) => {
                   const isSelected = category === c
                   return (
                     <button
@@ -679,7 +725,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     >
                       <CategoryIcon category={c} />
                       <span
-                        className="category-choice-label text-[11px] font-medium leading-tight text-center w-full px-0.5 truncate"
+                        className="category-choice-label text-[11px] font-medium leading-tight text-center w-full px-0.5"
                       >
                         {c}
                       </span>
@@ -687,6 +733,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   )
                 })}
               </div>
+              {visibleCategories.length === 0 && <p className="text-xs text-[#8B95A1] py-4" role="status">일치하는 카테고리가 없어요. 검색어를 바꾸거나 카테고리 관리에서 추가하세요.</p>}
               {fieldErrors.category && (
                 <p id="transaction-category-error" role="alert" className={errorTextClass}>
                   {fieldErrors.category}
@@ -694,6 +741,15 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
+            {type === 'expense' && category === '대출' && <div className="loan-split bg-[#2C2C2E] rounded-2xl p-4">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={splitLoan} onChange={e => setSplitLoan(e.target.checked)} />원금·이자 구분 (선택)</label>
+              {splitLoan && <div className="grid grid-cols-2 gap-3 mt-3">
+                <label className="text-xs">원금 (원)<input aria-describedby="loan-split-help" inputMode="numeric" value={loanPrincipal} onChange={e => setLoanPrincipal(e.target.value.replace(/[^0-9]/g, ''))} /></label>
+                <label className="text-xs">이자 (원)<input aria-describedby="loan-split-help" inputMode="numeric" value={loanInterest} onChange={e => setLoanInterest(e.target.value.replace(/[^0-9]/g, ''))} /></label>
+              </div>}
+              <p id="loan-split-help" className="text-xs text-[#8B95A1] mt-2">합계는 위 거래 금액과 같아야 해요. 이자가 없으면 0을 입력하세요.</p>
+              {fieldErrors.loan && <p role="alert" className="text-xs text-[#F25260] mt-2">{fieldErrors.loan}</p>}
+            </div>}
             <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
               <p className="text-[11px] font-semibold text-[#9CA6B3] uppercase tracking-wide">
                 메모 (선택) · <span className="text-[#3D8EF8]">#해시태그</span> 사용 가능
@@ -836,12 +892,15 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
+          </form>
+        </div>
+        <div className="transaction-footer">
             {/* 버튼 영역 */}
             {isEditMode ? (
-              <button type="submit" disabled={uploading}
+              <button type="submit" form="transaction-entry-form" disabled={uploading}
                 className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-[#3182F6] hover:bg-[#2272EB]`}>
                 {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                {uploading ? '저장 중...' : '수정 완료'}
+                {uploading ? '저장 중...' : '저장'}
               </button>
             ) : (
               <>
@@ -853,12 +912,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     className="flex-1 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                   >
                     <Plus size={15} />
-                    항목 추가
+                    계속 입력
                   </button>
-                  <button type="submit" disabled={uploading}
+                  <button type="submit" form="transaction-entry-form" disabled={uploading}
                     className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5' : 'flex-1 py-3.5'} bg-[#3182F6] hover:bg-[#2272EB]`}>
                     {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                    {uploading ? '저장 중...' : queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : type === 'income' ? '수입 추가' : '지출 추가'}
+                    {uploading ? '저장 중...' : queue.length > 0 ? `저장 (${queue.length + (amount ? 1 : 0)}건)` : '저장'}
                   </button>
                 </div>
                 {onSaveTemplates && (
@@ -873,7 +932,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 )}
               </>
             )}
-          </form>
         </div>
       </div>
     </div>

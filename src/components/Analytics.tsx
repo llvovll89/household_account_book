@@ -21,6 +21,7 @@ import {
 } from "recharts";
 import type {Budget, Transaction, UserPaymentMethod} from "../types";
 import {CATEGORY_EMOJI} from "../types";
+import ExpenseBreakdown from "./ExpenseBreakdown";
 import SpendingAnalysisView from "./SpendingAnalysisView";
 import EmptyState from "./ui/EmptyState";
 import {useMonthlyData} from "../lib/useMonthlyData";
@@ -355,7 +356,7 @@ export default function Analytics({
             checkIncome = 0,
             checkExpense = 0,
             creditIncome = 0,
-            creditExpense = 0;
+            creditExpense = 0, transferIncome = 0, transferExpense = 0;
         currentMonthly.forEach((t) => {
             const isCredit = isCreditPaymentMethod(t.paymentMethod);
             const pm = isCredit ? "credit" : (t.paymentMethod ?? "cash");
@@ -366,6 +367,8 @@ export default function Analytics({
             } else if (pm === "check") {
                 if (t.type === "income") checkIncome += amt;
                 else checkExpense += amt;
+            } else if (pm === "transfer") {
+                if (t.type === "income") transferIncome += amt; else transferExpense += amt;
             } else {
                 if (t.type === "income") creditIncome += amt;
                 else creditExpense += amt;
@@ -376,6 +379,7 @@ export default function Analytics({
             {label: "현금", income: cashIncome, expense: cashExpense},
             {label: "체크", income: checkIncome, expense: checkExpense},
             {label: "신용", income: creditIncome, expense: creditExpense},
+            {label: "계좌이체", income: transferIncome, expense: transferExpense},
         ];
 
         const nextStatementYM = shiftYM(yearMonth, 1);
@@ -396,6 +400,7 @@ export default function Analytics({
                 expense: creditExpense,
                 net: creditIncome - creditExpense,
             },
+            transfer: { income: transferIncome, expense: transferExpense, net: transferIncome - transferExpense },
             methodCompareData,
             cardDue: calculateCardDueAmount(
                 transactions,
@@ -449,6 +454,7 @@ export default function Analytics({
                     cashExpense,
                     checkExpense,
                     creditExpense,
+                    transferExpense: monthTx.filter(t => t.type === "expense" && t.paymentMethod === "transfer").reduce((s, t) => s + t.amount, 0),
                 };
             }),
         [monthlyData, transactions],
@@ -472,19 +478,19 @@ export default function Analytics({
                 list.push({
                     icon: "📈",
                     text: `지출이 전월 대비 ${expenseDiff}% 늘었어요`,
-                    color: "#F25260",
+                    color: "var(--expense)",
                 });
             } else if (expenseDiff < 0) {
                 list.push({
                     icon: "🎉",
                     text: `지출이 전월 대비 ${Math.abs(expenseDiff)}% 줄었어요!`,
-                    color: "#2ACF6A",
+                    color: "var(--income)",
                 });
             } else {
                 list.push({
                     icon: "✅",
                     text: `지출이 전월과 동일해요`,
-                    color: "#8B95A1",
+                    color: "var(--muted)",
                 });
             }
         }
@@ -496,7 +502,7 @@ export default function Analytics({
                     incomeDiff > 0
                         ? `수입이 전월 대비 ${incomeDiff}% 증가했어요`
                         : `수입이 전월 대비 ${Math.abs(incomeDiff)}% 감소했어요`,
-                color: incomeDiff > 0 ? "#2ACF6A" : "#F5BE3A",
+                color: incomeDiff > 0 ? "var(--income)" : "var(--category-gold)",
             });
         }
 
@@ -505,7 +511,7 @@ export default function Analytics({
             list.push({
                 icon: CATEGORY_EMOJI[topCat.cat] ?? "📦",
                 text: `가장 많이 쓴 항목은 ${topCat.cat} (${topCat.pct}%)`,
-                color: "#8B95A1",
+                color: "var(--muted)",
             });
         }
 
@@ -513,7 +519,7 @@ export default function Analytics({
             list.push({
                 icon: "📅",
                 text: `${topWeekday.label}요일 지출이 가장 많아요 (${fmt(topWeekday.total)}원)`,
-                color: "#8B95A1",
+                color: "var(--muted)",
             });
         }
 
@@ -526,7 +532,7 @@ export default function Analytics({
                 list.push({
                     icon: "🏆",
                     text: `저축률 ${saveRate}%! 훌륭한 한 달이에요`,
-                    color: "#F5BE3A",
+                    color: "var(--category-gold)",
                 });
         }
 
@@ -543,7 +549,7 @@ export default function Analytics({
             list.push({
                 icon: "⚠️",
                 text: `${topUp.cat} 지출이 전월보다 ${pct}% 증가했어요`,
-                color: "#F5BE3A",
+                color: "var(--category-gold)",
             });
         }
 
@@ -560,7 +566,7 @@ export default function Analytics({
             list.push({
                 icon: "👍",
                 text: `${topDown.cat}을(를) 전월보다 ${pct}% 절약했어요`,
-                color: "#2ACF6A",
+                color: "var(--income)",
             });
         }
 
@@ -568,7 +574,7 @@ export default function Analytics({
             list.push({
                 icon: "🚨",
                 text: `이번 달 지출이 수입을 초과했어요`,
-                color: "#F25260",
+                color: "var(--expense)",
             });
         }
 
@@ -594,7 +600,7 @@ export default function Analytics({
                     list.push({
                         icon: "🛍️",
                         text: `주말 하루 평균 지출이 평일보다 ${Math.round((weekendAvg / weekdayAvg - 1) * 100)}% 높아요`,
-                        color: "#F5BE3A",
+                        color: "var(--category-gold)",
                     });
             }
         }
@@ -657,7 +663,7 @@ export default function Analytics({
         });
     }, [tagData, monthlyData, transactions]);
 
-    const topTagColors = ["#3D8EF8", "#F5BE3A", "#2ACF6A"];
+    const topTagColors = ["var(--accent)", "var(--category-gold)", "var(--income)"];
 
     // ── 전월 동기간(MTD) 비교 ─────────────────────────────
     const mtdComparison = useMemo(() => {
@@ -817,6 +823,7 @@ export default function Analytics({
                 · {TAB_HINTS[viewMode]}
             </p>
 
+            <ExpenseBreakdown transactions={transactions} yearMonth={yearMonth} />
             <div key={viewMode} className="space-y-3 tab-content">
             {/* ──── 월간 뷰 ──── */}
             {viewMode === "monthly" && (
@@ -889,17 +896,17 @@ export default function Analytics({
                                         {
                                             label: "거래 건수",
                                             value: `${txCount}건`,
-                                            color: "#F1F3F6",
+                                            color: "var(--text)",
                                         },
                                         {
                                             label: "지출 일수",
                                             value: `${uniqueDays}일`,
-                                            color: "#F25260",
+                                            color: "var(--expense)",
                                         },
                                         {
                                             label: "일평균",
                                             value: `${fmt(dailyAvg)}`,
-                                            color: "#F5BE3A",
+                                            color: "var(--category-gold)",
                                         },
                                         {
                                             label: "최대 단건",
@@ -978,10 +985,10 @@ export default function Analytics({
                                         style={{
                                             color:
                                                 mtdComparison.diff > 0
-                                                    ? "#F25260"
+                                                    ? "var(--expense)"
                                                     : mtdComparison.diff < 0
-                                                      ? "#2ACF6A"
-                                                      : "#8B95A1",
+                                                      ? "var(--income)"
+                                                      : "var(--muted)",
                                         }}
                                     >
                                         {mtdComparison.diff > 0
@@ -996,8 +1003,8 @@ export default function Analytics({
                                             style={{
                                                 color:
                                                     mtdComparison.diff > 0
-                                                        ? "#F25260"
-                                                        : "#2ACF6A",
+                                                        ? "var(--expense)"
+                                                        : "var(--income)",
                                             }}
                                         >
                                             {mtdComparison.diff > 0 ? "+" : ""}
@@ -1112,13 +1119,13 @@ export default function Analytics({
                                                             height: `${Math.max(4, rate)}%`,
                                                             backgroundColor:
                                                                 isCurrent
-                                                                    ? "#3D8EF8"
+                                                                    ? "var(--accent)"
                                                                     : rate >= 20
-                                                                      ? "#2ACF6A"
+                                                                      ? "var(--income)"
                                                                       : rate >=
                                                                           10
-                                                                        ? "#F5BE3A"
-                                                                        : "#F25260",
+                                                                        ? "var(--category-gold)"
+                                                                        : "var(--expense)",
                                                             opacity: isCurrent
                                                                 ? 1
                                                                 : 0.55,
@@ -1432,7 +1439,7 @@ export default function Analytics({
                                 paymentMethodStats.check.income > 0 ||
                                 paymentMethodStats.check.expense > 0 ||
                                 paymentMethodStats.credit.income > 0 ||
-                                paymentMethodStats.credit.expense > 0) && (
+                                paymentMethodStats.credit.expense > 0 || paymentMethodStats.transfer.income > 0 || paymentMethodStats.transfer.expense > 0) && (
                                 <div className="bg-[#1C1C1E] rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-3">
                                         결제수단 분석
@@ -1472,7 +1479,8 @@ export default function Analytics({
                                     </div>
 
                                     {pmTab === "balance" && (
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="rounded-2xl px-3 py-2.5 bg-[#2C2C2E]"><p className="text-xs text-[#8B95A1]">계좌이체 순유입</p><p className="text-sm num font-bold mt-1">{fmtFull(paymentMethodStats.transfer.net)}원</p><p className="text-xs text-[#8B95A1] mt-1">지출 {fmtFull(paymentMethodStats.transfer.expense)}원</p></div>
                                             <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
                                                 <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">
                                                     💵 현금 순잔액
@@ -1570,7 +1578,7 @@ export default function Analytics({
                                                 <XAxis
                                                     dataKey="label"
                                                     tick={{
-                                                        fill: "#8B95A1",
+                                                        fill: "var(--muted)",
                                                         fontSize: 11,
                                                     }}
                                                     axisLine={false}
@@ -1578,7 +1586,7 @@ export default function Analytics({
                                                 />
                                                 <YAxis
                                                     tick={{
-                                                        fill: "#4E5968",
+                                                        fill: "var(--muted)",
                                                         fontSize: 10,
                                                     }}
                                                     axisLine={false}
@@ -1589,7 +1597,7 @@ export default function Analytics({
                                                 />
                                                 <Tooltip
                                                     contentStyle={{
-                                                        background: "#1C1C1E",
+                                                        background: "var(--surface)",
                                                         border: "1px solid rgba(255,255,255,0.08)",
                                                         borderRadius: 12,
                                                     }}
@@ -1609,12 +1617,12 @@ export default function Analytics({
                                                 <Bar
                                                     dataKey="income"
                                                     radius={[6, 6, 0, 0]}
-                                                    fill="#2ACF6A"
+                                                    fill="var(--income)"
                                                 />
                                                 <Bar
                                                     dataKey="expense"
                                                     radius={[6, 6, 0, 0]}
-                                                    fill="#3D8EF8"
+                                                    fill="var(--accent)"
                                                 />
                                             </BarChart>
                                         </ResponsiveContainer>
@@ -1632,7 +1640,7 @@ export default function Analytics({
                                                     <XAxis
                                                         dataKey="label"
                                                         tick={{
-                                                            fill: "#8B95A1",
+                                                            fill: "var(--muted)",
                                                             fontSize: 11,
                                                         }}
                                                         axisLine={false}
@@ -1640,7 +1648,7 @@ export default function Analytics({
                                                     />
                                                     <YAxis
                                                         tick={{
-                                                            fill: "#4E5968",
+                                                            fill: "var(--muted)",
                                                             fontSize: 10,
                                                         }}
                                                         axisLine={false}
@@ -1652,7 +1660,7 @@ export default function Analytics({
                                                     <Tooltip
                                                         contentStyle={{
                                                             background:
-                                                                "#1C1C1E",
+                                                                "var(--surface)",
                                                             border: "1px solid rgba(255,255,255,0.08)",
                                                             borderRadius: 12,
                                                         }}
@@ -1667,33 +1675,35 @@ export default function Analytics({
                                                                 : name ===
                                                                     "checkExpense"
                                                                   ? "체크"
-                                                                  : "신용",
+                                                                  : name === "transferExpense" ? "계좌이체" : "신용",
                                                         ]}
                                                     />
                                                     <Line
                                                         type="monotone"
                                                         dataKey="cashExpense"
-                                                        stroke="#2ACF6A"
+                                                        stroke="var(--income)"
                                                         strokeWidth={2.2}
                                                         dot={{r: 2}}
                                                     />
                                                     <Line
                                                         type="monotone"
                                                         dataKey="checkExpense"
-                                                        stroke="#6AD3C0"
+                                                        stroke="var(--category-teal)"
                                                         strokeWidth={2.2}
                                                         dot={{r: 2}}
                                                     />
+                                                    <Line type="monotone" dataKey="transferExpense" stroke="var(--category-gold)" strokeWidth={2.2} dot={{ r: 2 }} />
                                                     <Line
                                                         type="monotone"
                                                         dataKey="creditExpense"
-                                                        stroke="#3D8EF8"
+                                                        stroke="var(--accent)"
                                                         strokeWidth={2.2}
                                                         dot={{r: 2}}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
-                                            <div className="mt-2 flex items-center gap-4 text-[11px]">
+                                            <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px]">
+                                                <span className="text-[#8B95A1]">계좌이체</span>
                                                 <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
                                                     <span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />
                                                     현금
@@ -1763,7 +1773,7 @@ export default function Analytics({
                                                     <XAxis
                                                         dataKey="label"
                                                         tick={{
-                                                            fill: "#8B95A1",
+                                                            fill: "var(--muted)",
                                                             fontSize: 11,
                                                         }}
                                                         axisLine={false}
@@ -1771,7 +1781,7 @@ export default function Analytics({
                                                     />
                                                     <YAxis
                                                         tick={{
-                                                            fill: "#4E5968",
+                                                            fill: "var(--muted)",
                                                             fontSize: 10,
                                                         }}
                                                         axisLine={false}
@@ -1783,7 +1793,7 @@ export default function Analytics({
                                                     <Tooltip
                                                         contentStyle={{
                                                             background:
-                                                                "#1C1C1E",
+                                                                "var(--surface)",
                                                             border: "1px solid rgba(255,255,255,0.08)",
                                                             borderRadius: 12,
                                                         }}
@@ -1924,10 +1934,10 @@ export default function Analytics({
                                                 : null;
                                         const diffColor =
                                             diff > 0
-                                                ? "#F25260"
+                                                ? "var(--expense)"
                                                 : diff < 0
-                                                  ? "#2ACF6A"
-                                                  : "#8B95A1";
+                                                  ? "var(--income)"
+                                                  : "var(--muted)";
                                         return (
                                             <div key={cat}>
                                                 <div className="flex items-center justify-between mb-1">
@@ -2113,8 +2123,8 @@ export default function Analytics({
                                             backgroundColor:
                                                 yearTotalIncome >
                                                 yearTotalExpense
-                                                    ? "#3D8EF8"
-                                                    : "#F25260",
+                                                    ? "var(--accent)"
+                                                    : "var(--expense)",
                                         }}
                                     />
                                 </div>
@@ -2366,7 +2376,7 @@ export default function Analytics({
                                                             backgroundColor:
                                                                 topTagColors[
                                                                     idx
-                                                                ] ?? "#4E5968",
+                                                                ] ?? "var(--muted)",
                                                         }}
                                                     />
                                                 </div>
@@ -2415,7 +2425,7 @@ export default function Analytics({
                                             <XAxis
                                                 dataKey="name"
                                                 tick={{
-                                                    fill: "#8B95A1",
+                                                    fill: "var(--muted)",
                                                     fontSize: 10,
                                                 }}
                                                 axisLine={false}
@@ -2423,7 +2433,7 @@ export default function Analytics({
                                             />
                                             <YAxis
                                                 tick={{
-                                                    fill: "#4E5968",
+                                                    fill: "var(--muted)",
                                                     fontSize: 10,
                                                 }}
                                                 axisLine={false}
@@ -2437,12 +2447,12 @@ export default function Analytics({
                                                     borderRadius: 12,
                                                 }}
                                                 labelStyle={{
-                                                    color: "#F1F3F6",
+                                                    color: "var(--text)",
                                                     fontSize: 12,
                                                     fontWeight: 700,
                                                 }}
                                                 itemStyle={{
-                                                    color: "#F25260",
+                                                    color: "var(--expense)",
                                                     fontSize: 12,
                                                 }}
                                                 formatter={(v) => [
@@ -2452,7 +2462,7 @@ export default function Analytics({
                                             />
                                             <Bar
                                                 dataKey="지출"
-                                                fill="#F25260"
+                                                fill="var(--expense)"
                                                 radius={[6, 6, 0, 0]}
                                             />
                                         </BarChart>
@@ -2504,7 +2514,7 @@ export default function Analytics({
                                             <XAxis
                                                 dataKey="label"
                                                 tick={{
-                                                    fill: "#8B95A1",
+                                                    fill: "var(--muted)",
                                                     fontSize: 10,
                                                 }}
                                                 axisLine={false}
@@ -2512,7 +2522,7 @@ export default function Analytics({
                                             />
                                             <YAxis
                                                 tick={{
-                                                    fill: "#4E5968",
+                                                    fill: "var(--muted)",
                                                     fontSize: 10,
                                                 }}
                                                 axisLine={false}
@@ -2526,7 +2536,7 @@ export default function Analytics({
                                                     borderRadius: 12,
                                                 }}
                                                 labelStyle={{
-                                                    color: "#F1F3F6",
+                                                    color: "var(--text)",
                                                     fontSize: 12,
                                                     fontWeight: 700,
                                                 }}
@@ -2647,12 +2657,12 @@ export default function Analytics({
                                         Math.max(4, m.rate),
                                     );
                                     const color = isCurrent
-                                        ? "#3D8EF8"
+                                        ? "var(--accent)"
                                         : m.rate > 100
-                                          ? "#F25260"
+                                          ? "var(--expense)"
                                           : m.rate >= 80
-                                            ? "#F5BE3A"
-                                            : "#2ACF6A";
+                                            ? "var(--category-gold)"
+                                            : "var(--income)";
                                     return (
                                         <div
                                             key={m.ym}
@@ -2780,8 +2790,8 @@ export default function Analytics({
                                                                 width: `${barPct}%`,
                                                                 backgroundColor:
                                                                     isPositive
-                                                                        ? "#2ACF6A"
-                                                                        : "#F25260",
+                                                                        ? "var(--income)"
+                                                                        : "var(--expense)",
                                                                 opacity:
                                                                     isCurrent
                                                                         ? 1
@@ -2845,7 +2855,7 @@ function CompareCard({
     diff: number | null;
     isIncome: boolean;
 }) {
-    const mainColor = isIncome ? "#2ACF6A" : "#F25260";
+    const mainColor = isIncome ? "var(--income)" : "var(--expense)";
     return (
         <div className="bg-[#2C2C2E] rounded-2xl p-4">
             <p className="text-xs text-[#4E5968] font-semibold mb-2">{label}</p>

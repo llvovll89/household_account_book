@@ -50,7 +50,7 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
 
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 space-y-2.5 max-h-72 overflow-y-auto">
           {applied.map((item) => {
-            const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+            const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
               <div key={item.id} className="flex items-center gap-2.5">
                 <div

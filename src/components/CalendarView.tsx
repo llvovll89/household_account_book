@@ -206,7 +206,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
             ) : (
               <div className="overflow-y-auto max-h-[calc(82vh-56px)]">
                 {selectedTx.map((t, idx) => {
-                  const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: '#8B95A1' }
+                  const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
                   return (
                     <div
                       key={t.id}
