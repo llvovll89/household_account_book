@@ -134,6 +134,10 @@ export default function HelpModal({ onClose }: Props) {
             </div>
           ))}
 
+          <nav aria-label="공개 사용 가이드" className="flex flex-wrap gap-4 text-sm text-[#79B2FF]">
+            <a href="/about/" className="underline underline-offset-4 min-h-11 inline-flex items-center">잔고플랜 소개</a>
+            <a href="/guide/" className="underline underline-offset-4 min-h-11 inline-flex items-center">자세한 사용법</a>
+          </nav>
           {/* 팁 */}
           <div className="bg-[#3D8EF8]/10 border border-[#3D8EF8]/20 rounded-2xl p-4 flex gap-3">
             <TrendingUp size={17} className="text-[#3D8EF8] shrink-0 mt-0.5" />

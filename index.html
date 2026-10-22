@@ -10,26 +10,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="잔고플랜" />
-    <meta name="description" content="수입·지출·예산을 한 번에 관리하는 잔고플랜" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="잔고플랜" />
-    <meta property="og:title" content="잔고플랜" />
-    <meta property="og:description" content="수입·지출·예산을 한 번에 관리하는 잔고플랜" />
-    <meta property="og:url" content="/" />
-    <meta property="og:image" content="/favicon.svg" />
-    <meta property="og:image:width" content="64" />
-    <meta property="og:image:height" content="64" />
-    <meta property="og:image:type" content="image/svg+xml" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="잔고플랜" />
-    <meta name="twitter:description" content="수입·지출·예산을 한 번에 관리하는 잔고플랜" />
-    <meta name="twitter:image" content="/favicon.svg" />
-    <title>잔고플랜</title>
+    <!-- SEO_HEAD -->
+    <link rel="stylesheet" href="/seo.css">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" data-nosnippet></div>
+    <footer class="app-public-footer" aria-label="앱 소개와 도움말">
+      <h2>잔고플랜 모바일 가계부</h2>
+      <p>수입·지출 기록, 월별 예산, 카드 청구와 구독료, 저축 목표를 한곳에서 관리하세요.</p>
+      <nav><a href="/about/">잔고플랜 소개</a><a href="/guide/">가계부 사용법</a></nav>
+    </footer>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
