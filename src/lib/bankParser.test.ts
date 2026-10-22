@@ -1,5 +1,15 @@
 import { expect, it } from 'vitest'
-import { guessCategory } from './bankParser'
+import { applyMapping, guessCategory, parsePDFText } from './bankParser'
+
+it('excludes impossible dates while preserving valid leap days in imported rows', () => {
+  const rows = ['2026-02-30', '2026-13-01', '2026-00-10', '2026-02-29', '2024-02-29', '20261022'].map(date => ({ date, description: 'test', amount: '1000' }))
+  const parsed = applyMapping(rows, { date: 'date', description: 'description', amount: 'amount', deposit: '', withdrawal: '', typeCol: '' })
+  expect(parsed.map(row => row.date)).toEqual(['2024-02-29', '2026-10-22'])
+})
+
+it('excludes impossible calendar dates from PDF transaction text', () => {
+  expect(parsePDFText('2026.02.30 9000 lunch\n2024.02.29 8000 cafe').map(row => row.date)).toEqual(['2024-02-29'])
+})
 
 it.each([
   ['자동차보험 납부', '보험'],

@@ -80,18 +80,18 @@ export default function YearlyBarChart({ data, currentYM }: Props) {
           content={<YearlyTooltip />}
         />
         <Bar dataKey="income" radius={[4, 4, 0, 0]} barSize={8} animationDuration={600}>
-          {data.map((m, i) => (
+          {data.map((m) => (
             <Cell
-              key={i}
+              key={m.ym}
               fill={CHART_COLORS.income}
               opacity={m.ym === currentYM ? 1 : (m.income > 0 || m.expense > 0) ? 0.55 : 0.2}
             />
           ))}
         </Bar>
         <Bar dataKey="expense" radius={[4, 4, 0, 0]} barSize={8} animationDuration={600}>
-          {data.map((m, i) => (
+          {data.map((m) => (
             <Cell
-              key={i}
+              key={m.ym}
               fill={CHART_COLORS.expense}
               opacity={m.ym === currentYM ? 1 : (m.income > 0 || m.expense > 0) ? 0.55 : 0.2}
             />

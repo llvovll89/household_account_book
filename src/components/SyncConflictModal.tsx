@@ -1,4 +1,5 @@
 import { AlertTriangle, RefreshCw, ShieldX } from 'lucide-react'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
     conflictKeys: string[]
@@ -82,20 +83,24 @@ export default function SyncConflictModal({
     onRetryMine,
     onClose,
 }: Props) {
+    const { handleClose, modalRef } = useModalClose(onClose)
     const recommendedSet = new Set(recommendedKeys)
 
     return (
         <div
             className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
-            onClick={(e) => e.target === e.currentTarget && onClose()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sync-conflict-modal-title"
+            onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
-            <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div ref={modalRef} className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
                 <div className="flex items-start gap-3">
                     <span className="w-9 h-9 rounded-xl bg-[#F25260]/15 border border-[#F25260]/25 flex items-center justify-center shrink-0">
                         <AlertTriangle size={17} className="text-[#FF8A95]" />
                     </span>
                     <div>
-                        <h3 className="text-white text-base font-bold">동기화 충돌 발생</h3>
+                        <h3 id="sync-conflict-modal-title" className="text-white text-base font-bold">동기화 충돌 발생</h3>
                         <p className="text-xs text-[#8B95A1] mt-1 leading-relaxed">
                             다른 기기에서 변경된 항목과 현재 저장 내용이 충돌했어요.
                         </p>

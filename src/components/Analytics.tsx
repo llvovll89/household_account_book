@@ -844,7 +844,7 @@ export default function Analytics({
                             <div className="space-y-2.5">
                                 {insights.map((ins, i) => (
                                     <div
-                                        key={i}
+                                        key={ins.text}
                                         className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3 list-item-enter border-l-[3px] overflow-hidden"
                                         style={{
                                             borderColor: ins.color,
@@ -1290,9 +1290,9 @@ export default function Analytics({
                                                     (a, b) => b.total - a.total,
                                                 )
                                                 .slice(0, 4)
-                                                .map((d, i) => (
+                                                .map((d) => (
                                                     <div
-                                                        key={i}
+                                                        key={d.label}
                                                         className="flex items-center justify-between bg-[#2C2C2E] rounded-xl px-3 py-2"
                                                     >
                                                         <span className="text-xs font-bold text-[#8B95A1]">
@@ -1338,10 +1338,10 @@ export default function Analytics({
                                     <div className="grid grid-cols-7 gap-1">
                                         {dayHeatmapData.map((cell, i) =>
                                             cell.day === null ? (
-                                                <div key={i} />
+                                                <div key={`pad-${i}`} />
                                             ) : (
                                                 <div
-                                                    key={i}
+                                                    key={cell.day}
                                                     className="aspect-square rounded-md flex items-center justify-center"
                                                     style={{
                                                         backgroundColor:

@@ -754,43 +754,58 @@ export async function saveTransactions(t: Transaction[]): Promise<void> {
 
 export async function loadMemos(): Promise<Memo[]> {
   if (storageMode === 'local') return loadLocalMemos()
-  return (await loadRemoteState(getStorageUid())).memos
+  try {
+    return (await loadRemoteState(getStorageUid())).memos
+  } catch {
+    return loadLocalMemos()
+  }
 }
 
 export async function saveMemos(m: Memo[]): Promise<void> {
+  safeSave(MEMOS_KEY, m)
   if (storageMode === 'local') {
-    safeSave(MEMOS_KEY, m)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { memos: m })
 }
 
 export async function loadBudgets(): Promise<Budget[]> {
   if (storageMode === 'local') return loadLocalBudgets()
-  return (await loadRemoteState(getStorageUid())).budgets
+  try {
+    return (await loadRemoteState(getStorageUid())).budgets
+  } catch {
+    return loadLocalBudgets()
+  }
 }
 
 export async function saveBudgets(b: Budget[]): Promise<void> {
+  safeSave(BUDGETS_KEY, b)
   if (storageMode === 'local') {
-    safeSave(BUDGETS_KEY, b)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { budgets: b })
 }
 
 export async function loadRecurring(): Promise<RecurringTransaction[]> {
   if (storageMode === 'local') return loadLocalRecurring()
-  return (await loadRemoteState(getStorageUid())).recurring
+  try {
+    return (await loadRemoteState(getStorageUid())).recurring
+  } catch {
+    return loadLocalRecurring()
+  }
 }
 
 export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
+  safeSave(RECURRING_KEY, r)
   if (storageMode === 'local') {
-    safeSave(RECURRING_KEY, r)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { recurring: r })
 }
 

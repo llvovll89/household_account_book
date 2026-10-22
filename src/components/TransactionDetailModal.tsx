@@ -6,6 +6,7 @@ import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt, parseYmdLocal } from '../lib/format'
 import { loadSettings } from '../lib/storage'
 import { getStatementYMForCardExpense, isCreditPaymentMethod, resolveCardBillingDay, resolvePaymentMethod } from '../lib/cardBilling'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   transaction: Transaction
@@ -27,6 +28,7 @@ function formatShortDate(dateStr: string) {
 }
 
 export default function TransactionDetailModal({ transaction: t, userPaymentMethods = [], onEdit, onDelete, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const color = CATEGORY_COLOR[t.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
   const tags = t.tags ?? []
   const isIncome = t.type === 'income'
@@ -66,9 +68,12 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transaction-detail-modal-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[88vh] flex flex-col modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[88vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -76,8 +81,8 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
 
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-2 pb-3 shrink-0">
-          <h2 className="text-[17px] font-bold text-white">내역 상세</h2>
-          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <h2 id="transaction-detail-modal-title" className="text-[17px] font-bold text-white">내역 상세</h2>
+          <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>

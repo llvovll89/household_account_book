@@ -21,6 +21,10 @@ import {
   loadTransactions,
   loadRecurring,
   saveRecurring,
+  loadMemos,
+  saveMemos,
+  loadBudgets,
+  saveBudgets,
   mergeLocalIntoFirebase,
   resetAllData,
   StorageConflictError,
@@ -75,6 +79,21 @@ describe('storage util', () => {
     localStorage.clear()
     vi.clearAllMocks()
     setStorageContext('local')
+  })
+
+  it.each([
+    { name: 'memos', key: 'hb_memos', value: [MEMO], save: () => saveMemos([MEMO]), load: loadMemos },
+    { name: 'budgets', key: 'hb_budgets', value: [{ category: '식비', limit: 200000 }], save: () => saveBudgets([{ category: '식비', limit: 200000 }]), load: loadBudgets },
+    { name: 'recurring', key: 'hb_recurring', value: [{ id: 'r-1', type: 'expense' as const, amount: 1000, category: '식비', description: '', dayOfMonth: 1, lastAppliedMonth: '', createdAt: 1 }], save: () => saveRecurring([{ id: 'r-1', type: 'expense', amount: 1000, category: '식비', description: '', dayOfMonth: 1, lastAppliedMonth: '', createdAt: 1 }]), load: loadRecurring },
+  ])('preserves $name locally when cloud writes and reads fail', async ({ key, value, save, load }) => {
+    setStorageContext('firebase', 'uid-offline')
+    vi.mocked(runTransaction).mockRejectedValue(new Error('offline'))
+    vi.mocked(getDoc).mockRejectedValue(new Error('offline'))
+    await expect(save()).rejects.toThrow('offline')
+    expect(JSON.parse(localStorage.getItem(key)!)).toEqual(value)
+    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(localStorage.getItem('hb_firebase_cache')).toBe('true')
+    expect(await load()).toEqual(value)
   })
 
   it('로컬 캐시 플래그가 없으면 거래내역만 있어도 병합 대상이다', () => {
