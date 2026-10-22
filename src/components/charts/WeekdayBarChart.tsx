@@ -73,9 +73,9 @@ export default function WeekdayBarChart({ data }: Props) {
           onMouseLeave={() => setActiveIndex(null)}
           onClick={(_, index) => setActiveIndex(activeIndex === index ? null : index)}
         >
-          {data.map((_, i) => (
+          {data.map((d, i) => (
             <Cell
-              key={i}
+              key={d.label}
               fill={getBarColor(i)}
               opacity={activeIndex !== null && activeIndex !== i ? 0.6 : 1}
             />

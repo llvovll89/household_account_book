@@ -74,7 +74,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       memo: sub.memo,
     })
     setAmountStr(sub.amount > 0 ? String(sub.amount) : '')
-    const idx = SERVICE_COLORS.indexOf((sub as any).color ?? SERVICE_COLORS[0])
+    const idx = SERVICE_COLORS.indexOf(sub.color ?? SERVICE_COLORS[0])
     setColorIdx(idx >= 0 ? idx : 0)
     setErrors({})
     setShowSheet(true)
@@ -103,7 +103,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         ...form,
         amount,
         createdAt: Date.now(),
-        ...({ color } as any),
+        color,
       }
       onChange([...subscriptions, next])
     }
@@ -205,7 +205,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       ) : (
         <div className="space-y-2">
           {sorted.map((sub, subIdx) => {
-            const color = (sub as any).color ?? SERVICE_COLORS[0]
+            const color = sub.color ?? SERVICE_COLORS[0]
             const days = daysUntilBilling(sub.billingDay)
             const catColor = CATEGORY_COLOR[sub.category]
             return (
@@ -294,7 +294,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
               .sort((a, b) => b.amount - a.amount)
               .slice(0, 3)
               .map(sub => {
-                const color = (sub as any).color ?? SERVICE_COLORS[0]
+                const color = sub.color ?? SERVICE_COLORS[0]
                 const annual = sub.amount * 12
                 return (
                   <div key={sub.id} className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">

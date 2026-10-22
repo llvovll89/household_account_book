@@ -484,7 +484,23 @@ function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
   }
 }
 
+const BACKUP_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000 // 30일
+
+// 30일 이상 지난 hb_backup_* 키를 정리해 localStorage 용량 잠식을 방지한다
+function pruneOldBackups(): void {
+  const now = Date.now()
+  for (let i = localStorage.length - 1; i >= 0; i--) {
+    const key = localStorage.key(i)
+    if (!key) continue
+    const match = /^hb_backup_(\d+)_/.exec(key)
+    if (!match) continue
+    if (now - Number(match[1]) > BACKUP_MAX_AGE_MS) localStorage.removeItem(key)
+  }
+}
+
 function backupAndClearLocalData(): void {
+  pruneOldBackups()
+
   const backupPrefix = `hb_backup_${Date.now()}`
   const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, STOCK_TRADES_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
 
@@ -723,57 +739,77 @@ export async function saveTransactions(t: Transaction[]): Promise<void> {
 
 export async function loadMemos(): Promise<Memo[]> {
   if (storageMode === 'local') return loadLocalMemos()
-  return (await loadRemoteState(getStorageUid())).memos
+  try {
+    return (await loadRemoteState(getStorageUid())).memos
+  } catch {
+    return loadLocalMemos()
+  }
 }
 
 export async function saveMemos(m: Memo[]): Promise<void> {
+  safeSave(MEMOS_KEY, m)
   if (storageMode === 'local') {
-    safeSave(MEMOS_KEY, m)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { memos: m })
 }
 
 export async function loadBudgets(): Promise<Budget[]> {
   if (storageMode === 'local') return loadLocalBudgets()
-  return (await loadRemoteState(getStorageUid())).budgets
+  try {
+    return (await loadRemoteState(getStorageUid())).budgets
+  } catch {
+    return loadLocalBudgets()
+  }
 }
 
 export async function saveBudgets(b: Budget[]): Promise<void> {
+  safeSave(BUDGETS_KEY, b)
   if (storageMode === 'local') {
-    safeSave(BUDGETS_KEY, b)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { budgets: b })
 }
 
 export async function loadRecurring(): Promise<RecurringTransaction[]> {
   if (storageMode === 'local') return loadLocalRecurring()
-  return (await loadRemoteState(getStorageUid())).recurring
+  try {
+    return (await loadRemoteState(getStorageUid())).recurring
+  } catch {
+    return loadLocalRecurring()
+  }
 }
 
 export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
+  safeSave(RECURRING_KEY, r)
   if (storageMode === 'local') {
-    safeSave(RECURRING_KEY, r)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { recurring: r })
 }
 
 export async function loadStockTrades(): Promise<StockTrade[]> {
   if (storageMode === 'local') return loadLocalStockTrades()
-  return (await loadRemoteState(getStorageUid())).stockTrades
+  try {
+    return (await loadRemoteState(getStorageUid())).stockTrades
+  } catch {
+    return loadLocalStockTrades()
+  }
 }
 
 export async function saveStockTrades(trades: StockTrade[]): Promise<void> {
+  safeSave(STOCK_TRADES_KEY, trades)
   if (storageMode === 'local') {
-    safeSave(STOCK_TRADES_KEY, trades)
     markUserLocalData()
     return
   }
+  markFirebaseCacheLocalData()
   await saveRemotePatch(getStorageUid(), { stockTrades: trades })
 }
 

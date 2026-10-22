@@ -12,6 +12,7 @@ import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
 import { applyAutoCategory } from '../lib/autoCategoryRules'
 import EmptyState from './ui/EmptyState'
+import { useVisualViewport } from '../hooks/useVisualViewport'
 
 interface Props {
   transaction?: Transaction | null
@@ -42,6 +43,7 @@ function fmtShortDate(date: string) {
 }
 
 export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], initialType }: Props) {
+  const viewportRef = useVisualViewport()
   const amountInputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
@@ -50,6 +52,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
+  const [amountFocused, setAmountFocused] = useState(false)
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(toLocalDateStr())
@@ -203,6 +206,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     }
 
     setFieldErrors(nextErrors)
+    if (Object.keys(nextErrors).length > 0) {
+      requestAnimationFrame(() => {
+        const target = modalRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+        target?.scrollIntoView({ block: 'center', behavior: 'auto' })
+        target?.focus({ preventScroll: true })
+      })
+    }
     return Object.keys(nextErrors).length === 0
   }
 
@@ -344,13 +354,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
+      ref={viewportRef}
+      className="transaction-viewport fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1A1E30] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="transaction-panel bg-[#1A1E30] w-full max-w-lg rounded-t-[28px] border-t border-white/6 flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -385,7 +396,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
         {/* 템플릿 목록 */}
         {showTemplates && (
-          <div className="mx-6 mb-3">
+          <div className="mx-6 mb-3 max-h-32 overflow-y-auto shrink-0">
             {transactionTemplates.length === 0 ? (
               <EmptyState
                 emoji="🔖"
@@ -412,7 +423,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
           </div>
         )}
 
-        <div className="overflow-y-auto flex-1">
+        <div className="transaction-fields overflow-y-auto flex-1 min-h-0 overscroll-contain">
           {/* 대기열 */}
           {queue.length > 0 && (
             <div className="mx-6 mb-3 bg-[#252A3F] rounded-2xl overflow-hidden">
@@ -451,7 +462,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
+          <form id="transaction-form" noValidate onSubmit={handleSubmit} className="px-5 pb-4 space-y-3">
             {/* 수입 / 지출 */}
             <div role="group" aria-label="거래 유형" className="flex gap-2 bg-[#252A3F] p-1 rounded-xl">
               <button type="button" onClick={() => setType('income')}
@@ -466,6 +477,79 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   }`}>
                 지출
               </button>
+            </div>
+
+            {/* 금액 */}
+            <div
+              className={`bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text border ${fieldErrors.amount ? 'border-[#F25260]/40' : 'border-transparent'}`}
+              onClick={() => amountInputRef.current?.focus()}
+            >
+              <div className="flex items-center justify-between mb-2 min-h-9">
+                <label htmlFor="transaction-amount" className="text-xs font-semibold text-[#8B95A1]">금액</label>
+                {amountFocused && (
+                  <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={(event) => {
+                    event.stopPropagation()
+                    amountInputRef.current?.blur()
+                  }} className="min-h-9 px-3 rounded-lg bg-[#3D8EF8]/15 text-[#79B2FF] text-xs font-bold">
+                    입력 완료
+                  </button>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <input
+                  ref={amountInputRef}
+                  id="transaction-amount"
+                  type="text" inputMode="numeric"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  onFocus={() => setAmountFocused(true)}
+                  onBlur={() => setAmountFocused(false)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      event.currentTarget.blur()
+                    }
+                  }}
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  placeholder="0"
+                  required={queue.length === 0}
+                  aria-invalid={!!fieldErrors.amount}
+                  aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
+                  className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
+                />
+                <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
+              </div>
+              <div className="flex gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
+                {[10000, 50000, 100000, 500000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      const current = parseInt(amount.replace(/,/g, ''), 10) || 0
+                      handleAmountChange(String(current + v))
+                    }}
+                    className={`flex-1 min-h-11 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
+                  >
+                    +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
+                  </button>
+                ))}
+                {amount && (
+                  <button
+                    type="button"
+                    onClick={() => handleAmountChange('')}
+                    aria-label="금액 지우기"
+                    className="px-3 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#4E5968] active:text-[#F25260] transition-colors"
+                  >
+                    지움
+                  </button>
+                )}
+              </div>
+              {fieldErrors.amount && (
+                <p id="transaction-amount-error" role="alert" className={errorTextClass}>
+                  {fieldErrors.amount}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -576,57 +660,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 )}
               </div>
             )}
-
-            {/* 금액 */}
-            <div
-              className={`bg-[#252A3F] rounded-2xl px-5 py-4 overflow-hidden cursor-text border ${fieldErrors.amount ? 'border-[#F25260]/40' : 'border-transparent'}`}
-              onClick={() => amountInputRef.current?.focus()}
-            >
-              <p className="text-[11px] font-semibold text-[#4E5968] mb-2 uppercase tracking-wide">금액</p>
-              <div className="flex items-baseline gap-2">
-                <input
-                  ref={amountInputRef}
-                  type="text" inputMode="numeric"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  placeholder="0"
-                  required={queue.length === 0}
-                  aria-invalid={!!fieldErrors.amount}
-                  aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
-                  className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
-                />
-                <span className="text-lg font-bold text-[#4E5968] shrink-0">원</span>
-              </div>
-              <div className="flex gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
-                {[10000, 50000, 100000, 500000].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => {
-                      const current = parseInt(amount.replace(/,/g, ''), 10) || 0
-                      handleAmountChange(String(current + v))
-                    }}
-                    className={`flex-1 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
-                  >
-                    +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
-                  </button>
-                ))}
-                {amount && (
-                  <button
-                    type="button"
-                    onClick={() => handleAmountChange('')}
-                    className="px-3 py-1.5 rounded-xl bg-[#1A1E30] text-[11px] font-bold text-[#4E5968] active:text-[#F25260] transition-colors"
-                  >
-                    C
-                  </button>
-                )}
-              </div>
-              {fieldErrors.amount && (
-                <p id="transaction-amount-error" role="alert" className={errorTextClass}>
-                  {fieldErrors.amount}
-                </p>
-              )}
-            </div>
 
             <div className="bg-[#252A3F] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">날짜</p>
@@ -839,9 +872,12 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               )}
             </div>
 
+          </form>
+        </div>
+        <div className="transaction-actions shrink-0 bg-[#1A1E30] border-t border-white/6 px-5 pt-3">
             {/* 버튼 영역 */}
             {isEditMode ? (
-              <button type="submit" disabled={uploading}
+              <button type="submit" form="transaction-form" disabled={uploading}
                 className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${type === 'income' ? 'bg-[#1A8C4E] hover:bg-[#1FA05A]' : 'bg-[#C0394A] hover:bg-[#D44257]'}`}>
                 {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {uploading ? '저장 중...' : '수정 완료'}
@@ -858,7 +894,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     <Plus size={15} />
                     항목 추가
                   </button>
-                  <button type="submit" disabled={uploading}
+                  <button type="submit" form="transaction-form" disabled={uploading}
                     className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5' : 'flex-1 py-3.5'} ${type === 'income' ? 'bg-[#1A8C4E] hover:bg-[#1FA05A]' : 'bg-[#C0394A] hover:bg-[#D44257]'}`}>
                     {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {uploading ? '저장 중...' : queue.length > 0 ? `전체 저장 (${queue.length + (amount ? 1 : 0)}건)` : type === 'income' ? '수입 추가' : '지출 추가'}
@@ -868,7 +904,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   <button
                     type="button"
                     onClick={handleSaveAsTemplate}
-                    className="w-full py-2.5 rounded-2xl font-semibold text-[13px] bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                    className="transaction-template-save w-full py-2.5 rounded-2xl font-semibold text-[13px] bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                   >
                     <BookmarkPlus size={13} />
                     템플릿으로 저장
@@ -876,7 +912,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 )}
               </>
             )}
-          </form>
         </div>
       </div>
     </div>

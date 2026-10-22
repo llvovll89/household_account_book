@@ -1,4 +1,5 @@
 import { AlertCircle, RefreshCw, ShieldAlert, X } from 'lucide-react'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
     reasons: Array<'conflict' | 'save-failed'>
@@ -45,6 +46,7 @@ export default function SyncRecoveryGuideModal({
     onRetrySaveFailedOnly,
     onClose,
 }: Props) {
+    const { handleClose, modalRef } = useModalClose(onClose)
     const showConflict = hasReason(reasons, 'conflict')
     const showSaveFailed = hasReason(reasons, 'save-failed')
     const progressRatio = retryProgress && retryProgress.total > 0
@@ -62,23 +64,26 @@ export default function SyncRecoveryGuideModal({
     return (
         <div
             className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
-            onClick={(e) => e.target === e.currentTarget && onClose()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sync-recovery-guide-modal-title"
+            onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
-            <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+            <div ref={modalRef} className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
                         <span className="w-9 h-9 rounded-xl bg-[#F5BE3A]/15 border border-[#F5BE3A]/25 flex items-center justify-center shrink-0">
                             <AlertCircle size={17} className="text-[#FFD66A]" />
                         </span>
                         <div>
-                            <h3 className="text-white text-base font-bold">동기화 해결 가이드</h3>
+                            <h3 id="sync-recovery-guide-modal-title" className="text-white text-base font-bold">동기화 해결 가이드</h3>
                             <p className="text-xs text-[#8B95A1] mt-1 leading-relaxed">
                                 현재 실패 원인 기준으로 복구 순서를 안내합니다.
                             </p>
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="w-7 h-7 rounded-full bg-[#1C1C1E] text-[#8B95A1] flex items-center justify-center shrink-0"
                         aria-label="닫기"
                     >

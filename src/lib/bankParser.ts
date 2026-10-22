@@ -49,19 +49,30 @@ export function detectColumns(headers: string[]): Partial<ColumnMapping> {
 // ────────────────────────────────────────────
 //  날짜 정규화  →  YYYY-MM-DD
 // ────────────────────────────────────────────
+function isValidYMD(ymd: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd)
+  if (!m) return false
+  const [, y, mo, d] = m
+  const date = new Date(Number(y), Number(mo) - 1, Number(d))
+  return date.getFullYear() === Number(y) && date.getMonth() === Number(mo) - 1 && date.getDate() === Number(d)
+}
+
 function parseDate(raw: string): string {
   const s = raw.trim().replace(/[.\/\s]/g, '-').replace(/[^0-9\-]/g, '')
+  let result: string
   // YYYYMMDD
-  if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
+  if (/^\d{8}$/.test(s)) result = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
   // YYYY-MM-DD (already)
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  else if (/^\d{4}-\d{2}-\d{2}/.test(s)) result = s.slice(0, 10)
   // YY-MM-DD: 현재 연도 이하면 2000년대, 초과면 1900년대
-  if (/^\d{2}-\d{2}-\d{2}$/.test(s)) {
+  else if (/^\d{2}-\d{2}-\d{2}$/.test(s)) {
     const yy = parseInt(s.slice(0, 2), 10)
     const century = yy <= new Date().getFullYear() % 100 ? '20' : '19'
-    return `${century}${s}`
+    result = `${century}${s}`
+  } else {
+    result = s.slice(0, 10)
   }
-  return s.slice(0, 10)
+  return isValidYMD(result) ? result : ''
 }
 
 // ────────────────────────────────────────────
@@ -307,7 +318,7 @@ export function applyMapping(
     if (!dateRaw.trim()) continue
 
     const date = parseDate(dateRaw)
-    if (!date || date === 'NaN-Na-Na') continue
+    if (!date) continue
 
     const description = (row[mapping.description] ?? '').trim()
 
@@ -379,6 +390,7 @@ export function parsePDFText(text: string): ParsedRow[] {
     const dateMatch = line.match(dateRe)
     if (!dateMatch) continue
     const date = parseDate(dateMatch[1])
+    if (!date) continue
 
     const amounts = [...line.matchAll(amountRe)]
       .map((m) => parseAmount(m[1]))

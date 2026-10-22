@@ -89,6 +89,7 @@ export default function useStockPrice(tickers: string[]): UseStockPriceResult {
     refresh().then(schedule)
 
     return () => clearTimeout(timerId)
+    // tickers 배열은 매 렌더 새 참조로 들어와도 내용이 같으면 재실행하지 않도록 tickersKey(정렬된 문자열)로만 감지한다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tickersKey, refresh])
 

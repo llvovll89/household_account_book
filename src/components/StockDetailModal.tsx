@@ -3,6 +3,7 @@ import { ChevronLeft, Pencil, Trash2, TrendingUp, TrendingDown } from 'lucide-re
 import type { StockTrade, StockHolding, StockQuote } from '../types'
 import { fmt, fmtQty, fmtPrice, formatDate } from '../lib/format'
 import StockPriceChart from './StockPriceChart'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   ticker: string
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function StockDetailModal({ ticker, trades, holding, quote = null, onEdit, onDelete, onClose }: Props) {
+  const { handleClose, modalRef } = useModalClose(onClose)
   const sorted = useMemo(
     () => [...trades].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
     [trades]
@@ -38,12 +40,12 @@ export default function StockDetailModal({ ticker, trades, holding, quote = null
     : holding.realizedPnL > 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'
 
   return (
-    <div className="fixed inset-0 bg-[#181818] z-50 overflow-y-auto">
+    <div ref={modalRef} className="fixed inset-0 bg-[#181818] z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-label={`${ticker} 종목 상세`}>
       {/* 헤더 */}
       <div className="sticky top-0 bg-[#0D0F14] z-10 px-4 pt-5 pb-3 border-b border-white/[0.06]">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="뒤로 가기"
             className="w-8 h-8 rounded-full bg-[#1C1C1E] flex items-center justify-center shrink-0"
           >

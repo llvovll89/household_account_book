@@ -66,8 +66,8 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
           <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
           <Bar dataKey="budget" name="예산" fill="rgba(255,255,255,0.08)" radius={[0, 4, 4, 0]} barSize={10} />
           <Bar dataKey="actual" name="지출" radius={[0, 4, 4, 0]} barSize={10}>
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.over ? 'rgba(242,82,96,0.7)' : 'rgba(61,142,248,0.7)'} />
+            {data.map((entry) => (
+              <Cell key={entry.category} fill={entry.over ? 'rgba(242,82,96,0.7)' : 'rgba(61,142,248,0.7)'} />
             ))}
           </Bar>
         </BarChart>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Plus, Trash2, Pencil, Check } from 'lucide-react'
 import type { UserPaymentMethod } from '../types'
 import { generateId } from '../lib/format'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   userPaymentMethods: UserPaymentMethod[]
@@ -12,6 +13,7 @@ interface Props {
 type AddingType = 'check' | 'credit' | null
 
 export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [methods, setMethods] = useState<UserPaymentMethod[]>(userPaymentMethods)
   const [addingType, setAddingType] = useState<AddingType>(null)
   const [addLabel, setAddLabel] = useState('')
@@ -87,25 +89,28 @@ export default function PaymentMethodsModal({ userPaymentMethods, onSave, onClos
     const hasCash = methods.some((m) => m.type === 'cash')
     const finalMethods = hasCash ? methods : [cashMethod, ...methods]
     onSave(finalMethods)
-    onClose()
+    handleClose()
   }
 
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-methods-modal-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[88vh] flex flex-col border-t border-white/[0.06] modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[88vh] flex flex-col border-t border-white/[0.06] modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
 
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">결제수단 관리</h2>
+            <h2 id="payment-methods-modal-title" className="text-[18px] font-bold text-white">결제수단 관리</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">사용하는 카드와 결제수단을 설정하세요</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>

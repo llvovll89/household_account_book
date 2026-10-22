@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../types'
+import { useModalClose } from '../hooks/useModalClose'
 
 interface Props {
   customExpenseCategories: string[]
@@ -12,6 +13,7 @@ interface Props {
 type Tab = 'expense' | 'income'
 
 export default function CategoryModal({ customExpenseCategories, customIncomeCategories, onSave, onClose }: Props) {
+  const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [activeTab, setActiveTab] = useState<Tab>('expense')
   const [customExpense, setCustomExpense] = useState<string[]>(customExpenseCategories)
   const [customIncome, setCustomIncome] = useState<string[]>(customIncomeCategories)
@@ -40,25 +42,28 @@ export default function CategoryModal({ customExpenseCategories, customIncomeCat
 
   function handleSave() {
     onSave(customExpense, customIncome)
-    onClose()
+    handleClose()
   }
 
   return (
     <div
       className="fixed inset-0 bg-black/60 flex items-end justify-center z-50 modal-backdrop"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-modal-title"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06] modal-panel">
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/[0.06] modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
 
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
-            <h2 className="text-[18px] font-bold text-white">카테고리 관리</h2>
+            <h2 id="category-modal-title" className="text-[18px] font-bold text-white">카테고리 관리</h2>
             <p className="text-xs text-[#4E5968] mt-0.5">사용자 정의 카테고리 추가/삭제</p>
           </div>
-          <button onClick={onClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+          <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
             <X size={16} className="text-[#8B95A1]" />
           </button>
         </div>

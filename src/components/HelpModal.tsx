@@ -134,8 +134,8 @@ export default function HelpModal({ onClose }: Props) {
                 <span className="text-[15px] font-bold text-white">{title}</span>
               </div>
               <ul className="space-y-2">
-                {items.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2">
+                {items.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
                     <span className="mt-1.25 w-1 h-1 rounded-full bg-[#4E5968] shrink-0" />
                     <span className="text-[13px] text-[#8B95A1] leading-relaxed">{item}</span>
                   </li>
