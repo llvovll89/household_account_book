@@ -9,6 +9,21 @@ vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
 afterEach(cleanup)
 
+it('finishes amount entry without saving and keeps the draft available to save', async () => {
+  const onSave = vi.fn()
+  render(createElement(TransactionModal, { onSave, onClose: vi.fn() }))
+  const amount = screen.getByRole('textbox', { name: '금액 (원)' })
+  await waitFor(() => expect(document.activeElement).toBe(amount))
+  fireEvent.change(amount, { target: { value: '12500' } })
+  fireEvent.click(screen.getByRole('button', { name: '입력 완료' }))
+  expect(document.activeElement).not.toBe(amount)
+  expect((amount as HTMLInputElement).value).toBe('12,500')
+  expect(onSave).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+  expect(onSave.mock.calls[0][0][0].amount).toBe(12500)
+})
+
 it('validates optional loan splits and saves transfer payment details', async () => {
   const onSave = vi.fn()
   render(createElement(TransactionModal, { onSave, onClose: vi.fn() }))

@@ -997,7 +997,7 @@ export default function TransactionList({
     return (
         <div className="space-y-3 tab-content">
             {/* 뷰 전환 + 내보내기 */}
-            <div className="flex items-center gap-2">
+            <div className="transaction-toolbar flex flex-wrap items-center gap-2">
                 <div className="flex bg-[#1C1C1E] rounded-2xl p-1 gap-1">
                     <button
                         onClick={() => setViewMode("list")}
@@ -1071,7 +1071,11 @@ export default function TransactionList({
                                             />
                                             <input
                                                 ref={searchInputRef}
-                                                type="text"
+                                                type="search"
+                                                enterKeyHint="search"
+                                                onKeyDown={(event) => {
+                                                    if (event.key === "Enter") event.currentTarget.blur();
+                                                }}
                                                 aria-label="내역 검색"
                                                 aria-keyshortcuts="/ Escape"
                                                 value={search}

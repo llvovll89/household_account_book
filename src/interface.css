@@ -234,3 +234,34 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .ledger-navigation-brand .brand-wordmark { font-size: 22px; }
 .brand-mark-loading { width: 42px; height: 42px; flex-basis: 42px; }
 @media (max-width: 380px) { .ledger-header-brand h1.brand-wordmark { font-size: 18px; } .ledger-header-brand .brand-mark { width: 30px; height: 30px; flex-basis: 30px; } }
+
+/* Phone entry keeps the amount and actions within the keyboard's visible viewport. */
+.amount-shortcuts > button { min-height: 44px; }
+.amount-heading .secondary-action { min-height: 36px; padding-block: 6px; font-size: 12px; }
+.transaction-toolbar button { min-height: 44px; }
+@media (max-width: 767px) {
+  .ledger-header-inner { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+  .ledger-header-inner > div:first-child { gap: 12px; min-width: 0; }
+  .ledger-header-brand { flex-shrink: 0; }
+  .transaction-dialog .modal-panel {
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .transaction-dialog[data-keyboard="true"] .transaction-footer { padding-bottom: 8px; }
+  .transaction-dialog[data-keyboard="true"] [data-template-save] { display: none; }
+  .transaction-toolbar { flex-wrap: wrap; }
+  .transaction-toolbar > div:first-child { flex: 1 1 100%; }
+  .transaction-toolbar > div:first-child button { flex: 1; justify-content: center; }
+  .transaction-toolbar > div:last-child { margin-left: 0; width: 100%; justify-content: flex-end; }
+  .transaction-dialog :is(input, select, textarea):not([inputmode="numeric"]),
+  input[type="search"] { font-size: 16px; }
+}
+@media (max-width: 767px) and (display-mode: standalone) {
+  .ledger-header-inner,
+  .transaction-dialog .modal-panel {
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+  }
+}

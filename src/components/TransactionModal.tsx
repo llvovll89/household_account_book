@@ -52,6 +52,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
+  const [amountFocused, setAmountFocused] = useState(false)
   const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(toLocalDateStr())
@@ -84,6 +85,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       dialog.style.height = viewport.height + 'px'
       dialog.style.top = viewport.offsetTop + 'px'
       dialog.style.bottom = 'auto'
+      dialog.dataset.keyboard = String(window.innerHeight - viewport.height > 150)
     }
     resize()
     viewport.addEventListener('resize', resize)
@@ -238,8 +240,17 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       }
     }
     setFieldErrors(nextErrors)
-    if (nextErrors.amount) amountInputRef.current?.focus()
-    else if (nextErrors.loan) modalRef.current?.querySelector('.loan-split')?.scrollIntoView?.({ block: 'center' })
+    if (Object.keys(nextErrors).length > 0) {
+      requestAnimationFrame(() => {
+        const container = modalRef.current
+        const target = nextErrors.amount ? amountInputRef.current
+          : nextErrors.billingDay ? container?.querySelector<HTMLElement>('input[type="number"]')
+          : nextErrors.loan ? container?.querySelector<HTMLElement>('.loan-split input:not([type="checkbox"])')
+          : container?.querySelector<HTMLElement>('[aria-label="카테고리 선택"] button')
+        target?.scrollIntoView?.({ block: 'center', behavior: 'auto' })
+        target?.focus({ preventScroll: true })
+      })
+    }
     return Object.keys(nextErrors).length === 0
   }
 
@@ -425,7 +436,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
         {/* 템플릿 목록 */}
         {showTemplates && (
-          <div className="mx-6 mb-3">
+          <div className="mx-6 mb-3 max-h-32 overflow-y-auto shrink-0">
             {transactionTemplates.length === 0 ? (
               <EmptyState
                 emoji="🔖"
@@ -491,7 +502,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
           )}
 
-          <form id="transaction-entry-form" onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
+          <form id="transaction-entry-form" noValidate onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
             <div role="group" aria-label="거래 유형" className="transaction-type-switch flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
               <button type="button" onClick={() => { setType('income'); setCategoryQuery('') }} data-kind="income"
@@ -506,6 +517,80 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   }`}>
                 <ArrowUpRight size={17} aria-hidden="true" /> 지출
               </button>
+            </div>
+
+            {/* 금액 */}
+            <div
+              className={`bg-[#2C2C2E] rounded-2xl px-5 py-4 overflow-hidden cursor-text border ${fieldErrors.amount ? 'border-[#F25260]/40' : 'border-transparent'}`}
+              onClick={() => amountInputRef.current?.focus()}
+            >
+              <div className="amount-heading flex items-center justify-between mb-2 min-h-9">
+                <label htmlFor="transaction-amount" className="text-xs font-semibold text-[#9CA6B3]">금액</label>
+                {amountFocused && (
+                  <button type="button" onPointerDown={(event) => event.preventDefault()} onClick={(event) => {
+                    event.stopPropagation()
+                    amountInputRef.current?.blur()
+                  }} className="secondary-action">
+                    입력 완료
+                  </button>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2">
+                <input
+                  ref={amountInputRef}
+                  id="transaction-amount"
+                  aria-label="금액 (원)"
+                  type="text" inputMode="numeric"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  onFocus={() => setAmountFocused(true)}
+                  onBlur={() => setAmountFocused(false)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault()
+                      event.currentTarget.blur()
+                    }
+                  }}
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  placeholder="0"
+                  required={queue.length === 0}
+                  aria-invalid={!!fieldErrors.amount}
+                  aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
+                  className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
+                />
+                <span className="text-lg font-bold text-[#9CA6B3] shrink-0">원</span>
+              </div>
+              <div className="amount-shortcuts flex gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
+                {[10000, 50000, 100000, 500000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      const current = parseInt(amount.replace(/,/g, ''), 10) || 0
+                      handleAmountChange(String(current + v))
+                    }}
+                    className={`flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
+                  >
+                    +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
+                  </button>
+                ))}
+                {amount && (
+                  <button
+                    type="button"
+                    onClick={() => handleAmountChange('')}
+                    aria-label="금액 지우기"
+                    className="px-3 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#9CA6B3] active:text-[#F25260] transition-colors"
+                  >
+                    지움
+                  </button>
+                )}
+              </div>
+              {fieldErrors.amount && (
+                <p id="transaction-amount-error" role="alert" className={errorTextClass}>
+                  {fieldErrors.amount}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -616,58 +701,6 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 )}
               </div>
             )}
-
-            {/* 금액 */}
-            <div
-              className={`bg-[#2C2C2E] rounded-2xl px-5 py-4 overflow-hidden cursor-text border ${fieldErrors.amount ? 'border-[#F25260]/40' : 'border-transparent'}`}
-              onClick={() => amountInputRef.current?.focus()}
-            >
-              <p className="text-[11px] font-semibold text-[#9CA6B3] mb-2 uppercase tracking-wide">금액</p>
-              <div className="flex items-baseline gap-2">
-                <input
-                  ref={amountInputRef}
-                  aria-label="금액 (원)"
-                  type="text" inputMode="numeric"
-                  value={amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  placeholder="0"
-                  required={queue.length === 0}
-                  aria-invalid={!!fieldErrors.amount}
-                  aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
-                  className={`flex-1 min-w-0 bg-transparent text-[34px] font-extrabold focus:outline-none num text-right placeholder-[#1E2A3A] transition-colors ${type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}
-                />
-                <span className="text-lg font-bold text-[#9CA6B3] shrink-0">원</span>
-              </div>
-              <div className="flex gap-1.5 mt-3" onClick={(e) => e.stopPropagation()}>
-                {[10000, 50000, 100000, 500000].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => {
-                      const current = parseInt(amount.replace(/,/g, ''), 10) || 0
-                      handleAmountChange(String(current + v))
-                    }}
-                    className={`flex-1 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#8B95A1] transition-colors ${type === 'income' ? 'active:bg-[#2ACF6A]/20 active:text-[#2ACF6A]' : 'active:bg-[#F25260]/20 active:text-[#F25260]'}`}
-                  >
-                    +{v >= 10000 ? `${v / 10000}만` : `${v / 1000}천`}
-                  </button>
-                ))}
-                {amount && (
-                  <button
-                    type="button"
-                    onClick={() => handleAmountChange('')}
-                    className="px-3 py-1.5 rounded-xl bg-[#1C1C1E] text-[11px] font-bold text-[#9CA6B3] active:text-[#F25260] transition-colors"
-                  >
-                    C
-                  </button>
-                )}
-              </div>
-              {fieldErrors.amount && (
-                <p id="transaction-amount-error" role="alert" className={errorTextClass}>
-                  {fieldErrors.amount}
-                </p>
-              )}
-            </div>
 
             <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
               <p className="text-[11px] font-semibold text-[#9CA6B3] mb-1.5 uppercase tracking-wide">날짜</p>
@@ -924,6 +957,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   <button
                     type="button"
                     onClick={handleSaveAsTemplate}
+                    data-template-save
                     className="w-full py-2.5 rounded-2xl font-semibold text-[13px] bg-[#2C2C2E] text-[#9CA6B3] hover:text-[#8B95A1] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                   >
                     <BookmarkPlus size={13} />

@@ -23,7 +23,7 @@ it('searches and clears transactions while advanced filters remain collapsed', a
   render(createElement(TransactionList, { transactions, yearMonth: '2026-09', onEdit: vi.fn(), onDelete: vi.fn() }))
   const filterButton = screen.getByRole('button', { name: /상세 필터/ })
   expect(filterButton.getAttribute('aria-expanded')).toBe('false')
-  const search = screen.getByRole('textbox', { name: '내역 검색' })
+  const search = screen.getByRole('searchbox', { name: '내역 검색' })
   fireEvent.change(search, { target: { value: '오후 커피' } })
   await waitFor(() => expect(screen.queryByText('점심 식사')).toBeNull())
   expect(screen.getByText('오후 커피')).toBeTruthy()
