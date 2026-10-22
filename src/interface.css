@@ -236,6 +236,21 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 380px) { .ledger-header-brand h1.brand-wordmark { font-size: 18px; } .ledger-header-brand .brand-mark { width: 30px; height: 30px; flex-basis: 30px; } }
 
 /* Phone entry keeps the amount and actions within the keyboard's visible viewport. */
+.transaction-overview { padding-block: 4px 8px; }
+.transaction-quick-types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--raised); }
+.transaction-quick-types button { min-height: 44px; border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 650; }
+.transaction-quick-types button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px #10182012; }
+.transaction-result-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding: 12px 2px 0; font-size: 12px; color: var(--muted); }
+.transaction-result-summary > span:first-child { margin-right: auto; font-weight: 650; color: var(--text); }
+.transaction-result-summary strong { margin-left: 4px; font-weight: 650; }
+.entry-date-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.entry-date-heading [role="group"] { display: flex; gap: 6px; }
+.entry-date-heading button { min-height: 40px; padding: 8px 14px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); font-size: 12px; }
+.entry-date-heading button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.entry-queue summary { min-height: 48px; padding: 14px; cursor: pointer; color: var(--text); font-size: 13px; font-weight: 650; }
+.entry-queue summary span { margin-left: 12px; color: var(--accent); font-size: 12px; }
+.entry-queue[open] summary { border-bottom: 1px solid var(--line); }
+@media (hover: none) { .search-shortcuts { display: none; } }
 .amount-shortcuts > button { min-height: 44px; }
 .amount-heading .secondary-action { min-height: 36px; padding-block: 6px; font-size: 12px; }
 .transaction-toolbar button { min-height: 44px; }

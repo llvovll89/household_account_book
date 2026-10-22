@@ -233,7 +233,7 @@ export default function TransactionList({
     const [editingBillingDay, setEditingBillingDay] = useState(false);
     const [billingDayInput, setBillingDayInput] = useState("25");
     const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(() =>
-        getInitialSectionOpen(FILTER_PANEL_OPEN_KEY, true),
+        getInitialSectionOpen(FILTER_PANEL_OPEN_KEY, false),
     );
     const [isBalanceSectionOpen, setIsBalanceSectionOpen] = useState(() =>
         getInitialSectionOpen(BALANCE_SECTION_OPEN_KEY),
@@ -1115,13 +1115,29 @@ export default function TransactionList({
                                                     </span>
                                                 </>
                                             ) : (
-                                                <span className="text-[#9CA6B3]">
+                                                <span className="search-shortcuts text-[#9CA6B3]">
                                                     단축키: / 검색, Esc 초기화
                                                 </span>
                                             )}
                                         </p>
                                     </div>
 
+
+                        <section className="transaction-overview" aria-label="거래 빠른 필터">
+                            <div className="transaction-quick-types" role="group" aria-label="거래 유형 필터">
+                                {(['all', 'income', 'expense'] as FilterType[]).map((value) => (
+                                    <button key={value} type="button" aria-pressed={filter === value}
+                                        onClick={() => setFilter(value)}>
+                                        {value === 'all' ? '전체' : value === 'income' ? '수입' : '지출'}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="transaction-result-summary" role="status" aria-live="polite" aria-atomic="true">
+                                <span>{fmt(monthly.length)}건</span>
+                                <span>수입 <strong className="text-[#2ACF6A] num">{fmt(filteredIncome)}원</strong></span>
+                                <span>지출 <strong className="text-[#F25260] num">{fmt(filteredExpense)}원</strong></span>
+                            </div>
+                        </section>
 
                         <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
                             <div className="flex items-center gap-2 px-3 py-3">
@@ -1450,35 +1466,8 @@ export default function TransactionList({
                                     {/* 필터 탭 */}
                                     <div>
                                         <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
-                                            유형 · 결제수단
+                                            결제수단
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
-                                            {(
-                                                [
-                                                    "all",
-                                                    "income",
-                                                    "expense",
-                                                ] as FilterType[]
-                                            ).map((f) => (
-                                                <button
-                                                    key={f}
-                                                    onClick={() => setFilter(f)}
-                                                    aria-pressed={filter === f}
-                                                    className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                                                        filter === f
-                                                            ? "bg-[#3D8EF8] text-white"
-                                                            : "text-[#9CA6B3] hover:text-[#8B95A1]"
-                                                    }`}
-                                                >
-                                                    {f === "all"
-                                                        ? "전체"
-                                                        : f === "income"
-                                                          ? "수입"
-                                                          : "지출"}
-                                                </button>
-                                            ))}
-                                        </div>
-
                                         <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <span className="text-xs text-[#8B95A1] font-semibold">

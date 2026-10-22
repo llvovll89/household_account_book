@@ -2,12 +2,25 @@ import { createElement } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import TransactionModal from './TransactionModal'
+import { toLocalDateStr } from '../lib/format'
 
 vi.mock('../lib/storage', () => ({ loadSettings: async () => ({ userPaymentMethods: [], cardBillingDay: 25 }) }))
 vi.mock('../firebase/firebase', () => ({ auth: { currentUser: null } }))
 vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
 afterEach(cleanup)
+
+it('saves the previous local calendar day when Yesterday is selected', async () => {
+  const onSave = vi.fn()
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  render(createElement(TransactionModal, { onSave, onClose: vi.fn() }))
+  fireEvent.click(screen.getByRole('button', { name: '어제' }))
+  fireEvent.change(screen.getByRole('textbox', { name: '금액 (원)' }), { target: { value: '9000' } })
+  fireEvent.click(screen.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+  expect(onSave.mock.calls[0][0][0]).toMatchObject({ date: toLocalDateStr(yesterday), amount: 9000 })
+})
 
 it('finishes amount entry without saving and keeps the draft available to save', async () => {
   const onSave = vi.fn()

@@ -466,7 +466,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         <div className="transaction-scroll overflow-y-auto flex-1 min-h-0">
           {/* 대기열 */}
           {queue.length > 0 && (
-            <div className="mx-6 mb-3 bg-[#2C2C2E] rounded-2xl overflow-hidden">
+            <details className="entry-queue mx-6 mb-3 bg-[#2C2C2E] rounded-2xl overflow-hidden">
+              <summary>입력 대기 {queue.length}건 <span>내역 확인</span></summary>
               {queue.map((item, idx) => {
                 const qColor = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
                 const dateLabel = item.dateEnd
@@ -491,7 +492,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     <button
                       type="button"
                       onClick={() => handleRemoveFromQueue(idx)}
-                      className="w-5 h-5 rounded-full bg-[#F25260]/15 flex items-center justify-center shrink-0"
+                      className="w-11 h-11 rounded-full bg-[#F25260]/15 flex items-center justify-center shrink-0"
                       aria-label="대기열에서 제거"
                     >
                       <X size={10} className="text-[#F25260]" />
@@ -499,7 +500,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   </div>
                 )
               })}
-            </div>
+            </details>
           )}
 
           <form id="transaction-entry-form" noValidate onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
@@ -703,7 +704,18 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             )}
 
             <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-              <p className="text-[11px] font-semibold text-[#9CA6B3] mb-1.5 uppercase tracking-wide">날짜</p>
+              <div className="entry-date-heading">
+                <span className="text-xs text-[#9CA6B3]">날짜</span>
+                <div role="group" aria-label="빠른 날짜 선택">
+                  {[{ label: '오늘', days: 0 }, { label: '어제', days: -1 }].map(({ label, days }) => {
+                    const value = new Date()
+                    value.setDate(value.getDate() + days)
+                    const dateValue = toLocalDateStr(value)
+                    return <button key={label} type="button" aria-pressed={date === dateValue}
+                      onClick={() => setDate(dateValue)}>{label}</button>
+                  })}
+                </div>
+              </div>
               <FancyDatePicker value={date} onChange={setDate} />
             </div>
 
