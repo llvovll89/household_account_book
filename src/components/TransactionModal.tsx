@@ -45,6 +45,7 @@ function fmtShortDate(date: string) {
 
 export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], recentTransactions = [], initialType }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const paymentMethodInitialized = useRef(false)
   const categoryManuallySet = useRef(false)
@@ -92,7 +93,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       || loanInterest !== (transaction.loanInterest?.toString() ?? '')
     : !!(amount || description.trim() || receiptFile))
   const { closing, handleClose, modalRef } = useModalClose(onClose, {
-    initialFocusRef: amountInputRef,
+    initialFocusRef: typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches ? closeButtonRef : amountInputRef,
     onBeforeClose: () => {
       if (uploading) return false
       if (hasDraft && !discardConfirmedRef.current) {
@@ -462,7 +463,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <Bookmark size={15} />
               </button>
             )}
-            <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+            <button ref={closeButtonRef} onClick={handleClose} aria-label="닫기" className="dialog-icon-button">
               <X size={16} className="text-[#8B95A1]" />
             </button>
           </div>

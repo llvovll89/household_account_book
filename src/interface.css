@@ -258,9 +258,39 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .amount-shortcuts > button { min-height: 44px; }
 .amount-heading .secondary-action { min-height: 36px; padding-block: 6px; font-size: 12px; }
 .transaction-toolbar button { min-height: 44px; }
+.ledger-month-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; text-align: center; }
+.ledger-month-totals dt { color: var(--muted); font-size: 11px; margin-bottom: 3px; }
+.ledger-month-totals dd { overflow-wrap: anywhere; line-height: 1.4; }
+.transaction-tools { position: relative; flex-shrink: 0; margin-left: auto; }
+.transaction-tools summary { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 650; cursor: pointer; list-style: none; }
+.transaction-tools summary::-webkit-details-marker { display: none; }
+.transaction-tools[open] summary { color: var(--accent); border-color: var(--accent); }
+.transaction-tools-options { position: absolute; top: calc(100% + 8px); right: 0; min-width: 156px; padding: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; box-shadow: 0 8px 24px #10182020; z-index: 20; }
+.transaction-tools-options button { width: 100%; justify-content: flex-start; }
+.transaction-bulk-bar { bottom: calc(9rem + env(safe-area-inset-bottom, 0px)); }
+.transaction-bulk-bar > div { flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 100%; padding: 10px 12px; }
+.transaction-bulk-bar button { min-height: 44px; }
+@media (min-width: 1024px) { .transaction-bulk-bar { left: 224px; bottom: 28px; } }
 @media (max-width: 767px) {
+  .ledger-header { position: relative; }
+  .ledger-header-inner { padding-inline: 16px; padding-bottom: 12px; }
+  .ledger-header button { min-height: 44px; min-width: 44px; }
+  .ledger-month-picker { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; margin-top: 10px; gap: 8px; }
+  .ledger-month-picker > button { width: 100%; padding-inline: 8px; }
+  .ledger-month-picker > button:nth-child(4) { display: none; }
+  .ledger-month-picker [data-current-month="false"]::after { content: '이번 달로'; display: block; margin-top: 1px; font-size: 10px; font-weight: 500; }
+  .ledger-main { padding: 18px max(14px, env(safe-area-inset-right, 0px)) 24px max(14px, env(safe-area-inset-left, 0px)); }
+  .workspace-heading { margin-bottom: 16px; }
+  .workspace-heading p { display: none; }
+  .ledger-navigation-items { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .ledger-navigation-item { min-height: 64px; }
+  .ledger-navigation-label { font-size: 11px; }
+  .transaction-entry-row { padding-inline: 14px; gap: 10px; min-height: 72px; }
+  .transaction-dialog form { display: flex; flex-direction: column; gap: 12px; }
+  .transaction-dialog form > div { margin-block: 0; }
   .ledger-header-inner { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
-  .ledger-header-inner > div:first-child { gap: 12px; min-width: 0; }
+  .ledger-header-inner > div:first-child { flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
+  .ledger-header-inner > div:first-child > div:last-child { margin-left: auto; }
   .ledger-header-brand { flex-shrink: 0; }
   .transaction-dialog .modal-panel {
     height: 100%;
@@ -272,9 +302,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .transaction-dialog[data-keyboard="true"] .transaction-footer { padding-bottom: 8px; }
   .transaction-dialog[data-keyboard="true"] [data-template-save] { display: none; }
   .transaction-toolbar { flex-wrap: wrap; }
-  .transaction-toolbar > div:first-child { flex: 1 1 100%; }
+  .transaction-toolbar > div:first-child { flex: 1 1 0; min-width: 0; }
   .transaction-toolbar > div:first-child button { flex: 1; justify-content: center; }
-  .transaction-toolbar > div:last-child { margin-left: 0; width: 100%; justify-content: flex-end; }
   .transaction-dialog :is(input, select, textarea):not([inputmode="numeric"]),
   input[type="search"] { font-size: 16px; }
 }

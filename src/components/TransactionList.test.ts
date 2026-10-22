@@ -14,6 +14,24 @@ vi.mock('./TransactionDetailModal', () => ({ default: () => null }))
 beforeEach(() => { sessionStorage.clear(); localStorage.clear() })
 afterEach(cleanup)
 
+it('opens management to select records and cancels without deleting', () => {
+  const onBulkDelete = vi.fn()
+  render(createElement(TransactionList, {
+    transactions: [{ id: 'lunch', type: 'expense', amount: 9000, category: '식비', description: '점심 식사', date: '2026-09-11', createdAt: 1 }],
+    yearMonth: '2026-09', onEdit: vi.fn(), onDelete: vi.fn(), onBulkDelete,
+  }))
+  expect((screen.getByText('관리').closest('details') as HTMLDetailsElement).open).toBe(false)
+  fireEvent.click(screen.getByText('관리'))
+  fireEvent.click(screen.getByRole('button', { name: '선택' }))
+  const row = screen.getByText('점심 식사').closest('[role="button"]')
+  expect(row).toBeTruthy()
+  fireEvent.click(row!)
+  expect(screen.getByText('1개 선택됨')).toBeTruthy()
+  fireEvent.click(screen.getByText('선택 취소'))
+  expect(screen.queryByText('1개 선택됨')).toBeNull()
+  expect(onBulkDelete).not.toHaveBeenCalled()
+})
+
 it('filters income without opening advanced filters and restores all records', async () => {
   const transactions: Transaction[] = [
     { id: 'salary', type: 'income', amount: 3000000, category: '급여', description: '이번 달 급여', date: '2026-09-11', createdAt: 1 },

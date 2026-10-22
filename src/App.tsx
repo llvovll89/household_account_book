@@ -818,7 +818,7 @@ export default function App() {
             if (predicted) prefetchLedgerTab(predicted);
             setTab(nextTab);
             setFabExpanded(false);
-            window.scrollTo({top: 0, behavior: "smooth"});
+            window.scrollTo({top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "auto" : "smooth"});
         },
         [prefetchLedgerTab],
     );
@@ -1798,6 +1798,7 @@ export default function App() {
                                 <button
                                     aria-label={`${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월, 누르면 이번 달로 이동`}
                                     title="누르면 이번 달로 돌아가요"
+                                    data-current-month={isCurrentMonth()}
                                     onClick={() => setCurrentDate(new Date())}
                                     className={`px-5 min-h-11 rounded-2xl text-base font-bold transition-all ${isCurrentMonth() ? "bg-white text-[#111111]" : "bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]"}`}
                                 >
@@ -1824,21 +1825,21 @@ export default function App() {
 
                             {(monthIncome > 0 || monthExpense > 0) && (
                                 <div className="mt-3 pb-1 space-y-1.5">
-                                    <div className="flex items-center justify-center gap-4">
-                                        <span className="text-xs font-semibold text-[#2ACF6A] num">
-                                            +{monthIncome.toLocaleString()}
-                                        </span>
-                                        <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
-                                        <span className="text-xs font-semibold text-[#F25260] num">
-                                            -{monthExpense.toLocaleString()}
-                                        </span>
-                                        <div className="w-1 h-1 rounded-full bg-[rgba(255,255,255,0.12)]" />
-                                        <span
+                                    <dl className="ledger-month-totals">
+                                      <div><dt>수입</dt>
+                                        <dd className="text-xs font-semibold text-[#2ACF6A] num">
+                                            {monthIncome.toLocaleString()}원
+                                        </dd></div>
+                                      <div><dt>지출</dt>
+                                        <dd className="text-xs font-semibold text-[#F25260] num">
+                                            {monthExpense.toLocaleString()}원
+                                        </dd></div>
+                                      <div><dt>차액</dt><dd
                                             className={`text-xs font-bold num ${monthBalance >= 0 ? "text-white" : "text-[#F25260]"}`}
                                         >
                                             {monthBalance.toLocaleString()}원
-                                        </span>
-                                    </div>
+                                        </dd></div>
+                                    </dl>
 
                                     {(monthCardDue > 0 ||
                                         nextMonthCardDue > 0) && (

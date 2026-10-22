@@ -8,7 +8,21 @@ vi.mock('../lib/storage', () => ({ loadSettings: async () => ({ userPaymentMetho
 vi.mock('../firebase/firebase', () => ({ auth: { currentUser: null } }))
 vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+it('opens touch entry without forcing the keyboard and still saves a tapped amount', async () => {
+  vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
+  const onSave = vi.fn()
+  render(createElement(TransactionModal, { onSave, onClose: vi.fn() }))
+  const amount = screen.getByRole('textbox', { name: '금액 (원)' })
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: '닫기' })))
+  fireEvent.click(amount)
+  expect(document.activeElement).toBe(amount)
+  fireEvent.change(amount, { target: { value: '8000' } })
+  fireEvent.click(screen.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+  expect(onSave.mock.calls[0][0][0].amount).toBe(8000)
+})
 
 it('keeps a draft on close or Escape until the user explicitly discards it', async () => {
   const onClose = vi.fn()

@@ -202,6 +202,15 @@ export default function TransactionList({
     }, [search]);
     const [viewMode, setViewMode] = useState<ViewMode>("list");
     const [showExport, setShowExport] = useState(false);
+    const toolsRef = useRef<HTMLDetailsElement>(null);
+    useEffect(() => {
+        const dismissTools = (event: PointerEvent) => {
+            const tools = toolsRef.current;
+            if (tools?.open && event.target instanceof Node && !tools.contains(event.target)) tools.open = false;
+        };
+        document.addEventListener('pointerdown', dismissTools);
+        return () => document.removeEventListener('pointerdown', dismissTools);
+    }, []);
     const [periodMode, setPeriodMode] = useState<PeriodMode>("month");
     const [baseDate, setBaseDate] = useState(`${yearMonth}-01`);
     const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -1022,12 +1031,30 @@ export default function TransactionList({
                         <CalendarDays size={13} /> 캘린더
                     </button>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5">
+                <details ref={toolsRef} className="transaction-tools" onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if (toolsRef.current) toolsRef.current.open = false;
+                        toolsRef.current?.querySelector('summary')?.focus();
+                    }
+                }}>
+                  <summary onClick={(event) => {
+                      if (isSelectionMode) {
+                          event.preventDefault();
+                          setIsSelectionMode(false);
+                          setSelectedIds(new Set());
+                          if (toolsRef.current) toolsRef.current.open = false;
+                      }
+                  }}>{isSelectionMode ? '선택 취소' : '관리'} <ChevronDown size={14} aria-hidden="true" /></summary>
+                  <div className="transaction-tools-options">
                     {onBulkDelete && (
                         <button
                             onClick={() => {
                                 setIsSelectionMode((v) => !v);
                                 setSelectedIds(new Set());
+                                if (toolsRef.current) toolsRef.current.open = false;
+                                toolsRef.current?.querySelector('summary')?.focus();
                             }}
                             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${isSelectionMode ? "bg-[#3D8EF8]/20 text-[#3D8EF8]" : "bg-[#1C1C1E] text-[#8B95A1] hover:text-white"}`}
                         >
@@ -1036,12 +1063,16 @@ export default function TransactionList({
                         </button>
                     )}
                     <button
-                        onClick={() => setShowExport(true)}
+                        onClick={() => {
+                            setShowExport(true);
+                            if (toolsRef.current) toolsRef.current.open = false;
+                        }}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
                     >
                         <FileDown size={13} /> 내보내기
                     </button>
-                </div>
+                  </div>
+                </details>
             </div>
 
             {/* 캘린더 뷰 */}
@@ -2579,7 +2610,7 @@ export default function TransactionList({
                                                                                     null,
                                                                                 );
                                                                         }}
-                                                                        className="flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
+                                                                        className="transaction-entry-row flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
                                                                     >
                                                                         {isSelectionMode && (
                                                                             <div className="shrink-0 text-[#3D8EF8]">
@@ -2912,7 +2943,7 @@ export default function TransactionList({
 
             {/* 일괄 액션바 */}
             {isSelectionMode && selectedIds.size > 0 && (
-                <div className="fixed bottom-20 left-0 right-0 flex justify-center z-30 px-4">
+                <div className="transaction-bulk-bar fixed left-0 right-0 flex justify-center z-40 px-4">
                     <div className="flex items-center gap-3 bg-[#1C1C1E] border border-white/10 rounded-3xl px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                         <span className="text-white font-bold text-sm">
                             {selectedIds.size}개 선택됨
