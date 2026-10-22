@@ -75,8 +75,36 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [loanPrincipal, setLoanPrincipal] = useState(transaction?.loanPrincipal?.toString() ?? '')
   const [loanInterest, setLoanInterest] = useState(transaction?.loanInterest?.toString() ?? '')
   const [splitLoan, setSplitLoan] = useState(transaction?.loanPrincipal !== undefined)
+  const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
+  const discardConfirmedRef = useRef(false)
+  const keepEditingRef = useRef<HTMLButtonElement>(null)
+  const originalCreditDayRef = useRef('25')
   const isEditMode = !!transaction
-  const { closing, handleClose, modalRef } = useModalClose(onClose, { initialFocusRef: amountInputRef })
+  const hasDraft = queue.length > 0 || (transaction
+    ? Number(amount.replaceAll(',', '')) !== transaction.amount || category !== transaction.category
+      || description !== transaction.description || date !== transaction.date
+      || dateEnd !== (transaction.dateEnd ?? '') || paymentMethod !== (transaction.paymentMethod ?? 'cash')
+      || selectedMethodId !== (transaction.paymentMethodId ?? null) || !!receiptFile
+      || receiptImageUrl !== (transaction.receiptImageUrl ?? '')
+      || (splitLoan !== (transaction.loanPrincipal !== undefined))
+      || (paymentMethod === 'credit' && creditBillingDayInput !== originalCreditDayRef.current)
+      || loanPrincipal !== (transaction.loanPrincipal?.toString() ?? '')
+      || loanInterest !== (transaction.loanInterest?.toString() ?? '')
+    : !!(amount || description.trim() || receiptFile))
+  const { closing, handleClose, modalRef } = useModalClose(onClose, {
+    initialFocusRef: amountInputRef,
+    onBeforeClose: () => {
+      if (uploading) return false
+      if (hasDraft && !discardConfirmedRef.current) {
+        setShowDiscardPrompt(true)
+        return false
+      }
+      return true
+    },
+  })
+  useEffect(() => {
+    if (showDiscardPrompt) keepEditingRef.current?.focus()
+  }, [showDiscardPrompt])
   useEffect(() => {
     const viewport = window.visualViewport
     const dialog = modalRef.current?.parentElement
@@ -130,8 +158,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       if (transaction.paymentMethodId) {
         setSelectedMethodId(transaction.paymentMethodId)
         const card = findPaymentMethod(transaction.paymentMethodId)
+        originalCreditDayRef.current = String(card?.billingDay ?? 25)
         if (card?.billingDay) setCreditBillingDayInput(String(card.billingDay))
       } else if (typeof transaction.creditBillingDay === 'number') {
+        originalCreditDayRef.current = String(transaction.creditBillingDay)
         setCreditBillingDayInput(String(transaction.creditBillingDay))
       }
       setAmount(transaction.amount.toLocaleString())
@@ -323,6 +353,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
   function handleAmountChange(val: string) {
     const digits = val.replace(/[^0-9]/g, '')
+    if (digits && (!Number.isSafeInteger(Number(digits)) || Number(digits) > 999_999_999_999_999)) {
+      setFieldErrors((prev) => ({ ...prev, amount: '금액은 999,999,999,999,999원까지 입력할 수 있어요.' }))
+      return
+    }
     setAmount(digits ? Number(digits).toLocaleString() : '')
     if (fieldErrors.amount) {
       setFieldErrors((prev) => ({ ...prev, amount: undefined }))
@@ -555,6 +589,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   value={amount}
                   onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0"
+                  style={{ fontSize: amount.length > 15 ? 'clamp(16px, 5vw, 22px)' : amount.length > 11 ? 'clamp(22px, 6vw, 28px)' : undefined }}
                   required={queue.length === 0}
                   aria-invalid={!!fieldErrors.amount}
                   aria-describedby={fieldErrors.amount ? 'transaction-amount-error' : undefined}
@@ -941,7 +976,22 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         </div>
         <div className="transaction-footer">
             {/* 버튼 영역 */}
-            {isEditMode ? (
+            {showDiscardPrompt ? (
+              <div className="entry-discard-prompt">
+                <p role="alert">작성 중인 내용을 닫을까요?</p>
+                <p>저장하지 않은 내역은 사라져요.</p>
+                <div>
+                  <button ref={keepEditingRef} type="button" className="primary-action" onClick={() => {
+                    setShowDiscardPrompt(false)
+                    amountInputRef.current?.focus()
+                  }}>계속 작성</button>
+                  <button type="button" className="secondary-action" onClick={() => {
+                    discardConfirmedRef.current = true
+                    handleClose()
+                  }}>저장하지 않고 닫기</button>
+                </div>
+              </div>
+            ) : isEditMode ? (
               <button type="submit" form="transaction-entry-form" disabled={uploading}
                 className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-[#3182F6] hover:bg-[#2272EB]`}>
                 {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}

@@ -9,6 +9,7 @@ const modalStack: number[] = []
 interface UseModalCloseOptions {
   duration?: number
   initialFocusRef?: React.RefObject<HTMLElement | null>
+  onBeforeClose?: () => boolean
 }
 
 export function useModalClose(onClose: () => void, options: UseModalCloseOptions = {}) {
@@ -21,6 +22,8 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
   const modalIdRef = useRef<number>(0)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+  const beforeCloseRef = useRef(options.onBeforeClose)
+  beforeCloseRef.current = options.onBeforeClose
 
   // onClose는 매 렌더마다 새 함수로 넘어오는 경우가 많다(인라인 콜백).
   // handleClose를 그 identity에 묶으면 아래 useEffect가 애니메이션 도중
@@ -28,6 +31,7 @@ export function useModalClose(onClose: () => void, options: UseModalCloseOptions
   // 모달이 다시는 닫히지 않는 채로 백드롭만 화면을 가리는 버그가 생긴다.
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return
+    if (beforeCloseRef.current?.() === false) return
     isClosingRef.current = true
     setClosing(true)
     closeTimerRef.current = window.setTimeout(() => {

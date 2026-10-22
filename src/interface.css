@@ -250,6 +250,10 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .entry-queue summary { min-height: 48px; padding: 14px; cursor: pointer; color: var(--text); font-size: 13px; font-weight: 650; }
 .entry-queue summary span { margin-left: 12px; color: var(--accent); font-size: 12px; }
 .entry-queue[open] summary { border-bottom: 1px solid var(--line); }
+.entry-discard-prompt > p:first-child { color: var(--text); font-size: 15px; font-weight: 650; }
+.entry-discard-prompt > p:nth-child(2) { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.entry-discard-prompt > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.entry-discard-prompt button { flex: 1 1 auto; min-height: 44px; }
 @media (hover: none) { .search-shortcuts { display: none; } }
 .amount-shortcuts > button { min-height: 44px; }
 .amount-heading .secondary-action { min-height: 36px; padding-block: 6px; font-size: 12px; }

@@ -10,6 +10,62 @@ vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
 afterEach(cleanup)
 
+it('keeps a draft on close or Escape until the user explicitly discards it', async () => {
+  const onClose = vi.fn()
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose }))
+  const amount = screen.getByRole('textbox', { name: '금액 (원)' })
+  fireEvent.change(amount, { target: { value: '25000' } })
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+  expect(screen.getByRole('alert').textContent).toContain('작성 중인 내용')
+  expect(onClose).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '계속 작성' }))
+  expect((amount as HTMLInputElement).value).toBe('25,000')
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(onClose).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '저장하지 않고 닫기' }))
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+})
+
+it('closes a blank form without asking to discard', async () => {
+  const onClose = vi.fn()
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose }))
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+  expect(screen.queryByRole('button', { name: '계속 작성' })).toBeNull()
+})
+
+it('does not ask to discard an unchanged credit-card transaction', async () => {
+  const onClose = vi.fn()
+  render(createElement(TransactionModal, {
+    onSave: vi.fn(), onClose,
+    transaction: { id: 'existing', type: 'expense', amount: 9000, category: '식비', description: '', date: '2026-10-22', createdAt: 1, paymentMethod: 'credit', paymentMethodId: 'card' },
+    userPaymentMethods: [{ id: 'card', type: 'credit', label: '생활카드', billingDay: 12 }],
+  }))
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+  expect(screen.queryByRole('button', { name: '계속 작성' })).toBeNull()
+})
+
+it('protects queued entries when the current amount is blank', () => {
+  const onClose = vi.fn()
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose }))
+  fireEvent.change(screen.getByRole('textbox', { name: '금액 (원)' }), { target: { value: '10000' } })
+  fireEvent.click(screen.getByRole('button', { name: '계속 입력' }))
+  fireEvent.click(screen.getByRole('button', { name: '닫기' }))
+  expect(screen.getByRole('button', { name: '계속 작성' })).toBeTruthy()
+  expect(onClose).not.toHaveBeenCalled()
+})
+
+it('rejects unsafe amounts while keeping the last valid value', () => {
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose: vi.fn() }))
+  const amount = screen.getByRole('textbox', { name: '금액 (원)' })
+  fireEvent.change(amount, { target: { value: '123456789012345' } })
+  expect((amount as HTMLInputElement).value).toBe('123,456,789,012,345')
+  fireEvent.change(amount, { target: { value: '9999999999999999999' } })
+  expect(screen.getByRole('alert').textContent).toContain('까지 입력')
+  expect((amount as HTMLInputElement).value).toBe('123,456,789,012,345')
+})
+
 it('saves the previous local calendar day when Yesterday is selected', async () => {
   const onSave = vi.fn()
   const yesterday = new Date()
