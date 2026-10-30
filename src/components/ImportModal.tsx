@@ -8,6 +8,7 @@ import {
   extractPDFText, parsePDFText, type ColumnMapping, type ParsedRow,
 } from '../lib/bankParser'
 import { applyAutoCategory } from '../lib/autoCategoryRules'
+import { forgetImportMapping, loadImportMapping, saveImportMapping } from '../lib/importMappings'
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
 import PreviewRowDetailModal from './import/PreviewRowDetailModal'
@@ -113,6 +114,8 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   const [csvRows, setCsvRows] = useState<Record<string, string>[]>([])
   const [mapping, setMapping] = useState<ColumnMapping>({ ...EMPTY_MAPPING })
   const [isPDF, setIsPDF] = useState(false)
+  const [rememberMapping, setRememberMapping] = useState(true)
+  const [reusedMapping, setReusedMapping] = useState(false)
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
   const [previewFilter, setPreviewFilter] = useState<'all' | 'review'>('all')
   const [bulkExpenseCategory, setBulkExpenseCategory] = useState(EXPENSE_CATEGORIES[0])
@@ -160,7 +163,10 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
         if (!headers.length) { setError('파일을 읽지 못했습니다. CSV 또는 엑셀 파일인지 확인해주세요.'); return }
         const filteredRows = rows.filter(isMeaningfulDataRow)
         setCsvHeaders(headers); setCsvRows(filteredRows)
-        setMapping({ ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
+        const savedMapping = loadImportMapping(headers)
+        setReusedMapping(!!savedMapping)
+        setRememberMapping(true)
+        setMapping(savedMapping ?? { ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : '알 수 없는 오류'
@@ -201,6 +207,10 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
 
   function handleImport() {
     onImport(previewRows.filter((r) => !r.skip).map(({ type, amount, category, description, date }) => ({ type, amount, category, description, date })))
+    if (!isPDF) {
+      const remembered = rememberMapping ? saveImportMapping(csvHeaders, mapping) : forgetImportMapping(csvHeaders)
+      if (!remembered) showToast('내역을 가져왔지만 컬럼 설정은 기억하지 못했어요.', 4000, 'info')
+    }
     handleClose()
   }
 
@@ -391,6 +401,18 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 <p className="text-sm text-[#8B95A1]">
                   <span className="font-bold text-white">{csvRows.length}개</span> 행을 읽었습니다. 컬럼을 지정해주세요.
                 </p>
+              </div>
+              <div className="import-mapping-memory">
+                {reusedMapping && <p role="status">이전에 확인한 컬럼 설정을 불러왔어요. 이번 파일에도 맞는지 확인해주세요.</p>}
+                <label><input type="checkbox" checked={rememberMapping} onChange={event => setRememberMapping(event.target.checked)} /> 이 형식의 컬럼 설정 기억하기</label>
+                <p>이 기기에 컬럼 이름만 기억해요. 가져오기를 완료하면 다음에도 같은 형식에 적용해요.</p>
+                {reusedMapping && <button type="button" onClick={() => {
+                  if (forgetImportMapping(csvHeaders)) {
+                    setMapping({ ...EMPTY_MAPPING, ...detectColumns(csvHeaders) })
+                    setReusedMapping(false)
+                    setRememberMapping(false)
+                  } else showToast('기억한 설정을 지우지 못했어요. 다시 시도해주세요.', 3000, 'error')
+                }}>기억한 설정 지우기</button>}
               </div>
               {mappingIssueCount > 0 && (
                 <div className="flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
@@ -727,7 +749,7 @@ function MappingSelect({ label, value, headers, optional, onChange }: {
     <div>
       <label className="block text-[11px] font-semibold text-[#4E5968] mb-1.5">{label}</label>
       <div className="relative">
-        <select value={value} onChange={(e) => onChange(e.target.value)}
+        <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
           className="w-full bg-[#2C2C2E] border border-white/6 rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
           <option value="" className="text-[#4E5968]">{optional ? '없음' : '선택'}</option>
           {headers.map((h) => <option key={h} value={h}>{h}</option>)}

@@ -19,6 +19,12 @@
 }
 html, body { background: var(--page); color: var(--text); color-scheme: inherit; }
 body { letter-spacing: -.015em; }
+.import-mapping-memory { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); }
+.import-mapping-memory label { display: flex; gap: 10px; align-items: center; font-size: 13px; min-height: 44px; color: var(--text); }
+.import-mapping-memory input { width: 18px; height: 18px; flex-shrink: 0; }
+.import-mapping-memory p { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.import-mapping-memory [role="status"] { color: var(--accent); margin-bottom: 6px; }
+.import-mapping-memory button { font-size: 12px; color: var(--accent); min-height: 44px; }
 .home-overview { display: grid; gap: 16px; grid-column: 1 / -1; min-width: 0; }
 .home-overview section { padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; min-width: 0; }
 .home-overview h3 { font-size: 14px; font-weight: 650; color: var(--text); }
