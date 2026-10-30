@@ -53,6 +53,7 @@ interface Props {
   onOpenTagManager?: () => void
   onOpenWidgetSettings?: () => void
   onOpenHelp?: () => void
+  onOpenImport?: () => void
 }
 
 export default function LedgerWorkspace({
@@ -91,6 +92,7 @@ export default function LedgerWorkspace({
   onOpenTagManager,
   onOpenWidgetSettings,
   onOpenHelp,
+  onOpenImport,
 }: Props) {
   return (
     <>
@@ -116,6 +118,7 @@ export default function LedgerWorkspace({
               onAddTransaction={onTransactionAdd}
               onOpenWidgetSettings={onOpenWidgetSettings}
               onOpenHelp={onOpenHelp}
+              onOpenImport={onOpenImport}
             />
           </Suspense>
         </div>

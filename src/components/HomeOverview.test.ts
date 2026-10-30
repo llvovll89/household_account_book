@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import HomeOverview from './HomeOverview'
 import type { Transaction } from '../types'
 import { toLocalDateStr } from '../lib/format'
+import { getWeeklyReview } from '../lib/weeklyReview'
 
 afterEach(cleanup)
 const today = toLocalDateStr()
@@ -27,7 +28,27 @@ it('does not present missing records as a zero-spending achievement or invent an
   render(createElement(HomeOverview, { transactions: [], budgets: [], carryoverAmounts: {}, yearMonth: today.slice(0, 7), onBudget: vi.fn(), onReview: vi.fn() }))
   expect(screen.getByText(/아직 오늘 기록이 없어요/)).toBeTruthy()
   expect(screen.getByRole('button', { name: /예산 설정하기/ })).toBeTruthy()
-  expect(screen.queryByText(/무지출/)).toBeNull()
+  expect(screen.queryByText(/연속 무지출/)).toBeNull()
+})
+
+it('lets a returning user record today or import without filling every missing day', () => {
+  const lastDay = new Date()
+  lastDay.setDate(lastDay.getDate() - 4)
+  const onAdd = vi.fn(), onImport = vi.fn()
+  render(createElement(HomeOverview, { transactions: [transaction({ date: toLocalDateStr(lastDay) })], budgets: [], carryoverAmounts: {}, yearMonth: today.slice(0, 7), onAdd, onImport, onBudget: vi.fn(), onReview: vi.fn() }))
+  expect(screen.getByRole('heading', { name: '오늘부터 가볍게 이어가요' })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: /오늘 한 건 기록하기/ }))
+  fireEvent.click(screen.getByRole('button', { name: /파일로 내역 가져오기/ }))
+  expect(onAdd).toHaveBeenCalledOnce()
+  expect(onImport).toHaveBeenCalledOnce()
+})
+
+it('opens the weekly review without interpreting empty days as confirmed zero spending', () => {
+  render(createElement(HomeOverview, { transactions: [transaction({})], budgets: [], carryoverAmounts: {}, yearMonth: today.slice(0, 7), onBudget: vi.fn(), onReview: vi.fn() }))
+  const summary = screen.getByText(/이번 주 기록 돌아보기/)
+  fireEvent.click(summary)
+  expect(screen.getByText('기록한 내역만 집계해요. 기록하지 않은 날은 무지출로 계산하지 않아요.')).toBeTruthy()
+  expect(getWeeklyReview([transaction({})]).recordedDays).toBe(1)
 })
 
 it('shows the selected historical month and opens the relevant monthly details', () => {

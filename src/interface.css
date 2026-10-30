@@ -43,6 +43,16 @@ body { letter-spacing: -.015em; }
 .home-entry-list small { display: block; font-size: 11px; color: var(--muted); }
 .home-entry-list strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; max-width: 55%; text-align: right; }
 .home-attention p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+.home-return { grid-column: 1 / -1; }
+.home-return p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+.home-return .home-text-button { margin-right: 20px; }
+.home-weekly-review { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.home-weekly-review > summary { padding: 18px 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.home-weekly-review > summary > span { display: block; margin: 6px 0 0 18px; color: var(--muted); font-size: 12px; font-weight: 400; }
+.home-weekly-review > div { border-top: 1px solid var(--line); padding: 18px 22px; }
+.home-weekly-review p { font-size: 13px; line-height: 1.8; margin-top: 10px; overflow-wrap: anywhere; }
+.home-weekly-review .weekly-review-total { font-size: 30px; font-weight: 600; color: var(--text); }
+.weekly-review-total > span { font-size: 15px; margin-left: 4px; color: var(--muted); }
 .home-monthly-details { grid-column: 1 / -1; min-width: 0; }
 .home-monthly-details > summary { padding: 16px 4px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text); }
 .home-monthly-details > summary > span { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin: 6px 0 0 18px; }

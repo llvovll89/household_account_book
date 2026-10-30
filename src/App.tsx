@@ -2105,6 +2105,7 @@ export default function App() {
                 </div>
                 <Suspense fallback={<WorkspaceSkeleton />}>
                         <LedgerWorkspace
+                            onOpenImport={() => dispatchUI({type: "SET_IMPORT", value: true})}
                             activeTab={activeTab}
                             transactions={transactions}
                             budgets={budgets}
