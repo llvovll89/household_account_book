@@ -10,6 +10,30 @@ vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+it('reuses a recent entry with today and a changed amount, without copying the receipt', async () => {
+  const onSave = vi.fn()
+  render(createElement(TransactionModal, {
+    onSave, onClose: vi.fn(),
+    recentTransactions: [{ id: 'lunch', type: 'expense', amount: 9000, category: '식비', description: '점심', date: '2026-01-01', createdAt: 1, paymentMethod: 'credit', paymentMethodId: 'card', receiptImageUrl: 'old-receipt' }],
+    userPaymentMethods: [{ id: 'card', type: 'credit', label: '생활카드', billingDay: 12 }],
+  }))
+  fireEvent.click(screen.getByRole('button', { name: /점심.*식비.*생활카드.*9,000원/ }))
+  fireEvent.change(screen.getByRole('textbox', { name: '금액 (원)' }), { target: { value: '10000' } })
+  fireEvent.click(screen.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+  expect(onSave.mock.calls[0][0][0]).toMatchObject({ date: toLocalDateStr(), amount: 10000, category: '식비', description: '점심', paymentMethodId: 'card', creditBillingDay: 12 })
+  expect(onSave.mock.calls[0][0][0].receiptImageUrl).not.toBe('old-receipt')
+})
+
+it('does not offer deleted payment methods or show quick entry in edit mode', () => {
+  const old = { id: 'old', type: 'expense' as const, amount: 1000, category: '식비', description: '', date: '2026-01-01', createdAt: 1, paymentMethodId: 'deleted' }
+  const { unmount } = render(createElement(TransactionModal, { onSave: vi.fn(), onClose: vi.fn(), recentTransactions: [old] }))
+  expect(screen.queryByRole('region', { name: '최근 내역으로 빠른 입력' })).toBeNull()
+  unmount()
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose: vi.fn(), transaction: old, recentTransactions: [{ ...old, paymentMethodId: undefined }] }))
+  expect(screen.queryByRole('region', { name: '최근 내역으로 빠른 입력' })).toBeNull()
+})
+
 it('opens touch entry without forcing the keyboard and still saves a tapped amount', async () => {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
   const onSave = vi.fn()

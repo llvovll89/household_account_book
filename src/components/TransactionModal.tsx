@@ -124,9 +124,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const tags = parseHashtags(description)
   const errorTextClass = 'mt-2 text-xs font-semibold text-[#F25260]'
 
-  const categories = type === 'income'
+  const categories = useMemo(() => type === 'income'
     ? [...new Set([...INCOME_CATEGORIES, ...customIncomeCategories])]
-    : [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])]
+    : [...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])], [type, customIncomeCategories, customExpenseCategories])
 
   const visibleCategories = categories.filter(c => c.toLocaleLowerCase().includes(categoryQuery.trim().toLocaleLowerCase()))
   const recentCategoryNames = useMemo(() => {
@@ -137,18 +137,31 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     return [...latest].sort((a, b) => b[1] - a[1]).map(([name]) => name)
   }, [recentTransactions, type])
   const recentCategories = recentCategoryNames.filter(c => categories.includes(c)).slice(0, 4)
+  const quickEntries = useMemo(() => {
+    const seen = new Set<string>()
+    return [...recentTransactions].sort((a, b) => b.createdAt - a.createdAt).filter(t => {
+      if (t.type !== type || !categories.includes(t.category)) return false
+      if (t.paymentMethodId && !userPaymentMethods.some(m => m.id === t.paymentMethodId)) return false
+      const key = JSON.stringify([t.category, t.description, t.paymentMethod, t.paymentMethodId])
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }).slice(0, 4)
+  }, [recentTransactions, type, categories, userPaymentMethods])
 
   useEffect(() => {
     if (!transaction && !paymentMethodInitialized.current && userPaymentMethods.length > 0) {
       paymentMethodInitialized.current = true
-      const first = userPaymentMethods[0]
+      const lastUsed = [...recentTransactions].sort((a, b) => b.createdAt - a.createdAt)
+        .find(t => userPaymentMethods.some(m => m.id === t.paymentMethodId))
+      const first = userPaymentMethods.find(m => m.id === lastUsed?.paymentMethodId) ?? userPaymentMethods[0]
       setPaymentMethod(first.type as PaymentMethod)
       setSelectedMethodId(first.id)
       if (first.type === 'credit' && first.billingDay) {
         setCreditBillingDayInput(String(first.billingDay))
       }
     }
-  }, [userPaymentMethods, transaction])
+  }, [userPaymentMethods, transaction, recentTransactions])
 
   const findPaymentMethod = useEffectEvent((id: string) => userPaymentMethods.find(m => m.id === id))
 
@@ -196,7 +209,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
         const defaultDay = firstCredit?.billingDay ?? settings.cardBillingDay ?? 25
         setCardBillingDay(defaultDay)
-        if (!transaction) setCreditBillingDayInput(String(defaultDay))
+        if (!transaction && !paymentMethodInitialized.current) setCreditBillingDayInput(String(defaultDay))
       }
     })
 
@@ -402,6 +415,24 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     setShowTemplates(false)
   }
 
+  function applyQuickEntry(item: Transaction) {
+    paymentMethodInitialized.current = true
+    categoryManuallySet.current = true
+    setCategory(item.category)
+    setDescription(item.description)
+    setAmount(item.amount.toLocaleString())
+    setPaymentMethod(item.paymentMethod ?? 'cash')
+    setSelectedMethodId(item.paymentMethodId ?? null)
+    const method = userPaymentMethods.find(m => m.id === item.paymentMethodId)
+    setCreditBillingDayInput(String(method?.billingDay ?? item.creditBillingDay ?? cardBillingDay))
+    setSplitLoan(item.loanPrincipal !== undefined)
+    setLoanPrincipal(item.loanPrincipal?.toString() ?? '')
+    setLoanInterest(item.loanInterest?.toString() ?? '')
+    setAutoCategoryApplied(false)
+    setFieldErrors({})
+    requestAnimationFrame(() => { amountInputRef.current?.focus(); amountInputRef.current?.select() })
+  }
+
   function deleteTemplate(id: string) {
     onSaveTemplates?.(transactionTemplates.filter(t => t.id !== id))
   }
@@ -554,6 +585,21 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                 <ArrowUpRight size={17} aria-hidden="true" /> 지출
               </button>
             </div>
+
+            {!transaction && quickEntries.length > 0 && (
+              <section className="recent-entry-shortcuts" aria-label="최근 내역으로 빠른 입력">
+                <p>최근 내역 불러오기 <span>금액만 바꿔 기록하세요</span></p>
+                <div>
+                  {quickEntries.map(item => (
+                    <button type="button" key={item.id} onClick={() => applyQuickEntry(item)}>
+                      <CategoryIcon category={item.category} size={16} />
+                      <span>{item.description || item.category}<small>{item.category} · {userPaymentMethods.find(m => m.id === item.paymentMethodId)?.label ?? PAYMENT_METHOD_LABEL[item.paymentMethod ?? 'cash']}</small></span>
+                      <strong className="num">{fmt(item.amount)}원</strong>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* 금액 */}
             <div
