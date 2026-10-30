@@ -10,7 +10,8 @@ import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
-import { applyAutoCategory } from '../lib/autoCategoryRules'
+import { applyAutoCategory, getCorrectionKeyword, mergeCategoryCorrections } from '../lib/autoCategoryRules'
+import CategoryRuleOffer from './CategoryRuleOffer'
 import EmptyState from './ui/EmptyState'
 import CategoryIcon from './ui/CategoryIcon'
 
@@ -26,6 +27,7 @@ interface Props {
   onOpenCategoryModal?: () => void
   onOpenPaymentMethodsModal?: () => void
   autoCategoryRules?: AutoCategoryRule[]
+  onSaveRules?: (rules: AutoCategoryRule[]) => void
   recentTransactions?: Transaction[]
   initialType?: TransactionType
 }
@@ -43,7 +45,7 @@ function fmtShortDate(date: string) {
   return `${parseInt(m)}.${d}`
 }
 
-export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], recentTransactions = [], initialType }: Props) {
+export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], onSaveRules, recentTransactions = [], initialType }: Props) {
   const amountInputRef = useRef<HTMLInputElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -67,6 +69,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [cardBillingDay, setCardBillingDay] = useState(25)
   const [creditBillingDayInput, setCreditBillingDayInput] = useState('25')
   const [showTemplates, setShowTemplates] = useState(false)
+  const [rememberCorrection, setRememberCorrection] = useState(false)
+  const offersRule = !!transaction && transaction.category !== category && transaction.type === type
+    && !!getCorrectionKeyword(description) && applyAutoCategory(description, type, autoCategoryRules) !== category
   const [autoCategoryApplied, setAutoCategoryApplied] = useState(false)
   const [showReceipt, setShowReceipt] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(!!transaction)
@@ -349,6 +354,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
       if (all.length === 0) return
       onSave(all)
+      if (offersRule && rememberCorrection && onSaveRules) {
+        onSaveRules(mergeCategoryCorrections(autoCategoryRules, [{ description, type, category }]))
+      }
 
       // 모달 닫기
       setReceiptPreview(null)
@@ -860,6 +868,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                   )
                 })}
               </div>
+              {offersRule && onSaveRules && <CategoryRuleOffer description={description} category={category} type={type} rules={autoCategoryRules} checked={rememberCorrection} onChange={setRememberCorrection} />}
               {visibleCategories.length === 0 && <p className="text-xs text-[#8B95A1] py-4" role="status">일치하는 카테고리가 없어요. 검색어를 바꾸거나 카테고리 관리에서 추가하세요.</p>}
               {fieldErrors.category && (
                 <p id="transaction-category-error" role="alert" className={errorTextClass}>

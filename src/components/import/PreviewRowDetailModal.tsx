@@ -1,6 +1,8 @@
 import { X, TrendingUp, TrendingDown } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI } from '../../types'
 import type { ParsedRow } from '../../lib/bankParser'
+import { useModalClose } from '../../hooks/useModalClose'
 
 interface PreviewRow extends ParsedRow {
   category: string
@@ -14,14 +16,16 @@ interface Props {
   row: PreviewRow
   onClose: () => void
   onUpdate: (patch: Partial<PreviewRow>) => void
+  children?: ReactNode
 }
 
-export default function PreviewRowDetailModal({ row, onClose, onUpdate }: Props) {
+export default function PreviewRowDetailModal({ row, onClose, onUpdate, children }: Props) {
   const isIncome = row.type === 'income'
+  const { modalRef, handleClose } = useModalClose(onClose)
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-100" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6" onClick={(e) => e.stopPropagation()}>
+    <div role="dialog" aria-modal="true" aria-label="가져올 내역 수정" className="fixed inset-0 bg-black/70 flex items-end justify-center z-100" onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}>
+      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[92dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -40,7 +44,7 @@ export default function PreviewRowDetailModal({ row, onClose, onUpdate }: Props)
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
+            <button type="button" aria-label="가져올 내역 수정 닫기" onClick={handleClose} className="w-11 h-11 rounded-full bg-[#2C2C2E] flex items-center justify-center">
               <X size={15} className="text-[#8B95A1]" />
             </button>
           </div>
@@ -86,15 +90,16 @@ export default function PreviewRowDetailModal({ row, onClose, onUpdate }: Props)
             </div>
           </div>
 
+          {children}
           <div className="flex gap-3">
             <button
-              onClick={() => { onUpdate({ skip: true }); onClose() }}
+              onClick={() => { onUpdate({ skip: true }); handleClose() }}
               className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-colors ${row.skip ? 'bg-[#F25260]/20 text-[#F25260]' : 'bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C]'}`}
             >
               제외
             </button>
             <button
-              onClick={() => { onUpdate({ skip: false }); onClose() }}
+              onClick={() => { onUpdate({ skip: false }); handleClose() }}
               className={`flex-1 py-3 rounded-2xl font-bold text-sm transition-colors ${!row.skip ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'bg-[#2C2C2E] text-[#8B95A1] hover:bg-[#3A3A3C]'}`}
             >
               포함
