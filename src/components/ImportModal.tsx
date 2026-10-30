@@ -7,7 +7,8 @@ import {
   parseTabularFile, applyMapping, detectColumns, guessCategory,
   extractPDFText, parsePDFText, type ColumnMapping, type ParsedRow,
 } from '../lib/bankParser'
-import { applyAutoCategory } from '../lib/autoCategoryRules'
+import { applyAutoCategory, mergeCategoryCorrections } from '../lib/autoCategoryRules'
+import CategoryRuleOffer from './CategoryRuleOffer'
 import { forgetImportMapping, loadImportMapping, saveImportMapping } from '../lib/importMappings'
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
@@ -17,6 +18,7 @@ import { useModalClose } from '../hooks/useModalClose'
 interface Props {
   existingTransactions: Transaction[]
   autoCategoryRules?: AutoCategoryRule[]
+  onSaveRules?: (rules: AutoCategoryRule[]) => void
   onImport: (transactions: Omit<Transaction, 'id' | 'createdAt'>[]) => void
   onClose: () => void
 }
@@ -24,6 +26,7 @@ interface Props {
 type Step = 'upload' | 'mapping' | 'preview'
 interface PreviewRow extends ParsedRow {
   category: string
+  originalCategory: string
   skip: boolean
   isDuplicate: boolean
   needsReview: boolean
@@ -100,7 +103,7 @@ function getPreviewReviewMeta(description: string, category: string): { needsRev
   return { needsReview: reasons.length > 0, reviewReasons: reasons }
 }
 
-export default function ImportModal({ existingTransactions, autoCategoryRules = [], onImport, onClose }: Props) {
+export default function ImportModal({ existingTransactions, autoCategoryRules = [], onSaveRules, onImport, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [step, setStep] = useState<Step>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -117,6 +120,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   const [rememberMapping, setRememberMapping] = useState(true)
   const [reusedMapping, setReusedMapping] = useState(false)
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
+  const [rememberCorrections, setRememberCorrections] = useState<Record<number, boolean>>({})
   const [previewFilter, setPreviewFilter] = useState<'all' | 'review'>('all')
   const [bulkExpenseCategory, setBulkExpenseCategory] = useState(EXPENSE_CATEGORIES[0])
   const [bulkIncomeCategory, setBulkIncomeCategory] = useState(INCOME_CATEGORIES[0])
@@ -177,6 +181,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   }
 
   function buildPreview(parsed: ParsedRow[]) {
+    setRememberCorrections({})
     const existingSet = new Set(existingTransactions.map((t) => `${t.date}|${t.amount}|${t.type}`))
     setVisibleCount(PAGE_SIZE)
     setPreviewRows(parsed.map((p) => {
@@ -188,6 +193,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
       return {
         ...p,
         category,
+        originalCategory: category,
         skip: isDuplicate,
         isDuplicate,
         needsReview: reviewMeta.needsReview,
@@ -206,7 +212,15 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   }
 
   function handleImport() {
+    let updatedRules = autoCategoryRules
+    try {
+      updatedRules = mergeCategoryCorrections(autoCategoryRules, previewRows.filter((row, index) => !row.skip && row.category !== row.originalCategory && rememberCorrections[index]))
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '자동 분류 선택을 확인해주세요.', 4000, 'error')
+      return
+    }
     onImport(previewRows.filter((r) => !r.skip).map(({ type, amount, category, description, date }) => ({ type, amount, category, description, date })))
+    if (updatedRules.some((rule, index) => rule !== autoCategoryRules[index])) onSaveRules?.(updatedRules)
     if (!isPDF) {
       const remembered = rememberMapping ? saveImportMapping(csvHeaders, mapping) : forgetImportMapping(csvHeaders)
       if (!remembered) showToast('내역을 가져왔지만 컬럼 설정은 기억하지 못했어요.', 4000, 'info')
@@ -726,7 +740,12 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
           row={previewRows[detailIdx]}
           onClose={() => setDetailIdx(null)}
           onUpdate={(patch) => updateRow(detailIdx, patch)}
-        />,
+        >
+          {onSaveRules && previewRows[detailIdx].category !== previewRows[detailIdx].originalCategory && <CategoryRuleOffer
+            description={previewRows[detailIdx].description} type={previewRows[detailIdx].type} category={previewRows[detailIdx].category}
+            rules={autoCategoryRules} checked={rememberCorrections[detailIdx] ?? false}
+            onChange={checked => setRememberCorrections(previous => ({ ...previous, [detailIdx]: checked }))} />}
+        </PreviewRowDetailModal>,
         document.body
       )}
 

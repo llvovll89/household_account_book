@@ -2378,6 +2378,7 @@ export default function App() {
             {showImport && (
                 <Suspense fallback={null}>
                     <ImportModal
+                        onSaveRules={handleSaveAutoCategoryRules}
                         existingTransactions={transactions}
                         autoCategoryRules={autoCategoryRules}
                         onImport={handleBulkImport}
@@ -2390,6 +2391,7 @@ export default function App() {
             {showModal && (
                 <Suspense fallback={null}>
                     <TransactionModal
+                        onSaveRules={handleSaveAutoCategoryRules}
                         transaction={editingTransaction}
                         onSave={handleSaveTransaction}
                         onClose={() => {
