@@ -1270,6 +1270,7 @@ export default function App() {
         handleBulkEditTransactions,
     } = useAppHandlers({
         transactions,
+        budgets,
         editingTransaction,
         yearMonth,
         customExpenseCategories,
@@ -2316,6 +2317,8 @@ export default function App() {
 
             {toastMsg && (
                 <div
+                    role={toastVariant === "error" ? "alert" : "status"}
+                    aria-atomic="true"
                     className={`fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm ${toastAction ? "pointer-events-auto" : "pointer-events-none"}`}
                 >
                     <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">

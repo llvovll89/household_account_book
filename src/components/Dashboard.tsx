@@ -1,4 +1,4 @@
-import { getEffectiveBudgets } from '../lib/budgets'
+import { getBudgetCarryoverAmounts, getEffectiveBudgets } from '../lib/budgets'
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -368,22 +368,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   const effectiveBudgets = useMemo(() => getEffectiveBudgets(budgets, yearMonth), [budgets, yearMonth])
 
   // 이월 금액 계산 (전월 미사용 예산)
-  const carryoverAmounts = useMemo(() => {
-    const map: Record<string, number> = {}
-    const [y, m] = yearMonth.split('-').map(Number)
-    const prevYM = m === 1
-      ? `${y - 1}-12`
-      : `${y}-${String(m - 1).padStart(2, '0')}`
-    for (const b of effectiveBudgets) {
-      if (!b.carryover) continue
-      const prevSpent = transactions
-        .filter((t) => t.type === 'expense' && t.category === b.category && t.date.startsWith(prevYM))
-        .reduce((s, t) => s + t.amount, 0)
-      const unused = Math.max(0, b.limit - prevSpent)
-      if (unused > 0) map[b.category] = unused
-    }
-    return map
-  }, [effectiveBudgets, transactions, yearMonth])
+  const carryoverAmounts = useMemo(() => getBudgetCarryoverAmounts(budgets, transactions, yearMonth), [budgets, transactions, yearMonth])
 
   // 예산 초과/경고 카테고리 (이월 포함 유효 한도 기준)
   const { overBudget, nearBudget } = useMemo(() => {
