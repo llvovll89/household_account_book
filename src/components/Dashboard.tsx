@@ -6,6 +6,7 @@ import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCirc
 import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
+import HomeOverview from './HomeOverview'
 import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule } from '../lib/recurringSchedule'
@@ -105,6 +106,8 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== 'true')
   const [showBudget, setShowBudget] = useState(false)
+  const [showMonthlyDetails, setShowMonthlyDetails] = useState(false)
+  const monthlyDetailsRef = useRef<HTMLDetailsElement>(null)
   const [showRecurring, setShowRecurring] = useState(false)
   const [payday, setPayday] = useState<number | 'last' | null>(null)
   const [cardBillingDay, setCardBillingDay] = useState<number | null>(null)
@@ -795,6 +798,20 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
 
   return (
     <div className="dashboard-grid space-y-4 tab-content">
+      <HomeOverview transactions={transactions} budgets={effectiveBudgets} carryoverAmounts={carryoverAmounts} yearMonth={yearMonth}
+        onAdd={onAddTransaction} onBudget={() => setShowBudget(true)} onWidgets={onOpenWidgetSettings}
+        attention={overBudget.length > 0 ? `${overBudget[0].category} 예산을 초과했어요. 카테고리별 내역을 확인해보세요.`
+          : !hide('recurring-pending') && pendingRecurring.length > 0 ? `아직 반영하지 않은 정기 내역이 ${pendingRecurring.length}건 있어요.`
+          : !hide('subscription-alert') && upcomingSubscriptions.length > 0 ? `${upcomingSubscriptions[0].name} 구독 결제가 ${upcomingSubscriptions[0].daysLeft === 0 ? '오늘' : `${upcomingSubscriptions[0].daysLeft}일 후`} 예정되어 있어요.`
+          : undefined}
+        onReview={() => {
+          if (monthlyDetailsRef.current) monthlyDetailsRef.current.open = true
+          setShowMonthlyDetails(true)
+          monthlyDetailsRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' })
+        }} />
+      <details className="home-monthly-details" ref={monthlyDetailsRef} onToggle={event => setShowMonthlyDetails(event.currentTarget.open)}>
+        <summary>월간 현황과 상세 위젯 <span>잔액 · 예산 관리 · 분석</span></summary>
+        {showMonthlyDetails && <div className="dashboard-grid space-y-4">
       {/* 메인 잔액 카드 */}
       <div className="dashboard-summary rounded-[24px] p-6 bg-[#1C1C1E] card-enter" style={{ animationDelay: '0ms' }}>
         <div className="summary-heading flex items-center justify-between mb-1">
@@ -2148,6 +2165,8 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         </div>
       )}
 
+        </div>}
+      </details>
       {showBudget && (
         <BudgetModal
           budgets={effectiveBudgets.map((b) => ({ ...b, yearMonth: undefined }))}
