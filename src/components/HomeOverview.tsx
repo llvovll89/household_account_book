@@ -2,6 +2,8 @@ import { Plus, ArrowRight, SlidersHorizontal } from 'lucide-react'
 import type { Budget, Transaction } from '../types'
 import { fmt, toLocalDateStr } from '../lib/format'
 import CategoryIcon from './ui/CategoryIcon'
+import WeeklyReview from './WeeklyReview'
+import { getDaysSinceLastRecord } from '../lib/weeklyReview'
 
 interface Props {
   transactions: Transaction[]
@@ -12,10 +14,11 @@ interface Props {
   onBudget: () => void
   onWidgets?: () => void
   onReview: () => void
+  onImport?: () => void
   attention?: string
 }
 
-export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, attention }: Props) {
+export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, onImport, attention }: Props) {
   const today = toLocalDateStr()
   const isCurrentMonth = yearMonth === today.slice(0, 7)
   const monthly = transactions.filter(t => t.date.startsWith(yearMonth))
@@ -25,6 +28,7 @@ export default function HomeOverview({ transactions, budgets, carryoverAmounts, 
   const remaining = limit - spent
   const entries = monthly.filter(t => !isCurrentMonth || t.date === today).sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt)
   const expense = entries.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+  const daysSinceLastRecord = getDaysSinceLastRecord(transactions)
 
   return (
     <div className="home-overview">
@@ -59,11 +63,20 @@ export default function HomeOverview({ transactions, budgets, carryoverAmounts, 
         </> : <p className="home-description">{isCurrentMonth ? '아직 오늘 기록이 없어요. 쓴 내역이 있다면 한 건만 남겨보세요.' : '이 달에 기록한 내역이 없어요.'}</p>}
       </section>
 
+      {isCurrentMonth && daysSinceLastRecord !== null && daysSinceLastRecord >= 3 && (
+        <section className="home-return" aria-labelledby="home-return-title">
+          <h3 id="home-return-title">오늘부터 가볍게 이어가요</h3>
+          <p>마지막 기록 날짜가 {daysSinceLastRecord}일 전이에요. 지난 내역을 모두 채우지 않아도 괜찮아요.</p>
+          {onAdd && <button type="button" className="home-text-button" onClick={onAdd}>오늘 한 건 기록하기 <Plus size={15} /></button>}
+          {onImport && <button type="button" className="home-text-button" onClick={onImport}>파일로 내역 가져오기 <ArrowRight size={15} /></button>}
+        </section>
+      )}
       <section className="home-attention" aria-labelledby="home-attention-title">
         <h3 id="home-attention-title">확인할 일</h3>
         <p>{attention ?? (budgets.length > 0 ? '예산과 기록을 한 번 살펴보세요.' : '예산을 정하면 기록할 때마다 남은 금액을 확인할 수 있어요.')}</p>
         <button type="button" className="home-text-button" onClick={attention ? onReview : onBudget}>{attention ? '월간 상세 열기' : '예산 살펴보기'} <ArrowRight size={15} /></button>
       </section>
+      {isCurrentMonth && <WeeklyReview transactions={transactions} />}
     </div>
   )
 }

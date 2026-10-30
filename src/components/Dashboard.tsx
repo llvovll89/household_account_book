@@ -37,6 +37,7 @@ interface Props {
   onAddTransaction?: () => void
   onOpenWidgetSettings?: () => void
   onOpenHelp?: () => void
+  onOpenImport?: () => void
 }
 
 const ONBOARDED_KEY = 'hb_onboarded'
@@ -102,7 +103,7 @@ function PaydayRing({ daysLeft }: { daysLeft: number }) {
   )
 }
 
-export default function Dashboard({ transactions, budgets, recurring, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings, onOpenHelp }: Props) {
+export default function Dashboard({ transactions, budgets, recurring, goals, settingsVersion, yearMonth, customExpenseCategories, userPaymentMethods, subscriptions, hiddenWidgets = [], onBudgetsChange, onRecurringSave, onApplyRecurring, onOpenCategoryModal, onOpenPaymentMethodsModal, onAddTransaction, onOpenWidgetSettings, onOpenHelp, onOpenImport }: Props) {
   const hide = (id: DashboardWidgetId) => hiddenWidgets.includes(id)
   const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem(ONBOARDED_KEY) !== 'true')
   const [showBudget, setShowBudget] = useState(false)
@@ -510,33 +511,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     return { total, count: incomplete.length, nearest, nearestDays }
   }, [goals])
 
-  // 무지출 일수 (이번 달)
-  const noSpendDays = useMemo(() => {
-    const [y, m] = yearMonth.split('-').map(Number)
-    const today = new Date()
-    const isCurrentMonth = today.getFullYear() === y && today.getMonth() + 1 === m
-    const daysElapsed = isCurrentMonth ? today.getDate() : new Date(y, m, 0).getDate()
-    const spendDates = new Set(monthlyExpenseTx.map(t => t.date.slice(8, 10)))
-    return Math.max(0, daysElapsed - spendDates.size)
-  }, [monthlyExpenseTx, yearMonth])
-
-  // 연속 무지출 스트릭 (오늘 포함 연속 일수)
-  const noSpendStreak = useMemo(() => {
-    const today = new Date()
-    const [y, m] = yearMonth.split('-').map(Number)
-    if (today.getFullYear() !== y || today.getMonth() + 1 !== m) return 0
-    const spendDates = new Set(monthlyExpenseTx.map(t => t.date))
-    let streak = 0
-    const d = new Date(today)
-    while (true) {
-      const str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-      if (!str.startsWith(yearMonth)) break
-      if (spendDates.has(str)) break
-      streak++
-      d.setDate(d.getDate() - 1)
-    }
-    return streak
-  }, [monthlyExpenseTx, yearMonth])
+  const recordedDays = useMemo(() => new Set(monthly.filter(t => t.date <= toLocalDateStr()).map(t => t.date)).size, [monthly])
 
   // 재정 건강도 스코어 (0-100)
   const healthScore = useMemo(() => {
@@ -549,13 +524,13 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     const [hy, hm] = yearMonth.split('-').map(Number)
     const hToday = new Date()
     const hElapsed = (hToday.getFullYear() === hy && hToday.getMonth() + 1 === hm) ? hToday.getDate() : new Date(hy, hm, 0).getDate()
-    if (hElapsed > 0) score += Math.min(20, Math.round((noSpendDays / hElapsed) * 20))
+    if (hElapsed > 0) score += Math.min(20, Math.round((recordedDays / hElapsed) * 20))
     if (goals.length > 0) {
       const avg = goals.reduce((s, g) => s + Math.min(1, g.targetAmount > 0 ? g.currentAmount / g.targetAmount : 0), 0) / goals.length
       score += Math.round(avg * 15)
     }
     return Math.min(100, Math.max(0, score))
-  }, [savingsRate, budgets, overBudget, noSpendDays, yearMonth, goals])
+  }, [savingsRate, budgets, overBudget, recordedDays, yearMonth, goals])
 
   // 시간대별 지출 패턴
   const timeOfDaySpending = useMemo(() => {
@@ -784,7 +759,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   return (
     <div className="dashboard-grid space-y-4 tab-content">
       <HomeOverview transactions={transactions} budgets={effectiveBudgets} carryoverAmounts={carryoverAmounts} yearMonth={yearMonth}
-        onAdd={onAddTransaction} onBudget={() => setShowBudget(true)} onWidgets={onOpenWidgetSettings}
+        onAdd={onAddTransaction} onBudget={() => setShowBudget(true)} onWidgets={onOpenWidgetSettings} onImport={onOpenImport}
         attention={overBudget.length > 0 ? `${overBudget[0].category} 예산을 초과했어요. 카테고리별 내역을 확인해보세요.`
           : !hide('recurring-pending') && pendingRecurring.length > 0 ? `아직 반영하지 않은 정기 내역이 ${pendingRecurring.length}건 있어요.`
           : !hide('subscription-alert') && upcomingSubscriptions.length > 0 ? `${upcomingSubscriptions[0].name} 구독 결제가 ${upcomingSubscriptions[0].daysLeft === 0 ? '오늘' : `${upcomingSubscriptions[0].daysLeft}일 후`} 예정되어 있어요.`
@@ -810,15 +785,6 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               <SlidersHorizontal size={13} />
             </button>
           )}
-          {monthly.length > 0 && noSpendStreak >= 2 ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F5BE3A]/15 text-[#F5BE3A]">
-              🔥 {noSpendStreak}일 연속 무지출
-            </span>
-          ) : monthly.length > 0 && noSpendDays > 0 ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#2ACF6A]/15 text-[#2ACF6A]">
-              🎯 무지출 {noSpendDays}일
-            </span>
-          ) : null}
         </div>
         <p className={`summary-balance text-[clamp(26px,7vw,40px)] font-bold leading-tight num tracking-tight ${balance >= 0 ? 'text-white' : 'text-[#F25260]'}`}>
           {animatedBalance < 0 ? '-' : ''}{fmt(Math.abs(animatedBalance))}
@@ -1386,17 +1352,15 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
 
       {/* 오늘 지출 카드 */}
       {!hide('today-spending') && transactions.length > 0 && todaySpending && (todaySpending.todayExpense === 0 && todaySpending.todayIncome === 0 ? (
-        noSpendStreak >= 1 && (
           <div className="flex items-center gap-3 px-4 py-3.5 bg-[#2ACF6A]/10 rounded-2xl border border-[#2ACF6A]/20">
             <span className="text-2xl">🎯</span>
             <div>
               <p className="text-sm font-bold text-[#2ACF6A]">오늘 기록된 지출이 없어요</p>
               <p className="text-[11px] text-[#9CA6B3]">
-                {noSpendStreak >= 2 ? `🔥 ${noSpendStreak}일 연속 무지출 스트릭` : '빠뜨린 내역이 있다면 기록해보세요'}
+                빠뜨린 내역이 있다면 오늘부터 가볍게 기록해보세요
               </p>
             </div>
           </div>
-        )
       ) : (
         <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3.5">
           <div className="flex items-center justify-between mb-2.5">
@@ -1451,7 +1415,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               {[
                 { label: '저축률', value: `${savingsRate ?? 0}%`, color: (savingsRate ?? 0) >= 20 ? '#2ACF6A' : (savingsRate ?? 0) >= 10 ? '#F5BE3A' : '#F25260' },
                 { label: '예산 준수', value: budgets.length > 0 ? `${budgets.length - overBudget.length}/${budgets.length}` : '-', color: budgets.length > 0 && overBudget.length === 0 ? '#2ACF6A' : overBudget.length > budgets.length / 2 ? '#F25260' : '#F5BE3A' },
-                { label: '무지출 일', value: `${noSpendDays}일`, color: noSpendDays >= 10 ? '#2ACF6A' : noSpendDays >= 5 ? '#F5BE3A' : '#8B95A1' },
+                { label: '기록한 날', value: `${recordedDays}일`, color: '#8B95A1' },
                 { label: '목표 달성', value: goals.length > 0 ? `${goals.filter(g => g.currentAmount >= g.targetAmount).length}/${goals.length}` : '-', color: goals.length > 0 && goals.every(g => g.currentAmount >= g.targetAmount) ? '#2ACF6A' : '#8B95A1' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="flex items-center justify-between">
