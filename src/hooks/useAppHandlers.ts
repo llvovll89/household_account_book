@@ -8,6 +8,7 @@ import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings, loadTransactions } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
+import { getTransactionFeedback } from '../lib/transactionFeedback'
 import { auth } from '../firebase/firebase'
 import { deleteReceiptImage } from '../lib/receiptStorage'
 import type { UIAction } from './useAppHandlers.types'
@@ -16,6 +17,7 @@ export type { UIAction }
 
 interface HandlersInput {
   transactions: Transaction[]
+  budgets?: Budget[]
   editingTransaction: Transaction | null
   yearMonth: string
   customExpenseCategories: string[]
@@ -40,6 +42,7 @@ interface HandlersInput {
 
 export function useAppHandlers({
   transactions,
+  budgets = [],
   editingTransaction,
   yearMonth,
   customExpenseCategories,
@@ -63,7 +66,8 @@ export function useAppHandlers({
 }: HandlersInput) {
   const handleSaveTransaction = useCallback(
     (items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
-      setTransactions((prev) => {
+      const next = (() => {
+        const prev = transactions
         let next = prev
         if (editingTransaction && items.length > 0) {
           next = prev.map(t => {
@@ -83,12 +87,17 @@ export function useAppHandlers({
         } else {
           next = [...prev, ...items.map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))]
         }
-        persist(() => saveTransactions(next), '거래 저장에 실패했습니다.', 'transactions')
         return next
-      })
+      })()
+      setTransactions(next)
+      const feedback = getTransactionFeedback(items, next, budgets, !!editingTransaction)
+      persist(async () => {
+        await saveTransactions(next)
+        showToast(feedback, 6000, 'success')
+      }, '거래 저장에 실패했습니다.', 'transactions')
       dispatchUI({ type: 'CLOSE_TX_MODAL' })
     },
-    [editingTransaction, persist, setTransactions, dispatchUI]
+    [transactions, budgets, editingTransaction, persist, setTransactions, dispatchUI]
   )
 
   const handleDeleteTransaction = useCallback((id: string) => {

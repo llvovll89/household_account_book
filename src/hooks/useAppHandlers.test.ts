@@ -5,13 +5,39 @@ import { useAppHandlers } from './useAppHandlers'
 import type { Transaction, RecurringTransaction, Budget, Subscription, SavingsGoal } from '../types'
 vi.mock('../firebase/firebase', () => ({ auth: { currentUser: null } }))
 vi.mock('../lib/receiptStorage', () => ({ deleteReceiptImage: vi.fn() }))
+vi.mock('../lib/toast', () => ({ showToast: vi.fn() }))
 vi.mock('../lib/storage', () => ({
   loadSettings: vi.fn(async () => ({})), loadTransactions: vi.fn(async () => []),
   saveTransactions: vi.fn(async () => {}), saveSettings: vi.fn(async () => {}),
   saveRecurring: vi.fn(async () => {}), saveBudgets: vi.fn(async () => {}),
   saveSubscriptions: vi.fn(async () => {}), saveGoals: vi.fn(async () => {}), saveMemos: vi.fn(async () => {}),
 }))
-import { saveSettings, saveRecurring } from '../lib/storage'
+import { saveSettings, saveRecurring, saveTransactions } from '../lib/storage'
+import { showToast } from '../lib/toast'
+
+it('announces feedback once after persistence succeeds, and never on a failed write', async () => {
+  const tasks: (() => Promise<void>)[] = []
+  const { result } = renderHook(() => useAppHandlers({
+    transactions: [], budgets: [{ category: '식비', limit: 10000 }], editingTransaction: null, yearMonth: '2026-10',
+    customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
+    persist: task => { tasks.push(task) }, dispatchUI: vi.fn(),
+    setTransactions: vi.fn(), setRecurring: vi.fn(), setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
+    setCustomExpenseCategories: vi.fn(), setCustomIncomeCategories: vi.fn(), setUserPaymentMethods: vi.fn(),
+    setTransactionTemplates: vi.fn(), setAutoCategoryRules: vi.fn(), setHiddenWidgets: vi.fn(),
+  }))
+  vi.mocked(showToast).mockClear()
+  const item = { type: 'expense' as const, category: '식비', amount: 9000, description: '', date: '2026-10-12' }
+  act(() => result.current.handleSaveTransaction([item]))
+  expect(showToast).not.toHaveBeenCalled()
+  await tasks[0]()
+  expect(showToast).toHaveBeenCalledOnce()
+  expect(showToast).toHaveBeenLastCalledWith(expect.stringContaining('1,000원 남았어요'), 6000, 'success')
+  vi.mocked(showToast).mockClear()
+  vi.mocked(saveTransactions).mockRejectedValueOnce(new Error('offline'))
+  act(() => result.current.handleSaveTransaction([item]))
+  await expect(tasks[1]()).rejects.toThrow('offline')
+  expect(showToast).not.toHaveBeenCalled()
+})
 
 it('moves linked records, preserves budget totals, and applies recurring transfers with the original account', async () => {
   const transactions: Transaction[] = [{ id: 'tx', type: 'expense', category: '보장', amount: 100, description: '', date: '2026-10-01', createdAt: 1 }]
