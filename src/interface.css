@@ -19,6 +19,34 @@
 }
 html, body { background: var(--page); color: var(--text); color-scheme: inherit; }
 body { letter-spacing: -.015em; }
+.home-overview { display: grid; gap: 16px; grid-column: 1 / -1; min-width: 0; }
+.home-overview section { padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; min-width: 0; }
+.home-overview h3 { font-size: 14px; font-weight: 650; color: var(--text); }
+.home-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.home-section-heading > button { min-width: 44px; min-height: 44px; display: grid; place-items: center; color: var(--muted); border-radius: 10px; }
+.home-budget-value { font-size: clamp(30px, 8vw, 42px); font-weight: 650; letter-spacing: -.045em; margin: 8px 0; }
+.home-budget-value > span { font-size: 18px; margin-left: 5px; font-weight: 500; color: var(--muted); }
+.home-budget-value.is-over-budget, .entry-expense { color: var(--expense); }
+.entry-income { color: var(--income); }
+.home-description { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.home-budget-totals { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+.home-budget-totals strong { display: block; margin-top: 3px; color: var(--text); font-size: 16px; font-weight: 600; }
+.home-empty-title { font-size: 21px; font-weight: 600; margin: 14px 0 8px; }
+.home-text-button { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; color: var(--accent); font-size: 12px; font-weight: 600; white-space: normal; text-align: left; }
+.home-primary-action { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 12px; background: var(--action); color: var(--on-action); border-radius: 10px; font-size: 14px; font-weight: 600; }
+.home-primary-action:hover { background: var(--action-hover); }
+.home-today-total { margin-top: 12px; font-size: 12px; color: var(--muted); }
+.home-today-total strong { color: var(--text); margin-left: 8px; }
+.home-entry-list { list-style: none; padding: 0; margin-top: 12px; }
+.home-entry-list li { display: flex; align-items: center; gap: 10px; padding-block: 10px; }
+.home-entry-list li > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.home-entry-list small { display: block; font-size: 11px; color: var(--muted); }
+.home-entry-list strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; max-width: 55%; text-align: right; }
+.home-attention p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+.home-monthly-details { grid-column: 1 / -1; min-width: 0; }
+.home-monthly-details > summary { padding: 16px 4px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text); }
+.home-monthly-details > summary > span { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin: 6px 0 0 18px; }
+@media (min-width: 1024px) { .home-overview { grid-template-columns: 1.15fr 1fr; align-items: start; } .home-budget { grid-row: span 2; } }
 .recent-entry-shortcuts > p { color: var(--text); font-size: 12px; font-weight: 600; margin-bottom: 8px; }
 .recent-entry-shortcuts > p > span { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 3px; }
 .recent-entry-shortcuts > div { display: flex; gap: 8px; overflow-x: auto; padding: 3px 3px 8px; }
