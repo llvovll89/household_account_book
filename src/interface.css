@@ -19,6 +19,13 @@
 }
 html, body { background: var(--page); color: var(--text); color-scheme: inherit; }
 body { letter-spacing: -.015em; }
+.recent-entry-shortcuts > p { color: var(--text); font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.recent-entry-shortcuts > p > span { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 3px; }
+.recent-entry-shortcuts > div { display: flex; gap: 8px; overflow-x: auto; padding: 3px 3px 8px; }
+.recent-entry-shortcuts button { display: flex; align-items: center; gap: 8px; text-align: left; flex: 0 0 auto; min-height: 54px; max-width: 260px; padding: 9px 12px; background: var(--raised); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+.recent-entry-shortcuts button > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.recent-entry-shortcuts small { display: block; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.recent-entry-shortcuts strong { font-size: 12px; font-weight: 600; }
 button { white-space: nowrap; transition: background-color .15s, color .15s, border-color .15s, transform .15s; }
 button:active:not(:disabled) { transform: scale(.98); }
 button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
