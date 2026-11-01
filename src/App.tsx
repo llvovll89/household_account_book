@@ -2193,7 +2193,7 @@ export default function App() {
 
             <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none">
                 <div className="ledger-floating-actions max-w-lg mx-auto relative h-0">
-                    {showFAB &&
+                    {showFAB && !(activeTab === "subscriptions" && subscriptions.length === 0) && !(activeTab === "goals" && goals.length === 0) &&
                         (() => {
                             const isSpeedDialTab = !(
                                 ["memos", "subscriptions", "goals"] as Tab[]

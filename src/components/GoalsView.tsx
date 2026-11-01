@@ -408,16 +408,7 @@ export default function GoalsView({
             </div>
 
             {/* 목표 목록 */}
-            {goals.length === 0 ? (
-                <div className="bg-[#1C1C1E] rounded-2xl">
-                    <EmptyState
-                        emoji="🎯"
-                        title="저축 목표가 없어요"
-                        description="작은 목표 하나만 추가해도 자동 집계와 일일 필요 금액을 바로 확인할 수 있어요."
-                        action={{label: "목표 추가", onClick: openAdd}}
-                    />
-                </div>
-            ) : (
+            {goals.length > 0 && (
                 <div className="space-y-3">
                     {goals.length > 1 && (
                         <div className="flex justify-end">
