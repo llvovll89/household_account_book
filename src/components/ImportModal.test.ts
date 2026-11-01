@@ -12,11 +12,26 @@ vi.mock('../lib/bankParser', async importOriginal => {
 const headers = ['Date', 'Amount', 'Merchant']
 afterEach(() => { cleanup(); localStorage.clear(); vi.clearAllMocks() })
 
-async function upload(container: HTMLElement) {
-  vi.mocked(parseTabularFile).mockResolvedValue({ headers, rows: [{ Date: '2026-10-30', Amount: '9000', Merchant: '점심' }] })
+async function upload(container: HTMLElement, merchant = '점심') {
+  vi.mocked(parseTabularFile).mockResolvedValue({ headers, rows: [{ Date: '2026-10-30', Amount: '9000', Merchant: merchant }] })
   fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [new File(['sample'], 'bank.csv')] } })
   await screen.findByRole('combobox', { name: '설명/적요' })
 }
+
+it('excludes a category review row until the user explicitly includes it', async () => {
+  const onImport = vi.fn()
+  const view = render(createElement(ImportModal, { existingTransactions: [], onImport, onClose: vi.fn() }))
+  await upload(view.container, '커피')
+  fireEvent.change(screen.getByRole('combobox', { name: '설명/적요' }), { target: { value: 'Merchant' } })
+  fireEvent.click(screen.getByRole('button', { name: '다음' }))
+  expect(screen.getByText(/검토 필요 1건은 기본으로 제외했어요/)).toBeTruthy()
+  expect(screen.getByRole('button', { name: '0개 가져오기' }).hasAttribute('disabled')).toBe(true)
+  const selectAll = screen.getByRole('checkbox', { name: '검토 필요 항목을 제외한 전체 선택' })
+  expect(selectAll.hasAttribute('disabled')).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: '검토 행 전부 포함' }))
+  fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
+  expect(onImport.mock.calls[0][0]).toEqual([expect.objectContaining({ description: '커피', category: '기타지출' })])
+})
 
 it('remembers only confirmed mappings and restores a custom description column on next upload', async () => {
   const onImport = vi.fn()
@@ -25,6 +40,7 @@ it('remembers only confirmed mappings and restores a custom description column o
   fireEvent.change(screen.getByRole('combobox', { name: '설명/적요' }), { target: { value: 'Merchant' } })
   expect(loadImportMapping(headers)).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '다음' }))
+  fireEvent.click(screen.getByRole('button', { name: '검토 행 전부 포함' }))
   fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
   expect(onImport.mock.calls[0][0]).toEqual([expect.objectContaining({ description: '점심', amount: 9000 })])
   expect(loadImportMapping(headers)?.description).toBe('Merchant')
@@ -46,6 +62,7 @@ it('does not persist unconfirmed or opted-out mapping choices', async () => {
   await upload(second.container)
   fireEvent.click(screen.getByRole('checkbox', { name: '이 형식의 컬럼 설정 기억하기' }))
   fireEvent.click(screen.getByRole('button', { name: '다음' }))
+  fireEvent.click(screen.getByRole('button', { name: '검토 행 전부 포함' }))
   fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
   expect(loadImportMapping(headers)).toBeNull()
 })

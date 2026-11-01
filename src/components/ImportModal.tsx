@@ -199,7 +199,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
         ...p,
         category,
         originalCategory: category,
-        skip: isDuplicate,
+        skip: isDuplicate || reviewMeta.needsReview,
         isDuplicate,
         needsReview: reviewMeta.needsReview,
         reviewReasons: reviewMeta.reviewReasons,
@@ -569,6 +569,11 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                     <p className="text-xs text-[#3D8EF8] font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
                   </div>
                 )}
+                {reviewCount > 0 && (
+                  <p className="mx-1 rounded-xl border border-[#F25260]/20 bg-[#F25260]/8 px-3 py-2 text-[11px] leading-relaxed text-[#F25260]">
+                    검토 필요 {reviewCount}건은 기본으로 제외했어요. 분류를 확인한 뒤 행에서 포함하거나 아래 빠른 처리로 선택해주세요.
+                  </p>
+                )}
                 <div className="flex gap-2 px-1">
                   <button
                     type="button"
@@ -673,8 +678,9 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                   <thead className="bg-[#2C2C2E] sticky top-0 z-10">
                     <tr>
                       <th className="px-3 py-2.5 w-10">
-                        <input type="checkbox" checked={previewRows.length > 0 && previewRows.every((r) => !r.skip)}
-                          onChange={(e) => setPreviewRows((rows) => rows.map((r) => ({ ...r, skip: !e.target.checked })))}
+                        <input type="checkbox" aria-label="검토 필요 항목을 제외한 전체 선택" checked={previewRows.some((r) => !r.needsReview) && previewRows.every((r) => r.needsReview || !r.skip)}
+                          disabled={previewRows.every((r) => r.needsReview)}
+                          onChange={(e) => setPreviewRows((rows) => rows.map((r) => r.needsReview ? r : { ...r, skip: !e.target.checked }))}
                           className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
                       </th>
                       {['날짜', '설명', '카테고리', '금액'].map(h => (
