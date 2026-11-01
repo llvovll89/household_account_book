@@ -35,3 +35,12 @@
 일주일 동안 자주 쓰는 지출의 입력 시간, 입력 중 포기한 이유, 예산 피드백의 유용성, 다음 주 재사용 여부를 확인한다. 주간 비교는 기록된 금액의 비교이며 실제 소비 전체나 절약 성과를 확정하지 않는다.
 
 작업 시작 전부터 수정 중이던 `UX_REVIEW.md`는 변경하거나 커밋하지 않는다.
+
+## 후속 개선 · 2026-11-01
+
+5. `feat/import-presets` · [PR #12](https://github.com/llvovll89/household_account_book/pull/12): 동일 컬럼 구성의 파일에서 확인한 매핑 복원. 가져오기 완료 때만 기억하며 기기 내 컬럼 이름만 저장. 기억하지 않기·설정 삭제·형식 변경·저장소 실패 처리.
+6. `feat/rule-suggestions` · [PR #13](https://github.com/llvovll89/household_account_book/pull/13): 거래 수정과 가져오기 미리보기에서 카테고리 변경 시 명시적으로 선택한 미래 자동 분류 규칙 제안. 기존 키워드 갱신, 수입·지출 구분, 모순되는 일괄 선택 방지. 과거 거래 자동 변경 없음.
+7. `feat/pwa-entry` · [PR #14](https://github.com/llvovll89/household_account_book/pull/14): 성공적인 기록 뒤에 설치 안내. 7일 미루기와 가이드에서 직접 열기. 지원 환경에서 수입·지출 manifest 바로가기 제공. 인증·동기화 준비 후 정확한 입력 유형으로 진입하며 소비한 URL 동작 제거.
+8. `feat/usage-flow`: 사용 가이드의 사용 패턴 화면에서 이 기기의 입력·가져오기 완료율, 완료 전 닫은 단계, 오류, 완료시간 중앙값 확인. 측정 중지·삭제·요약 내보내기 제공. 금액·적요·파일명을 측정하지 않고 외부로 전송하지 않음. 상세 정의와 한계는 `USAGE_MEASUREMENT.md` 참고.
+
+설치 안내는 [web.dev의 설치 시점 안내](https://web.dev/learn/pwa/installation-prompt)와 [MDN manifest shortcuts](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/shortcuts)를 참고했다. 브라우저에서 URL 입력과 설치 제안 흐름을 확인했으며 실기기의 네이티브 설치·OS 바로가기 메뉴는 별도 확인 대상이다.

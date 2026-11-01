@@ -9,6 +9,7 @@ import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions,
 import { generateId, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { getTransactionFeedback } from '../lib/transactionFeedback'
+import { updateUsageFlow } from '../lib/usageFlow'
 import { auth } from '../firebase/firebase'
 import { deleteReceiptImage } from '../lib/receiptStorage'
 import type { UIAction } from './useAppHandlers.types'
@@ -67,7 +68,7 @@ export function useAppHandlers({
   dispatchUI,
 }: HandlersInput) {
   const handleSaveTransaction = useCallback(
-    (items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
+    (items: Omit<Transaction, 'id' | 'createdAt'>[], usageFlowId?: string | null) => {
       const next = (() => {
         const prev = transactions
         let next = prev
@@ -94,7 +95,9 @@ export function useAppHandlers({
       setTransactions(next)
       const feedback = getTransactionFeedback(items, next, budgets, !!editingTransaction)
       persist(async () => {
-        await saveTransactions(next)
+        try { await saveTransactions(next) }
+        catch (error) { updateUsageFlow(usageFlowId, 'error', 'persist'); throw error }
+        updateUsageFlow(usageFlowId, 'complete', 'persist')
         showToast(feedback, 6000, 'success')
         onRecordSaved?.()
       }, '거래 저장에 실패했습니다.', 'transactions')
@@ -159,11 +162,16 @@ export function useAppHandlers({
     })
   }, [persist, setTransactions, dispatchUI])
 
-  const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
+  const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[], usageFlowId?: string | null) => {
     if (items.length === 0) return
     const next = [...transactions, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
     setTransactions(next)
-    persist(async () => { await saveTransactions(next); onRecordSaved?.() }, '가져오기 저장에 실패했습니다.', 'transactions')
+    persist(async () => {
+      try { await saveTransactions(next) }
+      catch (error) { updateUsageFlow(usageFlowId, 'error', 'persist'); throw error }
+      updateUsageFlow(usageFlowId, 'complete', 'persist')
+      onRecordSaved?.()
+    }, '가져오기 저장에 실패했습니다.', 'transactions')
   }, [transactions, persist, setTransactions, onRecordSaved])
 
   const handleBudgetsChange = useCallback((b: Budget[]) => {

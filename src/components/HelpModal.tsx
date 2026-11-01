@@ -4,6 +4,7 @@ import { useModalClose } from '../hooks/useModalClose'
 interface Props {
   onClose: () => void
   onInstall?: () => void
+  onUsageInsights?: () => void
 }
 
 const sections = [
@@ -79,7 +80,7 @@ const sections = [
   },
 ]
 
-export default function HelpModal({ onClose, onInstall }: Props) {
+export default function HelpModal({ onClose, onInstall, onUsageInsights }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
 
   return (
@@ -114,6 +115,7 @@ export default function HelpModal({ onClose, onInstall }: Props) {
         {/* 컨텐츠 */}
         <div className="overflow-y-auto flex-1 px-6 pb-8 space-y-3">
           {onInstall && <button type="button" onClick={onInstall} className="home-primary-action">홈 화면에 추가하는 방법</button>}
+          {onUsageInsights && <button type="button" onClick={onUsageInsights} className="home-text-button">사용 패턴 보기</button>}
           {sections.map(({ icon: Icon, color, title, items }) => (
             <div key={title} className="bg-[#2C2C2E] rounded-2xl p-4">
               <div className="flex items-center gap-3 mb-3">

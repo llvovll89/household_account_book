@@ -70,6 +70,7 @@ import WorkspaceSkeleton from "./components/layout/WorkspaceSkeleton";
 const TransactionModal = lazy(() => import("./components/TransactionModal"));
 const ImportModal = lazy(() => import("./components/ImportModal"));
 const HelpModal = lazy(() => import("./components/HelpModal"));
+const UsageInsightsModal = lazy(() => import("./components/UsageInsightsModal"));
 const CategoryModal = lazy(() => import("./components/CategoryModal"));
 const PaymentMethodsModal = lazy(
     () => import("./components/PaymentMethodsModal"),
@@ -484,6 +485,7 @@ export default function App() {
         DEFAULT_HIDDEN_WIDGETS,
     );
     const [showTagManagerModal, setShowTagManagerModal] = useState(false);
+    const [showUsageInsights, setShowUsageInsights] = useState(false);
     const [showAutoCategoryRuleModal, setShowAutoCategoryRuleModal] =
         useState(false);
     const [showWidgetSettings, setShowWidgetSettings] = useState(false);
@@ -2293,7 +2295,7 @@ export default function App() {
                 </div>
             </div>
 
-            {showInstallBanner && !showModal && !showImport && !showHelp && !showAuthModal && !showCategoryModal && !showPaymentMethodsModal && !showResetModal && !showWidgetSettings && !showAutoCategoryRuleModal && !showTagManagerModal && (
+            {showInstallBanner && !showModal && !showImport && !showHelp && !showUsageInsights && !showAuthModal && !showCategoryModal && !showPaymentMethodsModal && !showResetModal && !showWidgetSettings && !showAutoCategoryRuleModal && !showTagManagerModal && (
                 <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
                     <div className="bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
                         <p className="text-sm font-semibold text-white">
@@ -2384,6 +2386,7 @@ export default function App() {
             {showHelp && (
                 <Suspense fallback={null}>
                     <HelpModal
+                        onUsageInsights={() => { dispatchUI({type: "SET_HELP", value: false}); setShowUsageInsights(true); }}
                         onInstall={canInstall ? () => { dispatchUI({type: "SET_HELP", value: false}); openInstallGuide(); } : undefined}
                         onClose={() =>
                             dispatchUI({type: "SET_HELP", value: false})
@@ -2391,6 +2394,7 @@ export default function App() {
                     />
                 </Suspense>
             )}
+            {showUsageInsights && <Suspense fallback={null}><UsageInsightsModal onClose={() => setShowUsageInsights(false)} /></Suspense>}
             {showImport && (
                 <Suspense fallback={null}>
                     <ImportModal
