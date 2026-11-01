@@ -3,6 +3,7 @@ import { FirebaseError } from 'firebase/app'
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -36,6 +37,7 @@ interface UseAuthSyncResult {
   handleMergeCancel: () => Promise<void>
   handleGoogleLogin: () => Promise<void>
   handleEmailAuth: () => Promise<void>
+  handlePasswordReset: () => Promise<void>
   handleLogout: () => Promise<void>
 }
 
@@ -224,6 +226,32 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     }
   }, [authMode, email, password])
 
+  const handlePasswordReset = useCallback(async () => {
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      showToast('비밀번호를 재설정할 이메일을 입력해주세요.')
+      return
+    }
+
+    setAuthBusy(true)
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail)
+      showToast('계정이 있다면 비밀번호 재설정 메일을 받으실 수 있어요.')
+    } catch (error) {
+      if (error instanceof FirebaseError && error.code === 'auth/user-not-found') {
+        showToast('계정이 있다면 비밀번호 재설정 메일을 받으실 수 있어요.')
+      } else if (error instanceof FirebaseError && error.code === 'auth/invalid-email') {
+        showToast('이메일 형식이 올바르지 않습니다.')
+      } else if (error instanceof FirebaseError && error.code === 'auth/too-many-requests') {
+        showToast('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.')
+      } else {
+        showToast('재설정 메일을 보내지 못했어요. 잠시 후 다시 시도해주세요.')
+      }
+    } finally {
+      setAuthBusy(false)
+    }
+  }, [email])
+
   const handleLogout = useCallback(async () => {
     try {
       await signOut(auth)
@@ -253,6 +281,7 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
     handleMergeCancel,
     handleGoogleLogin,
     handleEmailAuth,
+    handlePasswordReset,
     handleLogout,
   }
 }

@@ -737,6 +737,7 @@ export default function App() {
         handleMergeCancel,
         handleGoogleLogin,
         handleEmailAuth,
+        handlePasswordReset,
         handleLogout,
     } = useAuthSync({hydrateData});
 
@@ -2654,18 +2655,18 @@ export default function App() {
                     aria-modal="true"
                     aria-labelledby="auth-modal-title"
                 >
-                    <div className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
+                    <div className="auth-modal-panel w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3
                                 id="auth-modal-title"
-                                className="text-white text-base font-bold"
+                                className="text-base font-bold"
                             >
                                 계정 로그인
                             </h3>
                             <button
                                 aria-label="로그인 모달 닫기"
                                 onClick={() => setShowAuthModal(false)}
-                                className="text-xs font-bold text-[#8B95A1]"
+                                className="auth-secondary text-xs font-bold"
                             >
                                 닫기
                             </button>
@@ -2674,13 +2675,15 @@ export default function App() {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setAuthMode("login")}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${authMode === "login" ? "bg-[#3D8EF8] text-white" : "bg-[#1E2236] text-[#8B95A1]"}`}
+                                aria-pressed={authMode === "login"}
+                                className="auth-mode-button flex-1 py-2 rounded-xl text-xs font-bold transition-colors"
                             >
                                 이메일 로그인
                             </button>
                             <button
                                 onClick={() => setAuthMode("signup")}
-                                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${authMode === "signup" ? "bg-[#3D8EF8] text-white" : "bg-[#1E2236] text-[#8B95A1]"}`}
+                                aria-pressed={authMode === "signup"}
+                                className="auth-mode-button flex-1 py-2 rounded-xl text-xs font-bold transition-colors"
                             >
                                 회원가입
                             </button>
@@ -2693,7 +2696,7 @@ export default function App() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 type="email"
                                 placeholder="이메일"
-                                className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]"
+                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-[#3D8EF8]"
                             />
                             <input
                                 aria-label="비밀번호"
@@ -2701,8 +2704,13 @@ export default function App() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 type="password"
                                 placeholder="비밀번호 (6자 이상)"
-                                className="w-full px-3 py-2 rounded-xl bg-[#1E2236] border border-white/10 text-sm text-white placeholder:text-[#8B95A1] outline-none focus:border-[#3D8EF8]"
+                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-[#3D8EF8]"
                             />
+                            {authMode === "login" && (
+                                <button type="button" onClick={handlePasswordReset} disabled={authBusy} className="auth-secondary block ml-auto text-xs font-semibold disabled:opacity-50">
+                                    비밀번호를 잊으셨나요?
+                                </button>
+                            )}
                         </div>
 
                         <button
@@ -2720,7 +2728,7 @@ export default function App() {
                         <button
                             onClick={handleGoogleLogin}
                             disabled={authBusy}
-                            className="w-full py-2.5 rounded-xl bg-[#09f]/80 disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2"
+                            className="w-full py-2.5 rounded-xl bg-[var(--action)] disabled:opacity-50 text-white text-sm font-bold flex items-center justify-center gap-2"
                         >
                             {authBusy ? (
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
