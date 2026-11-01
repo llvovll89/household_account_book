@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { seoPlugin } from './build/seo'
+import { pwaShortcuts } from './src/lib/pwaShortcuts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -39,6 +40,7 @@ export default defineConfig(({ mode }) => ({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        shortcuts: pwaShortcuts,
         lang: 'ko',
         icons: [
           {

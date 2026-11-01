@@ -18,6 +18,7 @@ export type { UIAction }
 interface HandlersInput {
   transactions: Transaction[]
   budgets?: Budget[]
+  onRecordSaved?: () => void
   editingTransaction: Transaction | null
   yearMonth: string
   customExpenseCategories: string[]
@@ -43,6 +44,7 @@ interface HandlersInput {
 export function useAppHandlers({
   transactions,
   budgets = [],
+  onRecordSaved,
   editingTransaction,
   yearMonth,
   customExpenseCategories,
@@ -94,10 +96,11 @@ export function useAppHandlers({
       persist(async () => {
         await saveTransactions(next)
         showToast(feedback, 6000, 'success')
+        onRecordSaved?.()
       }, '거래 저장에 실패했습니다.', 'transactions')
       dispatchUI({ type: 'CLOSE_TX_MODAL' })
     },
-    [transactions, budgets, editingTransaction, persist, setTransactions, dispatchUI]
+    [transactions, budgets, editingTransaction, persist, setTransactions, dispatchUI, onRecordSaved]
   )
 
   const handleDeleteTransaction = useCallback((id: string) => {
@@ -157,12 +160,11 @@ export function useAppHandlers({
   }, [persist, setTransactions, dispatchUI])
 
   const handleBulkImport = useCallback((items: Omit<Transaction, 'id' | 'createdAt'>[]) => {
-    setTransactions((prev) => {
-      const next = [...prev, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
-      persist(() => saveTransactions(next), '가져오기 저장에 실패했습니다.', 'transactions')
-      return next
-    })
-  }, [persist, setTransactions])
+    if (items.length === 0) return
+    const next = [...transactions, ...items.map((item) => ({ ...item, id: generateId(), createdAt: Date.now() }))]
+    setTransactions(next)
+    persist(async () => { await saveTransactions(next); onRecordSaved?.() }, '가져오기 저장에 실패했습니다.', 'transactions')
+  }, [transactions, persist, setTransactions, onRecordSaved])
 
   const handleBudgetsChange = useCallback((b: Budget[]) => {
     setBudgets(b)

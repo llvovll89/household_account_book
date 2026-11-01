@@ -17,8 +17,9 @@ import { showToast } from '../lib/toast'
 
 it('announces feedback once after persistence succeeds, and never on a failed write', async () => {
   const tasks: (() => Promise<void>)[] = []
+  const onRecordSaved = vi.fn()
   const { result } = renderHook(() => useAppHandlers({
-    transactions: [], budgets: [{ category: '식비', limit: 10000 }], editingTransaction: null, yearMonth: '2026-10',
+    transactions: [], budgets: [{ category: '식비', limit: 10000 }], onRecordSaved, editingTransaction: null, yearMonth: '2026-10',
     customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
     persist: task => { tasks.push(task) }, dispatchUI: vi.fn(),
     setTransactions: vi.fn(), setRecurring: vi.fn(), setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
@@ -29,14 +30,18 @@ it('announces feedback once after persistence succeeds, and never on a failed wr
   const item = { type: 'expense' as const, category: '식비', amount: 9000, description: '', date: '2026-10-12' }
   act(() => result.current.handleSaveTransaction([item]))
   expect(showToast).not.toHaveBeenCalled()
+  expect(onRecordSaved).not.toHaveBeenCalled()
   await tasks[0]()
   expect(showToast).toHaveBeenCalledOnce()
+  expect(onRecordSaved).toHaveBeenCalledOnce()
   expect(showToast).toHaveBeenLastCalledWith(expect.stringContaining('1,000원 남았어요'), 6000, 'success')
   vi.mocked(showToast).mockClear()
+  onRecordSaved.mockClear()
   vi.mocked(saveTransactions).mockRejectedValueOnce(new Error('offline'))
   act(() => result.current.handleSaveTransaction([item]))
   await expect(tasks[1]()).rejects.toThrow('offline')
   expect(showToast).not.toHaveBeenCalled()
+  expect(onRecordSaved).not.toHaveBeenCalled()
 })
 
 it('moves linked records, preserves budget totals, and applies recurring transfers with the original account', async () => {

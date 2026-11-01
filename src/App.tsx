@@ -52,6 +52,7 @@ import type {RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
 import {calculateCardDueAmount, shiftYM} from "./lib/cardBilling";
 import {usePWAInstall} from "./hooks/usePWAInstall";
+import {consumeEntryShortcut} from "./lib/pwaShortcuts";
 import {useAuthSync} from "./hooks/useAuthSync";
 import {useAppHandlers} from "./hooks/useAppHandlers";
 import type {UIAction} from "./hooks/useAppHandlers.types";
@@ -437,6 +438,9 @@ export default function App() {
         deferredPrompt,
         closeInstallBanner,
         handleInstallClick,
+        offerInstallAfterSave,
+        openInstallGuide,
+        canInstall,
     } = usePWAInstall();
 
     const [tab, setTab] = useState<Tab>(() => {
@@ -733,6 +737,16 @@ export default function App() {
         handleEmailAuth,
         handleLogout,
     } = useAuthSync({hydrateData});
+
+    useEffect(() => {
+        if (!authReady || isSyncing) return;
+        const action = consumeEntryShortcut(window.location, window.history);
+        if (!action) return;
+        setTab("home");
+        setCurrentDate(new Date());
+        setTxInitialType(action);
+        dispatchUI({type: "OPEN_TX_MODAL"});
+    }, [authReady, isSyncing]);
 
     const handleResetAllData = useCallback(async () => {
         try {
@@ -1271,6 +1285,7 @@ export default function App() {
     } = useAppHandlers({
         transactions,
         budgets,
+        onRecordSaved: offerInstallAfterSave,
         editingTransaction,
         yearMonth,
         customExpenseCategories,
@@ -2278,7 +2293,7 @@ export default function App() {
                 </div>
             </div>
 
-            {showInstallBanner && (
+            {showInstallBanner && !showModal && !showImport && !showHelp && !showAuthModal && !showCategoryModal && !showPaymentMethodsModal && !showResetModal && !showWidgetSettings && !showAutoCategoryRuleModal && !showTagManagerModal && (
                 <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
                     <div className="bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
                         <p className="text-sm font-semibold text-white">
@@ -2294,7 +2309,7 @@ export default function App() {
                                 onClick={closeInstallBanner}
                                 className="px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold"
                             >
-                                닫기
+                                나중에
                             </button>
                             {!isIosManualInstall && deferredPrompt && (
                                 <button
@@ -2369,6 +2384,7 @@ export default function App() {
             {showHelp && (
                 <Suspense fallback={null}>
                     <HelpModal
+                        onInstall={canInstall ? () => { dispatchUI({type: "SET_HELP", value: false}); openInstallGuide(); } : undefined}
                         onClose={() =>
                             dispatchUI({type: "SET_HELP", value: false})
                         }
