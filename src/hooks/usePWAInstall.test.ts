@@ -18,6 +18,7 @@ it('does not interrupt first arrival and waits until save feedback ends', () => 
   expect(result.current.showInstallBanner).toBe(false)
   act(() => { vi.advanceTimersByTime(1) })
   expect(result.current.showInstallBanner).toBe(true)
+  expect(result.current.installOfferMode).toBe('automatic')
 })
 
 it('respects snooze and legacy dismissal while allowing explicit help', () => {
@@ -27,6 +28,7 @@ it('respects snooze and legacy dismissal while allowing explicit help', () => {
   expect(result.current.showInstallBanner).toBe(false)
   act(() => result.current.openInstallGuide())
   expect(result.current.showInstallBanner).toBe(true)
+  expect(result.current.installOfferMode).toBe('manual')
   act(() => result.current.closeInstallBanner())
   expect(Number(localStorage.getItem('hb_install_snooze_until'))).toBeGreaterThan(Date.now())
 })
