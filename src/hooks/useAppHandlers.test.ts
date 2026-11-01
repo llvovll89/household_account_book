@@ -14,6 +14,7 @@ vi.mock('../lib/storage', () => ({
 }))
 import { saveSettings, saveRecurring, saveTransactions } from '../lib/storage'
 import { showToast } from '../lib/toast'
+import { beginUsageFlow, getUsageSummary } from '../lib/usageFlow'
 
 it('announces feedback once after persistence succeeds, and never on a failed write', async () => {
   const tasks: (() => Promise<void>)[] = []
@@ -28,20 +29,25 @@ it('announces feedback once after persistence succeeds, and never on a failed wr
   }))
   vi.mocked(showToast).mockClear()
   const item = { type: 'expense' as const, category: '식비', amount: 9000, description: '', date: '2026-10-12' }
-  act(() => result.current.handleSaveTransaction([item]))
+  const flowId = beginUsageFlow('entry')
+  act(() => result.current.handleSaveTransaction([item], flowId))
   expect(showToast).not.toHaveBeenCalled()
   expect(onRecordSaved).not.toHaveBeenCalled()
+  expect(getUsageSummary().entry.completed).toBe(0)
   await tasks[0]()
   expect(showToast).toHaveBeenCalledOnce()
   expect(onRecordSaved).toHaveBeenCalledOnce()
+  expect(getUsageSummary().entry.completed).toBe(1)
   expect(showToast).toHaveBeenLastCalledWith(expect.stringContaining('1,000원 남았어요'), 6000, 'success')
   vi.mocked(showToast).mockClear()
   onRecordSaved.mockClear()
   vi.mocked(saveTransactions).mockRejectedValueOnce(new Error('offline'))
-  act(() => result.current.handleSaveTransaction([item]))
+  const failedId = beginUsageFlow('entry')
+  act(() => result.current.handleSaveTransaction([item], failedId))
   await expect(tasks[1]()).rejects.toThrow('offline')
   expect(showToast).not.toHaveBeenCalled()
   expect(onRecordSaved).not.toHaveBeenCalled()
+  expect(getUsageSummary().entry).toMatchObject({ completed: 1, withErrors: 1 })
 })
 
 it('moves linked records, preserves budget totals, and applies recurring transfers with the original account', async () => {

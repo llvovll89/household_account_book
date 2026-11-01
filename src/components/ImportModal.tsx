@@ -9,6 +9,7 @@ import {
 } from '../lib/bankParser'
 import { applyAutoCategory, mergeCategoryCorrections } from '../lib/autoCategoryRules'
 import CategoryRuleOffer from './CategoryRuleOffer'
+import { useUsageFlow } from '../hooks/useUsageFlow'
 import { forgetImportMapping, loadImportMapping, saveImportMapping } from '../lib/importMappings'
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
@@ -19,7 +20,7 @@ interface Props {
   existingTransactions: Transaction[]
   autoCategoryRules?: AutoCategoryRule[]
   onSaveRules?: (rules: AutoCategoryRule[]) => void
-  onImport: (transactions: Omit<Transaction, 'id' | 'createdAt'>[]) => void
+  onImport: (transactions: Omit<Transaction, 'id' | 'createdAt'>[], usageFlowId?: string | null) => void
   onClose: () => void
 }
 
@@ -104,6 +105,7 @@ function getPreviewReviewMeta(description: string, category: string): { needsRev
 }
 
 export default function ImportModal({ existingTransactions, autoCategoryRules = [], onSaveRules, onImport, onClose }: Props) {
+  const usage = useUsageFlow('import')
   const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [step, setStep] = useState<Step>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -152,6 +154,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   }, [step, csvRows.length])
 
   async function handleFile(file: File) {
+    usage.step('upload')
     setError(''); setLoading(true)
     try {
       const ext = file.name.split('.').pop()?.toLowerCase()
@@ -159,20 +162,22 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
         setIsPDF(true)
         const text = await extractPDFText(file)
         const parsed = parsePDFText(text)
-        if (!parsed.length) { setError('PDF에서 내역을 찾지 못했습니다. CSV 파일을 사용해주세요.'); return }
-        buildPreview(parsed); setStep('preview')
+        if (!parsed.length) { usage.error('upload'); setError('PDF에서 내역을 찾지 못했습니다. CSV 파일을 사용해주세요.'); return }
+        buildPreview(parsed); setStep('preview'); usage.step('preview')
       } else {
         setIsPDF(false)
         const { headers, rows } = await parseTabularFile(file)
-        if (!headers.length) { setError('파일을 읽지 못했습니다. CSV 또는 엑셀 파일인지 확인해주세요.'); return }
+        if (!headers.length) { usage.error('upload'); setError('파일을 읽지 못했습니다. CSV 또는 엑셀 파일인지 확인해주세요.'); return }
         const filteredRows = rows.filter(isMeaningfulDataRow)
         setCsvHeaders(headers); setCsvRows(filteredRows)
         const savedMapping = loadImportMapping(headers)
         setReusedMapping(!!savedMapping)
         setRememberMapping(true)
         setMapping(savedMapping ?? { ...EMPTY_MAPPING, ...detectColumns(headers) }); setStep('mapping')
+        usage.step('mapping')
       }
     } catch (e) {
+      usage.error('upload')
       const msg = e instanceof Error ? e.message : '알 수 없는 오류'
       setError(`파일 파싱 중 오류가 발생했습니다: ${msg}`)
       console.error('[ImportModal] 파일 파싱 오류:', e)
@@ -203,12 +208,12 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
   }
 
   function proceedToPreview() {
-    if (!mapping.date) { setError('날짜 컬럼을 선택해주세요.'); return }
-    if (!mapping.deposit && !mapping.withdrawal && !mapping.amount) { setError('금액 컬럼을 선택해주세요.'); return }
+    if (!mapping.date) { usage.error('mapping'); setError('날짜 컬럼을 선택해주세요.'); return }
+    if (!mapping.deposit && !mapping.withdrawal && !mapping.amount) { usage.error('mapping'); setError('금액 컬럼을 선택해주세요.'); return }
     setError('')
     const parsed = applyMapping(csvRows, mapping)
-    if (!parsed.length) { setError('파싱된 내역이 없습니다. 컬럼 설정을 확인해주세요.'); return }
-    buildPreview(parsed); setStep('preview')
+    if (!parsed.length) { usage.error('mapping'); setError('파싱된 내역이 없습니다. 컬럼 설정을 확인해주세요.'); return }
+    buildPreview(parsed); setStep('preview'); usage.step('preview')
   }
 
   function handleImport() {
@@ -216,10 +221,11 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
     try {
       updatedRules = mergeCategoryCorrections(autoCategoryRules, previewRows.filter((row, index) => !row.skip && row.category !== row.originalCategory && rememberCorrections[index]))
     } catch (error) {
+      usage.error('preview')
       showToast(error instanceof Error ? error.message : '자동 분류 선택을 확인해주세요.', 4000, 'error')
       return
     }
-    onImport(previewRows.filter((r) => !r.skip).map(({ type, amount, category, description, date }) => ({ type, amount, category, description, date })))
+    onImport(previewRows.filter((r) => !r.skip).map(({ type, amount, category, description, date }) => ({ type, amount, category, description, date })), usage.submit())
     if (updatedRules.some((rule, index) => rule !== autoCategoryRules[index])) onSaveRules?.(updatedRules)
     if (!isPDF) {
       const remembered = rememberMapping ? saveImportMapping(csvHeaders, mapping) : forgetImportMapping(csvHeaders)
@@ -719,7 +725,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
 
               {/* 하단 버튼 */}
               <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0 flex gap-3">
-                <button onClick={() => setStep(isPDF ? 'upload' : 'mapping')}
+                <button onClick={() => { setStep(isPDF ? 'upload' : 'mapping'); usage.step(isPDF ? 'upload' : 'mapping') }}
                   className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors">
                   이전
                 </button>

@@ -12,12 +12,13 @@ import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
 import { applyAutoCategory, getCorrectionKeyword, mergeCategoryCorrections } from '../lib/autoCategoryRules'
 import CategoryRuleOffer from './CategoryRuleOffer'
+import { useUsageFlow } from '../hooks/useUsageFlow'
 import EmptyState from './ui/EmptyState'
 import CategoryIcon from './ui/CategoryIcon'
 
 interface Props {
   transaction?: Transaction | null
-  onSave: (data: Omit<Transaction, 'id' | 'createdAt'>[]) => void
+  onSave: (data: Omit<Transaction, 'id' | 'createdAt'>[], usageFlowId?: string | null) => void
   onClose: () => void
   customExpenseCategories?: string[]
   customIncomeCategories?: string[]
@@ -46,6 +47,7 @@ function fmtShortDate(date: string) {
 }
 
 export default function TransactionModal({ transaction, onSave, onClose, customExpenseCategories = [], customIncomeCategories = [], userPaymentMethods = [], transactionTemplates = [], onSaveTemplates, onOpenCategoryModal, onOpenPaymentMethodsModal, autoCategoryRules = [], onSaveRules, recentTransactions = [], initialType }: Props) {
+  const usage = useUsageFlow('entry', !transaction)
   const amountInputRef = useRef<HTMLInputElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -304,7 +306,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }
 
   function handleAddToQueue() {
-    if (!validateCurrent(true)) return
+    if (!validateCurrent(true)) { usage.error('form'); return }
     const item = buildItem()
     if (!item) return
     setQueue((prev) => [...prev, item])
@@ -328,7 +330,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     const hasCurrentDraft = !!amount.replace(/,/g, '').trim()
     const mustHaveCurrent = isEditMode || queue.length === 0
     if (mustHaveCurrent || hasCurrentDraft) {
-      if (!validateCurrent(true)) return
+      if (!validateCurrent(true)) { usage.error('form'); return }
     } else if (fieldErrors.amount || fieldErrors.category || fieldErrors.billingDay) {
       setFieldErrors({})
     }
@@ -353,7 +355,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       const all = currentFinal ? [...queue, currentFinal] : [...queue]
 
       if (all.length === 0) return
-      onSave(all)
+      onSave(all, usage.submit())
       if (offersRule && rememberCorrection && onSaveRules) {
         onSaveRules(mergeCategoryCorrections(autoCategoryRules, [{ description, type, category }]))
       }
@@ -363,6 +365,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       setReceiptFile(null)
       setReceiptImageUrl('')
     } catch (error) {
+      usage.error('persist')
       showToast(error instanceof Error ? error.message : '저장 실패')
     } finally {
       setUploading(false)
