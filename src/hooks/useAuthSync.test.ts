@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   onAuthStateChangedMock: vi.fn(),
   createUserWithEmailAndPasswordMock: vi.fn(),
   signInWithEmailAndPasswordMock: vi.fn(),
+  sendPasswordResetEmailMock: vi.fn(),
   signInWithPopupMock: vi.fn(),
   signOutMock: vi.fn(),
 }))
@@ -37,6 +38,7 @@ vi.mock('firebase/auth', () => ({
   createUserWithEmailAndPassword: mocks.createUserWithEmailAndPasswordMock,
   onAuthStateChanged: mocks.onAuthStateChangedMock,
   signInWithEmailAndPassword: mocks.signInWithEmailAndPasswordMock,
+  sendPasswordResetEmail: mocks.sendPasswordResetEmailMock,
   signInWithPopup: mocks.signInWithPopupMock,
   signOut: mocks.signOutMock,
 }))
@@ -157,6 +159,30 @@ describe('useAuthSync', () => {
     expect(mocks.showToastMock).toHaveBeenCalledWith('이메일과 비밀번호를 입력해주세요.')
     expect(mocks.createUserWithEmailAndPasswordMock).not.toHaveBeenCalled()
     expect(mocks.signInWithEmailAndPasswordMock).not.toHaveBeenCalled()
+  })
+
+  it('이메일만 입력해 비밀번호 재설정 메일을 요청한다', async () => {
+    const hydrateData = vi.fn().mockResolvedValue(undefined)
+    const { result } = renderHook(() => useAuthSync({ hydrateData }))
+    await act(async () => { await result.current.handlePasswordReset() })
+    expect(mocks.sendPasswordResetEmailMock).not.toHaveBeenCalled()
+    expect(mocks.showToastMock).toHaveBeenCalledWith('비밀번호를 재설정할 이메일을 입력해주세요.')
+
+    mocks.sendPasswordResetEmailMock.mockResolvedValue(undefined)
+    act(() => { result.current.setEmail(' user@example.com ') })
+    await act(async () => { await result.current.handlePasswordReset() })
+    expect(mocks.sendPasswordResetEmailMock).toHaveBeenCalledWith(expect.anything(), 'user@example.com')
+    expect(mocks.showToastMock).toHaveBeenCalledWith('계정이 있다면 비밀번호 재설정 메일을 받으실 수 있어요.')
+  })
+
+  it('재설정 요청 실패를 안내하고 다시 시도할 수 있게 한다', async () => {
+    mocks.sendPasswordResetEmailMock.mockRejectedValue(new FirebaseError('auth/too-many-requests', 'rate limit'))
+    const hydrateData = vi.fn().mockResolvedValue(undefined)
+    const { result } = renderHook(() => useAuthSync({ hydrateData }))
+    act(() => { result.current.setEmail('user@example.com') })
+    await act(async () => { await result.current.handlePasswordReset() })
+    expect(mocks.showToastMock).toHaveBeenCalledWith('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.')
+    expect(result.current.authBusy).toBe(false)
   })
 
   it('회원가입 성공 시 로그아웃 후 로그인 모드로 전환한다', async () => {
