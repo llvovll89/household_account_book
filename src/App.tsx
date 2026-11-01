@@ -66,6 +66,7 @@ import BrandMark from "./components/ui/BrandMark";
 import ThemeToggle from "./components/layout/ThemeToggle";
 import BottomNavigation from "./components/layout/BottomNavigation";
 import WorkspaceSkeleton from "./components/layout/WorkspaceSkeleton";
+import InstallOffer from "./components/InstallOffer";
 
 const TransactionModal = lazy(() => import("./components/TransactionModal"));
 const ImportModal = lazy(() => import("./components/ImportModal"));
@@ -434,6 +435,7 @@ export default function App() {
 
     const {
         showInstallBanner,
+        installOfferMode,
         isIosManualInstall,
         installGuideText,
         deferredPrompt,
@@ -1542,6 +1544,11 @@ export default function App() {
         activeTab === "memos" ||
         activeTab === "subscriptions" ||
         activeTab === "goals";
+    const canShowInstallOffer =
+        showInstallBanner && !showModal && !showImport && !showHelp &&
+        !showUsageInsights && !showAuthModal && !showCategoryModal &&
+        !showPaymentMethodsModal && !showResetModal && !showWidgetSettings &&
+        !showAutoCategoryRuleModal && !showTagManagerModal;
 
     if (!authReady || isSyncing) {
         return (
@@ -2121,6 +2128,17 @@ export default function App() {
                         <p>{({home: '수입과 지출을 살펴보고 오늘의 기록을 남겨보세요.', transactions: '필요한 내역을 찾고 수입과 지출을 관리하세요.', analytics: '기록 속에서 나의 소비 습관을 발견해보세요.', subscriptions: '정기 결제와 다음 청구일을 함께 확인하세요.', goals: '이루고 싶은 목표를 향해 조금씩 모아보세요.', memos: '기억할 내용과 돈 관리 계획을 남겨보세요.'})[activeTab]}</p>
                     </div>
                 </div>
+                {canShowInstallOffer && installOfferMode === "automatic" && activeTab === "home" && (
+                    <div className="mb-4">
+                        <InstallOffer
+                            isIosManualInstall={isIosManualInstall}
+                            installGuideText={installGuideText}
+                            canPrompt={!!deferredPrompt}
+                            onLater={closeInstallBanner}
+                            onInstall={handleInstallClick}
+                        />
+                    </div>
+                )}
                 <Suspense fallback={<WorkspaceSkeleton />}>
                         <LedgerWorkspace
                             onOpenImport={() => dispatchUI({type: "SET_IMPORT", value: true})}
@@ -2296,34 +2314,15 @@ export default function App() {
                 </div>
             </div>
 
-            {showInstallBanner && !showModal && !showImport && !showHelp && !showUsageInsights && !showAuthModal && !showCategoryModal && !showPaymentMethodsModal && !showResetModal && !showWidgetSettings && !showAutoCategoryRuleModal && !showTagManagerModal && (
+            {canShowInstallOffer && installOfferMode === "manual" && (
                 <div className="fixed left-1/2 -translate-x-1/2 bottom-banner-safe z-50 w-[calc(100%-2.5rem)] max-w-sm">
-                    <div className="bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
-                        <p className="text-sm font-semibold text-white">
-                            앱처럼 빠르게 사용하려면 홈 화면에 추가하세요.
-                        </p>
-                        <p className="text-[11px] text-[#8B95A1] mt-1">
-                            {isIosManualInstall
-                                ? installGuideText
-                                : "설치 버튼을 눌러 잔고플랜 앱을 설치할 수 있어요."}
-                        </p>
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                            <button
-                                onClick={closeInstallBanner}
-                                className="px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold"
-                            >
-                                나중에
-                            </button>
-                            {!isIosManualInstall && deferredPrompt && (
-                                <button
-                                    onClick={handleInstallClick}
-                                    className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors"
-                                >
-                                    설치
-                                </button>
-                            )}
-                        </div>
-                    </div>
+                    <InstallOffer
+                        isIosManualInstall={isIosManualInstall}
+                        installGuideText={installGuideText}
+                        canPrompt={!!deferredPrompt}
+                        onLater={closeInstallBanner}
+                        onInstall={handleInstallClick}
+                    />
                 </div>
             )}
 

@@ -20,7 +20,8 @@ function snooze() {
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [showInstallBanner, setShowInstallBanner] = useState(false)
+  const [installOfferMode, setInstallOfferMode] = useState<'automatic' | 'manual' | null>(null)
+  const showInstallBanner = installOfferMode !== null
   const [canInstall, setCanInstall] = useState(false)
   const [installGuideText, setInstallGuideText] = useState('브라우저 메뉴에서 앱 설치 또는 홈 화면에 추가를 선택하세요.')
   const installedRef = useRef(false)
@@ -40,7 +41,7 @@ export function usePWAInstall() {
     const onInstalled = () => {
       installedRef.current = true
       setCanInstall(false)
-      setShowInstallBanner(false)
+      setInstallOfferMode(null)
       setDeferredPrompt(null)
       if (offerTimerRef.current) clearTimeout(offerTimerRef.current)
     }
@@ -58,12 +59,12 @@ export function usePWAInstall() {
     if (offerTimerRef.current) clearTimeout(offerTimerRef.current)
     // Let save feedback finish before offering installation.
     offerTimerRef.current = setTimeout(() => {
-      if (!installedRef.current && !isStandalone() && !isSnoozed()) setShowInstallBanner(true)
+      if (!installedRef.current && !isStandalone() && !isSnoozed()) setInstallOfferMode((current) => current ?? 'automatic')
     }, 6500)
   }, [])
-  const closeInstallBanner = useCallback(() => { setShowInstallBanner(false); snooze() }, [])
+  const closeInstallBanner = useCallback(() => { setInstallOfferMode(null); snooze() }, [])
   const openInstallGuide = useCallback(() => {
-    if (!installedRef.current && !isStandalone()) setShowInstallBanner(true)
+    if (!installedRef.current && !isStandalone()) setInstallOfferMode('manual')
   }, [])
   const handleInstallClick = useCallback(async () => {
     if (!deferredPrompt) { openInstallGuide(); return }
@@ -72,12 +73,12 @@ export function usePWAInstall() {
     try {
       await prompt.prompt()
       const choice = await prompt.userChoice
-      setShowInstallBanner(false)
+      setInstallOfferMode(null)
       if (choice.outcome === 'accepted') {
         installedRef.current = true
         setCanInstall(false)
       } else snooze()
-    } catch { setShowInstallBanner(true) }
+    } catch { setInstallOfferMode('manual') }
   }, [deferredPrompt, openInstallGuide])
-  return { showInstallBanner, isIosManualInstall: !deferredPrompt, installGuideText, deferredPrompt, canInstall, closeInstallBanner, handleInstallClick, offerInstallAfterSave, openInstallGuide }
+  return { showInstallBanner, installOfferMode, isIosManualInstall: !deferredPrompt, installGuideText, deferredPrompt, canInstall, closeInstallBanner, handleInstallClick, offerInstallAfterSave, openInstallGuide }
 }
