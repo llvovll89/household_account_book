@@ -5,6 +5,7 @@ interface Props {
   onClose: () => void
   onInstall?: () => void
   onUsageInsights?: () => void
+  onBackup?: () => void
 }
 
 const sections = [
@@ -80,7 +81,7 @@ const sections = [
   },
 ]
 
-export default function HelpModal({ onClose, onInstall, onUsageInsights }: Props) {
+export default function HelpModal({ onClose, onInstall, onUsageInsights, onBackup }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
 
   return (
@@ -114,6 +115,7 @@ export default function HelpModal({ onClose, onInstall, onUsageInsights }: Props
 
         {/* 컨텐츠 */}
         <div className="overflow-y-auto flex-1 px-6 pb-8 space-y-3">
+          {onBackup && <button type="button" onClick={onBackup} className="home-primary-action"><FileDown size={17} /> 전체 백업·복원</button>}
           {onInstall && <button type="button" onClick={onInstall} className="home-primary-action">홈 화면에 추가하는 방법</button>}
           {onUsageInsights && <button type="button" onClick={onUsageInsights} className="home-text-button">사용 패턴 보기</button>}
           {sections.map(({ icon: Icon, color, title, items }) => (

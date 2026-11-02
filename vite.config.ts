@@ -82,6 +82,7 @@ export default defineConfig(({ mode }) => ({
           '**/assets/CategoryModal-*.js',
           '**/assets/PaymentMethodsModal-*.js',
           '**/assets/ResetAllDataModal-*.js',
+          '**/assets/BackupModal-*.js',
           '**/assets/vendor-charts-*.js',
           '**/assets/MonthlyDashboard-*.js',
           '**/assets/CalendarDatePicker-*.js',
