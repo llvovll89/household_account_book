@@ -7,4 +7,5 @@
 - Preserve existing uncommitted user changes; do not include them in unrelated commits.
 - For the retention improvements, complete these in order on separate branches: mobile quick entry, home information hierarchy, post-save feedback, weekly summary and returning-user flow.
 - Continue with separate branches in this order: remembered import columns, category-rule suggestions, PWA installation and quick entry, usage-flow measurement.
+- Next, use separate branches in order for import duplicate matching, monthly budget/carryover accuracy, mobile startup performance, and full backup/restore.
 - Keep the Korean UI and existing brand, theme tokens, and component conventions.

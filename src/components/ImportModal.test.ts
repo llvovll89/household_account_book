@@ -12,6 +12,32 @@ vi.mock('../lib/bankParser', async importOriginal => {
 const headers = ['Date', 'Amount', 'Merchant']
 afterEach(() => { cleanup(); localStorage.clear(); vi.clearAllMocks() })
 
+it('imports a different description at the same amount after category review', async () => {
+  const onImport = vi.fn()
+  const view = render(createElement(ImportModal, { existingTransactions: [{ id: 'existing', type: 'expense', amount: 9000, category: '식비', description: '다른 식당', date: '2026-10-30', createdAt: 1 }], onImport, onClose: vi.fn() }))
+  await upload(view.container)
+  fireEvent.change(screen.getByRole('combobox', { name: '설명/적요' }), { target: { value: 'Merchant' } })
+  fireEvent.click(screen.getByRole('button', { name: '다음' }))
+  fireEvent.click(screen.getByText('점심'))
+  fireEvent.click(screen.getByRole('button', { name: /식비/ }))
+  fireEvent.click(screen.getByRole('button', { name: '포함' }))
+  fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
+  expect(onImport.mock.calls[0][0]).toEqual([expect.objectContaining({ description: '점심', amount: 9000 })])
+})
+
+it('excludes an existing exact match by default but allows explicitly including it', async () => {
+  const onImport = vi.fn()
+  const view = render(createElement(ImportModal, { existingTransactions: [{ id: 'existing', type: 'expense', amount: 9000, category: '식비', description: '점심', date: '2026-10-30', createdAt: 1 }], onImport, onClose: vi.fn() }))
+  await upload(view.container)
+  fireEvent.change(screen.getByRole('combobox', { name: '설명/적요' }), { target: { value: 'Merchant' } })
+  fireEvent.click(screen.getByRole('button', { name: '다음' }))
+  expect((screen.getByRole('button', { name: '0개 가져오기' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.click(screen.getByText('점심'))
+  fireEvent.click(screen.getByRole('button', { name: '포함' }))
+  fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
+  expect(onImport.mock.calls[0][0]).toHaveLength(1)
+})
+
 async function upload(container: HTMLElement, merchant = '점심') {
   vi.mocked(parseTabularFile).mockResolvedValue({ headers, rows: [{ Date: '2026-10-30', Amount: '9000', Merchant: merchant }] })
   fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [new File(['sample'], 'bank.csv')] } })

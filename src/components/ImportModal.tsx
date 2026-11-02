@@ -10,6 +10,7 @@ import {
 import { applyAutoCategory, mergeCategoryCorrections } from '../lib/autoCategoryRules'
 import CategoryRuleOffer from './CategoryRuleOffer'
 import { useUsageFlow } from '../hooks/useUsageFlow'
+import { classifyImportDuplicates } from '../lib/importDuplicates'
 import { forgetImportMapping, loadImportMapping, saveImportMapping } from '../lib/importMappings'
 import { showToast } from '../lib/toast'
 import MappingRowDetailModal from './import/MappingRowDetailModal'
@@ -32,6 +33,7 @@ interface PreviewRow extends ParsedRow {
   isDuplicate: boolean
   needsReview: boolean
   reviewReasons: string[]
+  duplicateReviewReasons: string[]
 }
 
 const EMPTY_MAPPING: ColumnMapping = { date: '', deposit: '', withdrawal: '', amount: '', typeCol: '', description: '' }
@@ -187,10 +189,10 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
 
   function buildPreview(parsed: ParsedRow[]) {
     setRememberCorrections({})
-    const existingSet = new Set(existingTransactions.map((t) => `${t.date}|${t.amount}|${t.type}`))
+    const matches = classifyImportDuplicates(parsed, existingTransactions)
     setVisibleCount(PAGE_SIZE)
-    setPreviewRows(parsed.map((p) => {
-      const isDuplicate = existingSet.has(`${p.date}|${p.amount}|${p.type}`)
+    setPreviewRows(parsed.map((p, index) => {
+      const { isDuplicate, reviewReasons: duplicateReviewReasons } = matches[index]
       const category =
         applyAutoCategory(p.description, p.type, autoCategoryRules) ??
         guessCategory(p.description, p.type)
@@ -199,10 +201,11 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
         ...p,
         category,
         originalCategory: category,
-        skip: isDuplicate || reviewMeta.needsReview,
+        skip: isDuplicate || reviewMeta.needsReview || duplicateReviewReasons.length > 0,
         isDuplicate,
-        needsReview: reviewMeta.needsReview,
-        reviewReasons: reviewMeta.reviewReasons,
+        needsReview: reviewMeta.needsReview || duplicateReviewReasons.length > 0,
+        reviewReasons: [...reviewMeta.reviewReasons, ...duplicateReviewReasons],
+        duplicateReviewReasons,
       }
     }))
   }
@@ -241,8 +244,8 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
       const reviewMeta = getPreviewReviewMeta(next.description, next.category)
       return {
         ...next,
-        needsReview: reviewMeta.needsReview,
-        reviewReasons: reviewMeta.reviewReasons,
+        needsReview: reviewMeta.needsReview || next.duplicateReviewReasons.length > 0,
+        reviewReasons: [...reviewMeta.reviewReasons, ...next.duplicateReviewReasons],
       }
     }))
   }, [])
@@ -323,8 +326,8 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
       return {
         ...row,
         category,
-        needsReview: reviewMeta.needsReview,
-        reviewReasons: reviewMeta.reviewReasons,
+        needsReview: reviewMeta.needsReview || row.duplicateReviewReasons.length > 0,
+        reviewReasons: [...reviewMeta.reviewReasons, ...row.duplicateReviewReasons],
       }
     }))
     showToast(
@@ -556,7 +559,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                   </div>
                   <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#2C2C2E] border-white/4'}`}>
                     <p className={`text-xl font-bold num ${dupCount > 0 ? 'text-[#F5BE3A]' : 'text-[#4E5968]'}`}>{dupCount}</p>
-                    <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-[#F5BE3A]/70' : 'text-[#4E5968]'}`}>중복 제외</p>
+                    <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-[#F5BE3A]/70' : 'text-[#4E5968]'}`}>기존 기록과 일치</p>
                   </div>
                   <div className={`rounded-2xl p-3 text-center border ${reviewCount > 0 ? 'bg-[#F25260]/10 border-[#F25260]/15' : 'bg-[#2C2C2E] border-white/4'}`}>
                     <p className={`text-xl font-bold num ${reviewCount > 0 ? 'text-[#F25260]' : 'text-[#8B95A1]'}`}>{reviewCount}</p>
@@ -569,6 +572,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                     <p className="text-xs text-[#3D8EF8] font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
                   </div>
                 )}
+                {dupCount > 0 && <p className="home-description">날짜·금액·수입/지출·적요가 같은 기존 기록을 건수만큼 제외했어요. 다른 결제라면 행에서 포함을 선택할 수 있어요.</p>}
                 {reviewCount > 0 && (
                   <p className="mx-1 rounded-xl border border-[#F25260]/20 bg-[#F25260]/8 px-3 py-2 text-[11px] leading-relaxed text-[#F25260]">
                     검토 필요 {reviewCount}건은 기본으로 제외했어요. 분류를 확인한 뒤 행에서 포함하거나 아래 빠른 처리로 선택해주세요.
