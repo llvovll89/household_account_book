@@ -54,6 +54,7 @@ interface Props {
   onOpenWidgetSettings?: () => void
   onOpenHelp?: () => void
   onOpenImport?: () => void
+  onOpenSubscriptions?: () => void
 }
 
 export default function LedgerWorkspace({
@@ -93,6 +94,7 @@ export default function LedgerWorkspace({
   onOpenWidgetSettings,
   onOpenHelp,
   onOpenImport,
+  onOpenSubscriptions,
 }: Props) {
   return (
     <>
@@ -119,6 +121,8 @@ export default function LedgerWorkspace({
               onOpenWidgetSettings={onOpenWidgetSettings}
               onOpenHelp={onOpenHelp}
               onOpenImport={onOpenImport}
+              onEditTransaction={onTransactionEdit}
+              onOpenSubscriptions={onOpenSubscriptions}
             />
           </Suspense>
         </div>

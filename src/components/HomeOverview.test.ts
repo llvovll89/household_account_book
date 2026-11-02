@@ -10,6 +10,16 @@ afterEach(cleanup)
 const today = toLocalDateStr()
 const transaction = (overrides: Partial<Transaction>): Transaction => ({ id: 'a', type: 'expense', category: '식비', amount: 9000, description: '점심', date: today, createdAt: 1, ...overrides })
 
+it('edits a home entry directly and names its contextual attention action', () => {
+  const onEdit = vi.fn(), onReview = vi.fn()
+  const item = transaction({})
+  render(createElement(HomeOverview, { transactions: [item], budgets: [], carryoverAmounts: {}, yearMonth: today.slice(0, 7), onBudget: vi.fn(), onEdit, onReview, attention: '식비 예산을 초과했어요.', reviewLabel: '식비 지출 보기' }))
+  fireEvent.click(screen.getByRole('button', { name: '점심 9,000원 내역 수정' }))
+  expect(onEdit).toHaveBeenCalledWith(item)
+  fireEvent.click(screen.getByRole('button', { name: '식비 지출 보기' }))
+  expect(onReview).toHaveBeenCalledOnce()
+})
+
 it('counts only budgeted categories, includes carryover, and offers recording and budget actions', () => {
   const onAdd = vi.fn(), onBudget = vi.fn()
   render(createElement(HomeOverview, {

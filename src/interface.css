@@ -71,8 +71,10 @@ body { letter-spacing: -.015em; }
 .home-today-total { margin-top: 12px; font-size: 12px; color: var(--muted); }
 .home-today-total strong { color: var(--text); margin-left: 8px; }
 .home-entry-list { list-style: none; padding: 0; margin-top: 12px; }
-.home-entry-list li { display: flex; align-items: center; gap: 10px; padding-block: 10px; }
-.home-entry-list li > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.home-entry-action { display: flex; align-items: center; gap: 10px; padding-block: 10px; min-height: 48px; width: 100%; text-align: left; border-radius: 8px; }
+.home-entry-action:focus-visible { outline: 2px solid var(--accent, #3D8EF8); outline-offset: 3px; }
+.home-entry-action:hover { background: var(--surface-hover, #ffffff08); }
+.home-entry-action > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .home-entry-list small { display: block; font-size: 11px; color: var(--muted); }
 .home-entry-list strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; max-width: 55%; text-align: right; }
 .home-attention p { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }

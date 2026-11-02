@@ -37,6 +37,8 @@ export interface DashboardProps {
   onOpenWidgetSettings?: () => void
   onOpenHelp?: () => void
   onOpenImport?: () => void
+  onEditTransaction?: (transaction: Transaction) => void
+  onOpenSubscriptions?: () => void
 }
 
 const ONBOARDED_KEY = 'hb_onboarded'
