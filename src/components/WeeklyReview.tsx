@@ -2,7 +2,9 @@ import type { Transaction } from '../types'
 import { getWeeklyReview } from '../lib/weeklyReview'
 import { fmt } from '../lib/format'
 
-export default function WeeklyReview({ transactions }: { transactions: Transaction[] }) {
+export interface WeeklyRange { start: string; end: string }
+interface Props { transactions: Transaction[]; onViewExpenses?: (range: WeeklyRange, category?: string) => void; onAdjustBudget?: (category: string) => void; onAdd?: () => void }
+export default function WeeklyReview({ transactions, onViewExpenses, onAdjustBudget, onAdd }: Props) {
   const review = getWeeklyReview(transactions)
   const difference = review.expense - review.previousExpense
   const shortDate = (date: string) => date.slice(5).replace('-', '.')
@@ -16,6 +18,12 @@ export default function WeeklyReview({ transactions }: { transactions: Transacti
         {review.canCompare ? <p>지난주 같은 요일까지({shortDate(review.previousStart)}–{shortDate(review.previousEnd)}) 기록한 지출{difference === 0 ? '과 금액이 같아요.' : `보다 ${fmt(Math.abs(difference))}원 ${difference > 0 ? '많아요' : '적어요'}.`}</p>
           : <p>비교할 기록이 충분하지 않아요. 기록이 쌓이면 지난주 같은 기간과 비교해드려요.</p>}
         {review.topCategory && <p>가장 많이 기록한 지출은 {review.topCategory.category} {fmt(review.topCategory.amount)}원이에요.</p>}
+        <div className="flex flex-col items-start gap-1 pt-2">
+          {review.expense > 0 && onViewExpenses && <button type="button" className="home-text-button" onClick={() => onViewExpenses({ start: review.start, end: review.end })}>이번 주 지출 보기</button>}
+          {review.topCategory && onViewExpenses && <button type="button" className="home-text-button" onClick={() => onViewExpenses({ start: review.start, end: review.end }, review.topCategory!.category)}>{review.topCategory.category} 지출만 보기</button>}
+          {review.topCategory && onAdjustBudget && <button type="button" className="home-text-button" onClick={() => onAdjustBudget(review.topCategory!.category)}>이번 달 {review.topCategory.category} 예산 조정</button>}
+          {review.expense === 0 && onAdd && <button type="button" className="home-text-button" onClick={onAdd}>오늘 내역 기록하기</button>}
+        </div>
         <p className="home-description">기록한 내역만 집계해요. 기록하지 않은 날은 무지출로 계산하지 않아요.</p>
       </div>
     </details>

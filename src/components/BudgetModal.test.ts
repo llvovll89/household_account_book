@@ -1,7 +1,15 @@
 import { createElement } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 import BudgetModal from './BudgetModal'
+afterEach(cleanup)
+
+it('offers a reviewed custom category without saving anything just by opening it', () => {
+  const onSave = vi.fn()
+  render(createElement(BudgetModal, { budgets: [], yearMonth: '2026-11', initialCategory: '반려동물', onSave, onClose: vi.fn() }))
+  expect((screen.getByRole('textbox', { name: '반려동물 예산' }) as HTMLInputElement).value).toBe('')
+  expect(onSave).not.toHaveBeenCalled()
+})
 
 it('edits actual default values when switching from an overridden month and saves its carryover setting', () => {
   const onSave = vi.fn()

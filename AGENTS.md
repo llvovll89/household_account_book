@@ -9,4 +9,4 @@
 - Continue with separate branches in this order: remembered import columns, category-rule suggestions, PWA installation and quick entry, usage-flow measurement.
 - Next, use separate branches in order for import duplicate matching, monthly budget/carryover accuracy, mobile startup performance, and full backup/restore.
 - Keep the Korean UI and existing brand, theme tokens, and component conventions.
-- Next authorized work: home direct editing/contextual actions (13), then actionable weekly review (15), each on its own branch and PR. Stop after these; no work on 14 or 16 is authorized yet.
+- The authorized follow-up sequence is home direct editing/contextual actions (13), then actionable weekly review (15), each on its own branch and PR. Stop after these; no work on 14 or 16 is authorized yet.

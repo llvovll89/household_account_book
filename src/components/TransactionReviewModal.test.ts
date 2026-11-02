@@ -5,6 +5,15 @@ import TransactionReviewModal from './TransactionReviewModal'
 import type { Transaction } from '../types'
 afterEach(cleanup)
 const tx: Transaction = { id: 'food', date: '2026-11-02', category: '식비', description: '점심', amount: 9000, type: 'expense', createdAt: 1 }
+it('shows both months of a requested week and excludes adjacent days', () => {
+  render(createElement(TransactionReviewModal, { scope: { title: '이번 주 지출', start: '2026-10-26', end: '2026-11-01' }, transactions: [
+    { ...tx, id: 'oct', date: '2026-10-31', description: '10월 지출' },
+    { ...tx, id: 'nov', date: '2026-11-01', description: '11월 지출' }, tx,
+  ], onEdit: vi.fn(), onClose: vi.fn() }))
+  expect(screen.getByText('10월 지출')).toBeTruthy()
+  expect(screen.getByText('11월 지출')).toBeTruthy()
+  expect(screen.queryByText('점심')).toBeNull()
+})
 it('shows only the requested expense scope and edits the original record without changing it', () => {
   const onEdit = vi.fn(), onClose = vi.fn()
   localStorage.setItem('hb_tx_type_filter', 'income')

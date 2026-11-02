@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Budget } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
@@ -9,6 +9,7 @@ type BudgetScope = 'base' | 'thisMonth'
 interface Props {
   budgets: Budget[]
   baseBudgets?: Budget[]
+  initialCategory?: string
   customExpenseCategories?: string[]
   yearMonth: string
   hasMonthOverride?: boolean
@@ -21,8 +22,14 @@ function formatYearMonthLabel(yearMonth: string): string {
   return `${y}년 ${m}월`
 }
 
-export default function BudgetModal({ budgets, baseBudgets, customExpenseCategories = [], yearMonth, hasMonthOverride = false, onSave, onClose }: Props) {
-  const { closing, handleClose, modalRef } = useModalClose(onClose)
+export default function BudgetModal({ budgets, baseBudgets, initialCategory, customExpenseCategories = [], yearMonth, hasMonthOverride = false, onSave, onClose }: Props) {
+  const categoryRef = useRef<HTMLInputElement>(null)
+  const { closing, handleClose, modalRef } = useModalClose(onClose, { initialFocusRef: categoryRef })
+  useEffect(() => {
+    if (!initialCategory) return
+    const frame = requestAnimationFrame(() => categoryRef.current?.scrollIntoView?.({ block: 'nearest' }))
+    return () => cancelAnimationFrame(frame)
+  }, [initialCategory])
   const [scope, setScope] = useState<BudgetScope>(hasMonthOverride ? 'thisMonth' : 'base')
   const [values, setValues] = useState<Record<string, string>>(() => {
     const m: Record<string, string> = {}
@@ -115,7 +122,7 @@ export default function BudgetModal({ budgets, baseBudgets, customExpenseCategor
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
-          {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories])].map((cat) => {
+          {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories, ...budgets.map(b => b.category), ...(initialCategory ? [initialCategory] : [])])].map((cat) => {
             const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
               <div key={cat} className="bg-[#2C2C2E] rounded-2xl px-4 py-3 space-y-2.5">
@@ -130,6 +137,7 @@ export default function BudgetModal({ budgets, baseBudgets, customExpenseCategor
                   <div className="flex items-center gap-1.5">
                     <label htmlFor={`budget-${cat}`} className="sr-only">{cat} 예산</label>
                     <input
+                      ref={cat === initialCategory ? categoryRef : undefined}
                       id={`budget-${cat}`}
                       type="text"
                       inputMode="numeric"

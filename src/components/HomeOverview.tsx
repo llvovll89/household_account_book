@@ -3,6 +3,7 @@ import type { Budget, Transaction } from '../types'
 import { fmt, toLocalDateStr } from '../lib/format'
 import CategoryIcon from './ui/CategoryIcon'
 import WeeklyReview from './WeeklyReview'
+import type { WeeklyRange } from './WeeklyReview'
 import { getDaysSinceLastRecord } from '../lib/weeklyReview'
 
 interface Props {
@@ -18,9 +19,11 @@ interface Props {
   attention?: string
   reviewLabel?: string
   onEdit?: (transaction: Transaction) => void
+  onReviewWeek?: (range: WeeklyRange, category?: string) => void
+  onReviewBudget?: (category: string) => void
 }
 
-export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, onImport, attention, reviewLabel, onEdit }: Props) {
+export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, onImport, attention, reviewLabel, onEdit, onReviewWeek, onReviewBudget }: Props) {
   const today = toLocalDateStr()
   const isCurrentMonth = yearMonth === today.slice(0, 7)
   const monthly = transactions.filter(t => t.date.startsWith(yearMonth))
@@ -80,7 +83,7 @@ export default function HomeOverview({ transactions, budgets, carryoverAmounts, 
         <p>{attention ?? (budgets.length > 0 ? '예산과 기록을 한 번 살펴보세요.' : '예산을 정하면 기록할 때마다 남은 금액을 확인할 수 있어요.')}</p>
         <button type="button" className="home-text-button" onClick={attention ? onReview : onBudget}>{attention ? reviewLabel ?? '월간 상세 열기' : '예산 살펴보기'} <ArrowRight size={15} /></button>
       </section>
-      {isCurrentMonth && <WeeklyReview transactions={transactions} />}
+      {isCurrentMonth && <WeeklyReview transactions={transactions} onViewExpenses={onReviewWeek} onAdjustBudget={onReviewBudget} onAdd={onAdd} />}
     </div>
   )
 }

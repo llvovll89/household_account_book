@@ -12,6 +12,7 @@ const TransactionReviewModal = lazy(() => import('./TransactionReviewModal'))
 export default function Dashboard(props: DashboardProps) {
   const { transactions, budgets, recurring, subscriptions, yearMonth, hiddenWidgets = [] } = props
   const [showBudget, setShowBudget] = useState(false)
+  const [budgetCategory, setBudgetCategory] = useState<string>()
   const [showRecurring, setShowRecurring] = useState(false)
   const [reviewScope, setReviewScope] = useState<TransactionReviewScope | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -36,7 +37,9 @@ export default function Dashboard(props: DashboardProps) {
 
   return <div className="dashboard-grid space-y-4 tab-content">
     <HomeOverview transactions={transactions} budgets={effective} carryoverAmounts={carryover} yearMonth={yearMonth}
-      onAdd={props.onAddTransaction} onBudget={() => setShowBudget(true)} onWidgets={props.onOpenWidgetSettings}
+      onAdd={props.onAddTransaction} onBudget={() => { setBudgetCategory(undefined); setShowBudget(true) }} onWidgets={props.onOpenWidgetSettings}
+      onReviewWeek={(range, category) => setReviewScope({ ...range, category, title: category ? `이번 주 ${category} 지출` : '이번 주 지출' })}
+      onReviewBudget={category => { setBudgetCategory(category); setShowBudget(true) }}
       onImport={props.onOpenImport} onEdit={props.onEditTransaction} attention={attention?.text} reviewLabel={attention?.label} onReview={() => {
         if (attention?.kind === 'budget') {
           const [year, month] = yearMonth.split('-').map(Number)
@@ -53,6 +56,7 @@ export default function Dashboard(props: DashboardProps) {
     {reviewScope && <Suspense fallback={<p role="status">지출 내역을 불러오는 중...</p>}><TransactionReviewModal transactions={transactions} scope={reviewScope} onEdit={props.onEditTransaction} onClose={() => setReviewScope(null)} /></Suspense>}
     {showRecurring && <Suspense fallback={<p role="status">정기 내역을 불러오는 중...</p>}><RecurringModal recurring={recurring} userPaymentMethods={props.userPaymentMethods} customExpenseCategories={props.customExpenseCategories} onSave={props.onRecurringSave} onClose={() => setShowRecurring(false)} /></Suspense>}
     {showBudget && <Suspense fallback={<p role="status">예산 설정을 불러오는 중...</p>}><BudgetModal
+      initialCategory={budgetCategory}
       budgets={effective} baseBudgets={budgets.filter(b => !b.yearMonth)} yearMonth={yearMonth}
       customExpenseCategories={props.customExpenseCategories} hasMonthOverride={budgets.some(b => b.yearMonth === yearMonth)}
       onClose={() => setShowBudget(false)} onSave={(next, scope) => props.onBudgetsChange([
