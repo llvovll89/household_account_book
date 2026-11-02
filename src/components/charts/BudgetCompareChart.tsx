@@ -1,4 +1,4 @@
-import { getEffectiveBudgets } from '../../lib/budgets'
+import { getBudgetProgress } from '../../lib/budgets'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import type { Budget, Transaction } from '../../types'
 import { CATEGORY_EMOJI } from '../../types'
@@ -32,13 +32,8 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function BudgetCompareChart({ transactions, budgets, yearMonth }: Props) {
-  const monthTx = transactions.filter((t) => t.date.startsWith(yearMonth) && t.type === 'expense')
-
-  const data = getEffectiveBudgets(budgets, yearMonth)
-    .map((b) => {
-      const actual = monthTx.filter((t) => t.category === b.category).reduce((s, t) => s + t.amount, 0)
-      return { category: b.category, budget: b.limit, actual, over: actual > b.limit }
-    })
+  const data = getBudgetProgress(budgets, transactions, yearMonth)
+    .map(b => ({ category: b.category, budget: b.effectiveLimit, actual: b.spent, over: b.spent > b.effectiveLimit }))
     .sort((a, b) => b.budget - a.budget)
 
   if (data.length === 0) {
@@ -51,6 +46,7 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
 
   return (
     <div className="space-y-3">
+      <p className="text-[11px] text-[#8B95A1]">선택한 달의 예산과 전월 이월액을 합산한 기준이에요.</p>
       <div role="img" aria-label="카테고리별 예산 대비 지출 비교 차트">
       <ResponsiveContainer width="100%" height={data.length * 52 + 20}>
         <BarChart data={data} layout="vertical" margin={{ left: 4, right: 12, top: 8, bottom: 8 }} barCategoryGap="28%">

@@ -1,4 +1,4 @@
-import { getBudgetCarryoverAmounts, getEffectiveBudgets } from '../lib/budgets'
+import { getBudgetCarryoverAmounts, getEffectiveBudgets, getBudgetProgress } from '../lib/budgets'
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -488,11 +488,13 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
     const daysElapsed = Math.max(1, today.getDate())
     const timePct = Math.round((daysElapsed / daysInMonth) * 100)
     const projected = Math.round((expense / daysElapsed) * daysInMonth)
-    const budgetTotal = budgets.reduce((s, b) => s + b.limit, 0)
-    const spendPct = budgetTotal > 0 ? Math.round((expense / budgetTotal) * 100) : null
+    const progress = getBudgetProgress(budgets, transactions, yearMonth)
+    const budgetTotal = progress.reduce((s, b) => s + b.effectiveLimit, 0)
+    const budgetedSpent = progress.reduce((s, b) => s + b.spent, 0)
+    const spendPct = budgetTotal > 0 ? Math.round((budgetedSpent / budgetTotal) * 100) : null
     const onTrack = spendPct === null || spendPct <= timePct + 10
     return { timePct, daysElapsed, daysInMonth, projected, budgetTotal, spendPct, onTrack }
-  }, [yearMonth, expense, budgets])
+  }, [yearMonth, expense, budgets, transactions])
 
   // 목표 달성을 위한 총 일일 저금 필요액
   const goalsDailyNeeded = useMemo(() => {
@@ -517,9 +519,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
   const healthScore = useMemo(() => {
     let score = 0
     if (savingsRate !== null) score += Math.min(35, Math.round((Math.max(0, savingsRate) / 30) * 35))
-    if (budgets.length > 0) {
-      const ok = budgets.filter(b => !overBudget.find(o => o.category === b.category)).length
-      score += Math.round((ok / budgets.length) * 30)
+    if (effectiveBudgets.length > 0) {
+      const ok = effectiveBudgets.filter(b => !overBudget.find(o => o.category === b.category)).length
+      score += Math.round((ok / effectiveBudgets.length) * 30)
     } else { score += 15 }
     const [hy, hm] = yearMonth.split('-').map(Number)
     const hToday = new Date()
@@ -530,7 +532,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       score += Math.round(avg * 15)
     }
     return Math.min(100, Math.max(0, score))
-  }, [savingsRate, budgets, overBudget, recordedDays, yearMonth, goals])
+  }, [savingsRate, effectiveBudgets, overBudget, recordedDays, yearMonth, goals])
 
   // 시간대별 지출 패턴
   const timeOfDaySpending = useMemo(() => {
@@ -742,7 +744,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
 
   function handleOpenSpendingFocus(category: string) {
     setFocusedExpenseCategory(category)
-    if (budgets.length > 0) return
+    if (effectiveBudgets.length > 0) return
     requestAnimationFrame(() => {
       spendingTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
@@ -845,8 +847,9 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
               const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
               const emoji = CATEGORY_EMOJI[cat] ?? '💸'
               const pct = expense > 0 ? Math.round((amt / expense) * 100) : 0
-              const budget = budgets.find((b) => b.category === cat)
-              const budgetPct = budget && budget.limit > 0 ? Math.round((amt / budget.limit) * 100) : null
+              const budget = effectiveBudgets.find((b) => b.category === cat)
+              const limit = budget ? budget.limit + (carryoverAmounts[cat] ?? 0) : 0
+              const budgetPct = limit > 0 ? Math.round((amt / limit) * 100) : null
               return (
                 <div key={cat} className="flex items-center gap-2">
                   <span className="text-[11px] shrink-0 w-16 truncate text-[#8B95A1]">{emoji} {cat}</span>
@@ -1238,7 +1241,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
                     </button>
                     <button
                       onClick={() => {
-                        if (budgets.length > 0) {
+                        if (effectiveBudgets.length > 0) {
                           showToast('예산 점검 화면에서 카테고리별 한도를 먼저 확인해보세요.')
                           setShowBudget(true)
                           return
@@ -1414,7 +1417,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             <div className="flex-1 space-y-2">
               {[
                 { label: '저축률', value: `${savingsRate ?? 0}%`, color: (savingsRate ?? 0) >= 20 ? '#2ACF6A' : (savingsRate ?? 0) >= 10 ? '#F5BE3A' : '#F25260' },
-                { label: '예산 준수', value: budgets.length > 0 ? `${budgets.length - overBudget.length}/${budgets.length}` : '-', color: budgets.length > 0 && overBudget.length === 0 ? '#2ACF6A' : overBudget.length > budgets.length / 2 ? '#F25260' : '#F5BE3A' },
+                { label: '예산 준수', value: effectiveBudgets.length > 0 ? `${effectiveBudgets.length - overBudget.length}/${effectiveBudgets.length}` : '-', color: effectiveBudgets.length > 0 && overBudget.length === 0 ? '#2ACF6A' : overBudget.length > effectiveBudgets.length / 2 ? '#F25260' : '#F5BE3A' },
                 { label: '기록한 날', value: `${recordedDays}일`, color: '#8B95A1' },
                 { label: '목표 달성', value: goals.length > 0 ? `${goals.filter(g => g.currentAmount >= g.targetAmount).length}/${goals.length}` : '-', color: goals.length > 0 && goals.every(g => g.currentAmount >= g.targetAmount) ? '#2ACF6A' : '#8B95A1' },
               ].map(({ label, value, color }) => (
@@ -1451,7 +1454,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
             </div>
             {spendingPace.spendPct !== null && (
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-semibold w-7 shrink-0" style={{ color: spendingPace.onTrack ? '#2ACF6A' : '#F25260' }}>지출</span>
+                <span title="예산이 설정된 카테고리의 지출 기준" className="text-[9px] font-semibold w-7 shrink-0" style={{ color: spendingPace.onTrack ? '#2ACF6A' : '#F25260' }}>지출</span>
                 <div className="relative flex-1 h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(spendingPace.spendPct, 100)}%`, backgroundColor: spendingPace.onTrack ? '#2ACF6A' : '#F25260' }} />
                   {/* today marker */}
@@ -1774,7 +1777,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
         <div className="flex flex-col items-start gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[15px] font-bold text-white">예산 관리</p>
           <div className="w-full grid grid-cols-2 gap-2 sm:w-auto sm:flex sm:gap-2">
-            {budgets.length > 0 && (
+            {effectiveBudgets.length > 0 && (
               <button
                 onClick={() => setBudgetView(v => v === 'list' ? 'gauge' : 'list')}
                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] text-xs font-semibold transition-colors whitespace-nowrap"
@@ -1828,7 +1831,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
           </div>
         </div>
 
-        {budgets.length === 0 ? (
+        {effectiveBudgets.length === 0 ? (
           <button
             onClick={() => setShowBudget(true)}
             className="w-full py-4 rounded-2xl border border-dashed border-white/10 text-sm text-[#9CA6B3] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
@@ -1959,7 +1962,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       </div>
 
       {/* 카테고리별 지출 */}
-      {expenseByCategory.length > 0 && budgets.length === 0 && (
+      {expenseByCategory.length > 0 && effectiveBudgets.length === 0 && (
         <div ref={spendingTopRef} className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowSpendingTop(v => !v)}
@@ -2119,6 +2122,7 @@ export default function Dashboard({ transactions, budgets, recurring, goals, set
       {showBudget && (
         <BudgetModal
           budgets={effectiveBudgets.map((b) => ({ ...b, yearMonth: undefined }))}
+          baseBudgets={budgets.filter(b => !b.yearMonth)}
           customExpenseCategories={customExpenseCategories}
           yearMonth={yearMonth}
           hasMonthOverride={budgets.some((b) => b.yearMonth === yearMonth)}

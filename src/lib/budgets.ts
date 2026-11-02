@@ -7,15 +7,28 @@ export function getEffectiveBudgets(budgets: Budget[], yearMonth: string): Budge
   return [...overrides, ...budgets.filter(budget => !budget.yearMonth && !covered.has(budget.category))]
 }
 
-/** Keep the same single-month carryover rule in summaries and save feedback. */
+/** Carry only the previous month's unused base allowance, when that month enabled it. */
 export function getBudgetCarryoverAmounts(budgets: Budget[], transactions: Transaction[], yearMonth: string): Record<string, number> {
   const [year, month] = yearMonth.split('-').map(Number)
   const previousMonth = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`
   const amounts: Record<string, number> = {}
+  const previousBudgets = getEffectiveBudgets(budgets, previousMonth)
   for (const budget of getEffectiveBudgets(budgets, yearMonth)) {
-    if (!budget.carryover) continue
+    const previous = previousBudgets.find(item => item.category === budget.category)
+    if (!previous?.carryover) continue
     const spent = transactions.filter(t => t.type === 'expense' && t.category === budget.category && t.date.startsWith(previousMonth)).reduce((sum, t) => sum + t.amount, 0)
-    amounts[budget.category] = Math.max(0, budget.limit - spent)
+    amounts[budget.category] = Math.max(0, previous.limit - spent)
   }
   return amounts
+}
+
+export function getBudgetProgress(budgets: Budget[], transactions: Transaction[], yearMonth: string) {
+  const carryover = getBudgetCarryoverAmounts(budgets, transactions, yearMonth)
+  const expenses = transactions.filter(t => t.type === 'expense' && t.date.startsWith(yearMonth))
+  return getEffectiveBudgets(budgets, yearMonth).map(budget => {
+    const carryoverAmount = carryover[budget.category] ?? 0
+    const effectiveLimit = budget.limit + carryoverAmount
+    const spent = expenses.filter(t => t.category === budget.category).reduce((sum, t) => sum + t.amount, 0)
+    return { ...budget, carryoverAmount, effectiveLimit, spent, remaining: effectiveLimit - spent }
+  })
 }

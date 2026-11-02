@@ -1,4 +1,4 @@
-import { getEffectiveBudgets } from '../lib/budgets'
+import { getBudgetProgress } from '../lib/budgets'
 import {useEffect, useMemo, useState} from "react";
 import {
     TrendingUp,
@@ -109,18 +109,10 @@ export default function Analytics({
     // ── 예산 준수율 6개월 트렌드 (현재 등록된 카테고리 예산 기준) ──
     const budgetComplianceTrend = useMemo(() => {
         if (budgets.length === 0) return [];
-        return monthlyData.map((m) => {
-            const effective = getEffectiveBudgets(budgets, m.ym);
-            const totalBudget = effective.reduce((sum, budget) => sum + budget.limit, 0);
-            const budgetedCategories = new Set(effective.map(budget => budget.category));
-            const spent = transactions
-                .filter(
-                    (t) =>
-                        t.date.startsWith(m.ym) &&
-                        t.type === "expense" &&
-                        budgetedCategories.has(t.category),
-                )
-                .reduce((s, t) => s + t.amount, 0);
+        return monthlyData.filter(m => getBudgetProgress(budgets, transactions, m.ym).some(b => b.effectiveLimit > 0)).map((m) => {
+            const progress = getBudgetProgress(budgets, transactions, m.ym);
+            const totalBudget = progress.reduce((sum, budget) => sum + budget.effectiveLimit, 0);
+            const spent = progress.reduce((sum, budget) => sum + budget.spent, 0);
             return {
                 ym: m.ym,
                 label: m.label,
