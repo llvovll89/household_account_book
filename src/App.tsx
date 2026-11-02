@@ -825,85 +825,12 @@ export default function App() {
             }
 
             prefetchLedgerTab(nextTab);
-            const likelyNext: Partial<Record<Tab, Tab>> = {
-                home: "transactions",
-                transactions: "analytics",
-                analytics: "home",
-                memos: "transactions",
-                subscriptions: "home",
-                goals: "home",
-            };
-            const predicted = likelyNext[nextTab];
-            if (predicted) prefetchLedgerTab(predicted);
             setTab(nextTab);
             setFabExpanded(false);
             window.scrollTo({top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "auto" : "smooth"});
         },
         [prefetchLedgerTab],
     );
-
-    useEffect(() => {
-        const preloadByContext = () => {
-            if (activeTab === "home") {
-                prefetchLedgerTab("transactions");
-                prefetchLedgerTab("analytics");
-                void import("./components/TransactionModal");
-                return;
-            }
-
-            if (activeTab === "transactions") {
-                prefetchLedgerTab("home");
-                prefetchLedgerTab("analytics");
-                void import("./components/TransactionModal");
-                return;
-            }
-
-            if (activeTab === "analytics") {
-                prefetchLedgerTab("home");
-                prefetchLedgerTab("transactions");
-                return;
-            }
-
-            if (activeTab === "memos") {
-                prefetchLedgerTab("transactions");
-                return;
-            }
-
-            if (activeTab === "subscriptions" || activeTab === "goals") {
-                prefetchLedgerTab("home");
-            }
-        };
-
-        const w = window as Window & {
-            requestIdleCallback?: (
-                cb: () => void,
-                opts?: {timeout: number},
-            ) => number;
-            cancelIdleCallback?: (id: number) => void;
-        };
-
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
-        let idleId: number | null = null;
-
-        if (w.requestIdleCallback) {
-            idleId = w.requestIdleCallback(
-                () => {
-                    preloadByContext();
-                },
-                {timeout: 1200},
-            );
-        } else {
-            timeoutId = setTimeout(() => {
-                preloadByContext();
-            }, 220);
-        }
-
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            if (idleId !== null && w.cancelIdleCallback)
-                w.cancelIdleCallback(idleId);
-        };
-    }, [activeTab, prefetchLedgerTab]);
 
     useEffect(() => {
         if (!import.meta.env.DEV) return;
