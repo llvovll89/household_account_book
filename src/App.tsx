@@ -48,7 +48,7 @@ import {CATEGORY_EMOJI} from "./types";
 import type {Tab} from "./types/navigation";
 import {loadAllData, loadSettings, resetAllData} from "./lib/storage";
 import {isRecurringDueToday} from "./lib/recurringSchedule";
-import type {RemoteVersionKey} from "./lib/storage";
+import type {AppDataSnapshot, RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
 import {calculateCardDueAmount, shiftYM} from "./lib/cardBilling";
 import {usePWAInstall} from "./hooks/usePWAInstall";
@@ -70,6 +70,7 @@ import InstallOffer from "./components/InstallOffer";
 
 const TransactionModal = lazy(() => import("./components/TransactionModal"));
 const ImportModal = lazy(() => import("./components/ImportModal"));
+const BackupModal = lazy(() => import("./components/BackupModal"));
 const HelpModal = lazy(() => import("./components/HelpModal"));
 const UsageInsightsModal = lazy(() => import("./components/UsageInsightsModal"));
 const CategoryModal = lazy(() => import("./components/CategoryModal"));
@@ -487,6 +488,8 @@ export default function App() {
         DEFAULT_HIDDEN_WIDGETS,
     );
     const [showTagManagerModal, setShowTagManagerModal] = useState(false);
+    const [showBackup, setShowBackup] = useState(false);
+    const persistInFlightRef = useRef(0);
     const [showUsageInsights, setShowUsageInsights] = useState(false);
     const [showAutoCategoryRuleModal, setShowAutoCategoryRuleModal] =
         useState(false);
@@ -693,15 +696,7 @@ export default function App() {
     }, []);
 
     const yearMonth = getYearMonth(currentDate);
-    const hydrateData = useCallback(async () => {
-        const timeout = new Promise<never>((_, reject) => {
-            window.setTimeout(
-                () => reject(new Error("data-load-timeout")),
-                DATA_LOAD_TIMEOUT_MS,
-            );
-        });
-
-        const snapshot = await Promise.race([loadAllData(), timeout]);
+    const applyDataSnapshot = useCallback((snapshot: AppDataSnapshot) => {
         setTransactions(snapshot.transactions);
         setMemos(snapshot.memos);
         setBudgets(snapshot.budgets);
@@ -718,6 +713,12 @@ export default function App() {
             snapshot.settings.hiddenWidgets ?? DEFAULT_HIDDEN_WIDGETS,
         );
     }, []);
+    const hydrateData = useCallback(async () => {
+        const timeout = new Promise<never>((_, reject) => {
+            window.setTimeout(() => reject(new Error("data-load-timeout")), DATA_LOAD_TIMEOUT_MS);
+        });
+        applyDataSnapshot(await Promise.race([loadAllData(), timeout]));
+    }, [applyDataSnapshot]);
 
     const {
         user,
@@ -861,7 +862,8 @@ export default function App() {
             failMsg: string,
             scope: RemoteVersionKey,
         ) => {
-            void task()
+            persistInFlightRef.current += 1;
+            void Promise.resolve().then(task)
                 .then(() => {
                     setHasPendingSync(false);
                     setLastSyncSuccessAt(Date.now());
@@ -924,7 +926,7 @@ export default function App() {
                             },
                         ];
                     });
-                });
+                }).finally(() => { persistInFlightRef.current -= 1; });
         },
         [conflictPreferredScopes],
     );
@@ -1473,7 +1475,7 @@ export default function App() {
         activeTab === "goals";
     const canShowInstallOffer =
         showInstallBanner && !showModal && !showImport && !showHelp &&
-        !showUsageInsights && !showAuthModal && !showCategoryModal &&
+        !showBackup && !showUsageInsights && !showAuthModal && !showCategoryModal &&
         !showPaymentMethodsModal && !showResetModal && !showWidgetSettings &&
         !showAutoCategoryRuleModal && !showTagManagerModal;
 
@@ -2313,6 +2315,7 @@ export default function App() {
             {showHelp && (
                 <Suspense fallback={null}>
                     <HelpModal
+                        onBackup={() => { dispatchUI({type: "SET_HELP", value: false}); setShowBackup(true); }}
                         onUsageInsights={() => { dispatchUI({type: "SET_HELP", value: false}); setShowUsageInsights(true); }}
                         onInstall={canInstall ? () => { dispatchUI({type: "SET_HELP", value: false}); openInstallGuide(); } : undefined}
                         onClose={() =>
@@ -2321,6 +2324,22 @@ export default function App() {
                     />
                 </Suspense>
             )}
+            {showBackup && <Suspense fallback={null}><BackupModal
+                accountLabel={user?.email ?? user?.displayName ?? undefined}
+                onClose={() => setShowBackup(false)}
+                canRestore={() => !isSyncing && !isRetryingPersist && !hasPendingSync && failedPersistTasks.length === 0 && persistInFlightRef.current === 0}
+                onRestored={(snapshot, cacheSaved) => {
+                    // Keep the confirmed snapshot intact even on a device set to auto-apply recurring entries.
+                    autoApplyCheckedRef.current = true;
+                    setAutoApplyPending([]);
+                    setShowAutoApplyModal(false);
+                    applyDataSnapshot(snapshot);
+                    setSettingsSyncTick(tick => tick + 1);
+                    setShowBackup(false);
+                    setLastSyncSuccessAt(Date.now());
+                    showToast(cacheSaved ? '전체 데이터와 설정을 복원했어요.' : '계정에는 복원했지만 기기 캐시를 저장하지 못했어요. 저장 공간을 확인해주세요.', 5000);
+                }}
+            /></Suspense>}
             {showUsageInsights && <Suspense fallback={null}><UsageInsightsModal onClose={() => setShowUsageInsights(false)} /></Suspense>}
             {showImport && (
                 <Suspense fallback={null}>

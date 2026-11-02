@@ -1,9 +1,14 @@
-import { doc, getDoc, runTransaction } from 'firebase/firestore'
+import { doc, getDoc, getDocFromServer, runTransaction } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
 import { showToast } from './toast'
+import { validateBackupData } from './backup'
 
 function safeSave(key: string, value: unknown): void {
+  if (!internalRestore) {
+    if (restoreInProgress) throw new Error('백업 복원이 진행 중이에요. 완료 후 다시 저장해주세요.')
+    recoverInterruptedRestore()
+  }
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e) {
@@ -25,6 +30,49 @@ const SETTINGS_KEY = 'hb_settings'
 const PENDING_SYNC_KEY = 'hb_pending_sync'
 // Firebase 모드에서 폴백 용도로 저장한 로컬 캐시 여부를 표시
 const FIREBASE_CACHE_KEY = 'hb_firebase_cache'
+const RESTORE_JOURNAL_KEY = 'hb_restore_journal_v1'
+const SNAPSHOT_LOCAL_KEYS = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY] as const
+const RESTORE_LOCAL_KEYS = [...SNAPSHOT_LOCAL_KEYS, PENDING_SYNC_KEY, FIREBASE_CACHE_KEY]
+let internalRestore = false
+let restoreInProgress = false
+let remoteWritesInFlight = 0
+
+/** Roll back an interrupted multi-key replacement before exposing or writing local data. */
+function recoverInterruptedRestore(): void {
+  if (internalRestore) return
+  const raw = localStorage.getItem(RESTORE_JOURNAL_KEY)
+  if (!raw) return
+  const journal: unknown = JSON.parse(raw)
+  if (!journal || typeof journal !== 'object' || Array.isArray(journal)) throw new Error('복원 복구 기록을 읽을 수 없어요.')
+  const values = journal as Record<string, unknown>
+  for (const key of RESTORE_LOCAL_KEYS) {
+    if (values[key] !== null && typeof values[key] !== 'string') throw new Error('복원 복구 기록이 올바르지 않아요.')
+  }
+  for (const key of RESTORE_LOCAL_KEYS) {
+    if (values[key] === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, values[key] as string)
+  }
+  localStorage.removeItem(RESTORE_JOURNAL_KEY)
+}
+
+function replaceLocalSnapshot(state: AppDataSnapshot, firebaseCache: boolean): void {
+  recoverInterruptedRestore()
+  const original = Object.fromEntries(RESTORE_LOCAL_KEYS.map(key => [key, localStorage.getItem(key)]))
+  // If there is no room for a rollback journal, abort without changing any data.
+  localStorage.setItem(RESTORE_JOURNAL_KEY, JSON.stringify(original))
+  internalRestore = true
+  try {
+    writeLocalSnapshot(state)
+    localStorage.removeItem(PENDING_SYNC_KEY)
+    if (firebaseCache) localStorage.setItem(FIREBASE_CACHE_KEY, 'true')
+    else localStorage.removeItem(FIREBASE_CACHE_KEY)
+    localStorage.removeItem(RESTORE_JOURNAL_KEY)
+  } catch (error) {
+    internalRestore = false
+    try { recoverInterruptedRestore() } catch { /* Leave the journal for recovery on the next read. */ }
+    throw error
+  } finally { internalRestore = false }
+}
 // 오프라인 등으로 Firestore 요청이 무한 대기하는 것을 막기 위한 최대 대기 시간
 const REMOTE_WRITE_TIMEOUT_MS = 9000
 
@@ -215,6 +263,7 @@ function parseJSON<T>(value: string | null, fallback: T): T {
 
 // 배열 파싱 + 아이템 단위 검증: 손상된 항목만 버리고 나머지는 살린다
 function parseValidArray<T>(key: string, guard: (item: unknown) => item is T): T[] {
+  recoverInterruptedRestore()
   const raw = localStorage.getItem(key)
   if (!raw) return []
   try {
@@ -306,6 +355,7 @@ function loadLocalGoals(): SavingsGoal[] {
 }
 
 function loadLocalSettings(): AppSettings {
+  recoverInterruptedRestore()
   return migrateSettings({ ...DEFAULT_SETTINGS, ...parseJSON(localStorage.getItem(SETTINGS_KEY), {}) })
 }
 
@@ -366,10 +416,12 @@ async function loadRemoteState(uid: string): Promise<RemoteState> {
 }
 
 async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promise<void> {
+  if (restoreInProgress) throw new Error('백업 복원이 진행 중이에요. 완료 후 다시 저장해주세요.')
   const patchKeys = extractPatchKeys(patch)
   if (patchKeys.length === 0) return
 
   let committedVersions: RemoteVersions | null = null
+  remoteWritesInFlight += 1
   try {
     await runTransaction(db, async (tx) => {
       const ref = getUserDocRef(uid)
@@ -410,7 +462,7 @@ async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promis
   } catch (e) {
     localStorage.setItem(PENDING_SYNC_KEY, 'true')
     throw e
-  }
+  } finally { remoteWritesInFlight -= 1 }
 }
 
 function localSnapshot(): RemoteState {
@@ -707,6 +759,7 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
 }
 
 export async function loadAllData(): Promise<AppDataSnapshot> {
+  if (restoreInProgress) throw new Error('백업 복원이 진행 중이에요.')
   if (storageMode === 'local') {
     return localSnapshot()
   }
@@ -861,4 +914,95 @@ export async function saveSettings(s: AppSettings): Promise<void> {
   }
   await saveRemotePatch(getStorageUid(), { settings: s })
   emitSettingsUpdatedEvent()
+}
+
+export interface BackupState {
+  data: AppDataSnapshot
+  target: string
+  token: {
+    mode: StorageMode
+    uid: string | null
+    localStamp?: string
+    versions?: RemoteVersions
+    remoteStamp?: string
+  }
+}
+
+function assertBackupReady(mode: StorageMode, uid: string | null): void {
+  if (storageMode !== mode || storageUid !== uid) throw new Error('저장소 또는 계정이 바뀌었어요. 파일을 다시 선택해주세요.')
+  if (restoreInProgress || remoteWritesInFlight > 0 || (mode === 'firebase' && localStorage.getItem(PENDING_SYNC_KEY) === 'true')) {
+    throw new Error('저장 또는 동기화할 변경사항이 있어요. 동기화를 마친 뒤 다시 시도해주세요.')
+  }
+}
+
+function localBackupStamp(): string {
+  return JSON.stringify(RESTORE_LOCAL_KEYS.map(key => localStorage.getItem(key)))
+}
+
+function strictBackupState(raw: Record<string, unknown>): AppDataSnapshot {
+  const defaults = { transactions: [], memos: [], budgets: [], recurring: [], subscriptions: [], goals: [], settings: DEFAULT_SETTINGS }
+  const state = Object.fromEntries(VERSION_KEYS.map(key => [key, raw[key] === undefined ? defaults[key] : raw[key]]))
+  if (!isObj(state.settings)) throw new Error('설정 데이터를 읽을 수 없어요.')
+  state.settings = migrateSettings({ ...DEFAULT_SETTINGS, ...state.settings } as AppSettings)
+  return validateBackupData(state)
+}
+
+/** Read a coherent saved snapshot. Never sync pending local writes or silently fall back from the server. */
+export async function loadBackupState(): Promise<BackupState> {
+  const mode = storageMode
+  const uid = storageUid
+  assertBackupReady(mode, uid)
+  recoverInterruptedRestore()
+  if (mode === 'local') {
+    const raw = Object.fromEntries(VERSION_KEYS.map((key, i) => {
+      const value = localStorage.getItem(SNAPSHOT_LOCAL_KEYS[i])
+      return [key, value === null ? undefined : JSON.parse(value)]
+    }))
+    return { data: strictBackupState(raw), target: '이 기기', token: { mode, uid, localStamp: localBackupStamp() } }
+  }
+  const snap = await withTimeout(getDocFromServer(getUserDocRef(getStorageUid())), REMOTE_WRITE_TIMEOUT_MS)
+  assertBackupReady(mode, uid)
+  const raw = snap.data() ?? {}
+  const data = strictBackupState(raw)
+  return { data, target: '로그인한 계정', token: { mode, uid, versions: normalizeVersions(raw.versions), remoteStamp: JSON.stringify(data) } }
+}
+
+/** Replace all seven sections together, conditional on the exact target shown in the preview. */
+export async function restoreAllData(input: AppDataSnapshot, token: BackupState['token']): Promise<{ data: AppDataSnapshot; cacheSaved: boolean }> {
+  const data = validateBackupData(input)
+  assertBackupReady(token.mode, token.uid)
+  recoverInterruptedRestore()
+  if (token.mode === 'local' && localBackupStamp() !== token.localStamp) throw new Error('미리보기 이후 기기의 데이터가 바뀌었어요. 파일을 다시 선택해주세요.')
+  restoreInProgress = true
+  let cacheSaved = true
+  try {
+    if (token.mode === 'local') {
+      replaceLocalSnapshot(data, false)
+    } else {
+      const uid = getStorageUid()
+      let committedVersions: RemoteVersions | null = null
+      await runTransaction(db, async tx => {
+        if (storageMode !== token.mode || storageUid !== token.uid) throw new Error('복원 대상 계정이 바뀌었어요.')
+        const ref = getUserDocRef(uid)
+        const snap = await tx.get(ref)
+        const raw = snap.data() ?? {}
+        const versions = normalizeVersions(raw.versions)
+        if (!token.versions || VERSION_KEYS.some(key => versions[key] !== token.versions![key]) || JSON.stringify(strictBackupState(raw)) !== token.remoteStamp) {
+          throw new Error('다른 기기에서 데이터가 바뀌었어요. 파일을 다시 선택하고 변경 내용을 확인해주세요.')
+        }
+        if (storageMode !== token.mode || storageUid !== token.uid) throw new Error('복원 대상 계정이 바뀌었어요.')
+        const nextVersions = { ...versions }
+        for (const key of VERSION_KEYS) nextVersions[key] += 1
+        // Replace the settings map as a whole too; recursive merge could retain old optional settings.
+        tx.set(ref, { ...data, versions: nextVersions, updatedAt: Date.now() }, { mergeFields: [...VERSION_KEYS, 'versions', 'updatedAt'] })
+        committedVersions = nextVersions
+      })
+      if (storageMode === token.mode && storageUid === token.uid) {
+        cachedRemoteVersions = committedVersions
+        try { replaceLocalSnapshot(data, true) } catch { cacheSaved = false }
+      } else { throw new Error('처음 선택한 계정에는 복원이 완료됐지만 계정이 바뀌었어요. 창을 닫고 현재 계정을 다시 확인해주세요.') }
+    }
+  } finally { restoreInProgress = false }
+  emitSettingsUpdatedEvent()
+  return { data, cacheSaved }
 }
