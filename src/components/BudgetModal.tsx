@@ -8,6 +8,7 @@ type BudgetScope = 'base' | 'thisMonth'
 
 interface Props {
   budgets: Budget[]
+  baseBudgets?: Budget[]
   customExpenseCategories?: string[]
   yearMonth: string
   hasMonthOverride?: boolean
@@ -20,7 +21,7 @@ function formatYearMonthLabel(yearMonth: string): string {
   return `${y}년 ${m}월`
 }
 
-export default function BudgetModal({ budgets, customExpenseCategories = [], yearMonth, hasMonthOverride = false, onSave, onClose }: Props) {
+export default function BudgetModal({ budgets, baseBudgets, customExpenseCategories = [], yearMonth, hasMonthOverride = false, onSave, onClose }: Props) {
   const { closing, handleClose, modalRef } = useModalClose(onClose)
   const [scope, setScope] = useState<BudgetScope>(hasMonthOverride ? 'thisMonth' : 'base')
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -37,6 +38,14 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
   function handleChange(cat: string, val: string) {
     const digits = val.replace(/[^0-9]/g, '')
     setValues((prev) => ({ ...prev, [cat]: digits ? Number(digits).toLocaleString() : '' }))
+  }
+
+  function changeScope(next: BudgetScope) {
+    if (next === scope) return
+    const source = next === 'base' ? (baseBudgets ?? budgets) : budgets
+    setValues(Object.fromEntries(source.map(b => [b.category, b.limit.toLocaleString()])))
+    setCarryoverMap(Object.fromEntries(source.map(b => [b.category, b.carryover ?? false])))
+    setScope(next)
   }
 
   function handleSave() {
@@ -82,7 +91,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
           <div className="flex items-center gap-2 rounded-2xl bg-[#2C2C2E] p-1">
             <button
               type="button"
-              onClick={() => setScope('base')}
+              onClick={() => changeScope('base')}
               aria-pressed={scope === 'base'}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'base' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
             >
@@ -90,7 +99,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
             </button>
             <button
               type="button"
-              onClick={() => setScope('thisMonth')}
+              onClick={() => changeScope('thisMonth')}
               aria-pressed={scope === 'thisMonth'}
               className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'thisMonth' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
             >
@@ -102,6 +111,7 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
               ? `${formatYearMonthLabel(yearMonth)}에만 적용되고, 다른 달의 기본 예산은 그대로 유지돼요.`
               : '매달 반복 적용되는 기본 예산이에요.'}
           </p>
+          <p className="text-[10px] text-[#4E5968] mt-1 px-1">이월액은 전월의 예산·이월 설정으로 계산하며, 이미 이월된 금액은 다시 넘기지 않아요.</p>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
@@ -131,9 +141,9 @@ export default function BudgetModal({ budgets, customExpenseCategories = [], yea
                     <span className="text-xs text-[#4E5968]">원</span>
                   </div>
                 </div>
-                {(values[cat] ?? '') !== '' && scope === 'base' && (
+                {(values[cat] ?? '') !== '' && (
                   <div className="flex items-center justify-between pl-13">
-                    <span className="text-xs text-[#4E5968]">미사용 예산 다음 달로 이월</span>
+                    <span className="text-xs text-[#4E5968]">이 달의 미사용 기본 예산을 다음 달로 이월</span>
                     <button
                       type="button"
                       onClick={() => setCarryoverMap((prev) => ({ ...prev, [cat]: !prev[cat] }))}

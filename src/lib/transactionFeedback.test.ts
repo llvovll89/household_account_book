@@ -5,9 +5,9 @@ import type { Transaction } from '../types'
 const item: Transaction = { id: 'a', type: 'expense', category: '식비', amount: 9000, date: '2026-10-12', description: '', createdAt: 1 }
 
 it('uses the saved month override and includes carryover consistently with home', () => {
-  const budgets = [{ category: '식비', limit: 10000 }, { category: '식비', limit: 30000, carryover: true, yearMonth: '2026-10' }]
+  const budgets = [{ category: '식비', limit: 40000, carryover: true }, { category: '식비', limit: 30000, carryover: false, yearMonth: '2026-10' }]
   const next = [item, { ...item, id: 'previous', amount: 20000, date: '2026-09-12' }]
-  expect(getTransactionFeedback([item], next, budgets)).toContain('2026년 10월 식비 예산이 31,000원 남았어요.')
+  expect(getTransactionFeedback([item], next, budgets)).toContain('2026년 10월 식비 예산이 41,000원 남았어요.')
 })
 
 it('reports over-budget and edited totals without counting the old amount twice', () => {
