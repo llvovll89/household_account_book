@@ -2070,6 +2070,7 @@ export default function App() {
                 )}
                 <Suspense fallback={<WorkspaceSkeleton />}>
                         <LedgerWorkspace
+                            onOpenSubscriptions={() => handleLedgerTabChange('subscriptions')}
                             onOpenImport={() => dispatchUI({type: "SET_IMPORT", value: true})}
                             activeTab={activeTab}
                             transactions={transactions}

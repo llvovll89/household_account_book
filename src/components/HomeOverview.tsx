@@ -16,9 +16,11 @@ interface Props {
   onReview: () => void
   onImport?: () => void
   attention?: string
+  reviewLabel?: string
+  onEdit?: (transaction: Transaction) => void
 }
 
-export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, onImport, attention }: Props) {
+export default function HomeOverview({ transactions, budgets, carryoverAmounts, yearMonth, onAdd, onBudget, onWidgets, onReview, onImport, attention, reviewLabel, onEdit }: Props) {
   const today = toLocalDateStr()
   const isCurrentMonth = yearMonth === today.slice(0, 7)
   const monthly = transactions.filter(t => t.date.startsWith(yearMonth))
@@ -55,9 +57,11 @@ export default function HomeOverview({ transactions, budgets, carryoverAmounts, 
         {entries.length > 0 ? <>
           <p className="home-today-total">{isCurrentMonth ? '오늘' : '이번 달'} 기록한 지출 <strong className="num">{fmt(expense)}원</strong></p>
           <ul className="home-entry-list">{entries.slice(0, 3).map(t => <li key={t.id}>
-            <CategoryIcon category={t.category} size={18} />
-            <span>{t.description || t.category}<small>{t.category}{!isCurrentMonth && ` · ${t.date.slice(5).replace('-', '.')}`}</small></span>
-            <strong className={`num ${t.type === 'expense' ? 'entry-expense' : 'entry-income'}`}>{t.type === 'expense' ? '−' : '+'}{fmt(t.amount)}원</strong>
+            <button type="button" disabled={!onEdit} onClick={() => onEdit?.(t)} aria-label={`${t.description || t.category} ${fmt(t.amount)}원 내역 수정`} className="home-entry-action">
+              <CategoryIcon category={t.category} size={18} />
+              <span>{t.description || t.category}<small>{t.category}{!isCurrentMonth && ` · ${t.date.slice(5).replace('-', '.')}`}</small></span>
+              <strong className={`num ${t.type === 'expense' ? 'entry-expense' : 'entry-income'}`}>{t.type === 'expense' ? '−' : '+'}{fmt(t.amount)}원</strong>
+            </button>
           </li>)}</ul>
           {entries.length > 3 && <p className="home-description">전체 {entries.length}건은 거래 내역 탭에서 확인할 수 있어요.</p>}
         </> : <p className="home-description">{isCurrentMonth ? '아직 오늘 기록이 없어요. 쓴 내역이 있다면 한 건만 남겨보세요.' : '이 달에 기록한 내역이 없어요.'}</p>}
@@ -74,7 +78,7 @@ export default function HomeOverview({ transactions, budgets, carryoverAmounts, 
       <section className="home-attention" aria-labelledby="home-attention-title">
         <h3 id="home-attention-title">확인할 일</h3>
         <p>{attention ?? (budgets.length > 0 ? '예산과 기록을 한 번 살펴보세요.' : '예산을 정하면 기록할 때마다 남은 금액을 확인할 수 있어요.')}</p>
-        <button type="button" className="home-text-button" onClick={attention ? onReview : onBudget}>{attention ? '월간 상세 열기' : '예산 살펴보기'} <ArrowRight size={15} /></button>
+        <button type="button" className="home-text-button" onClick={attention ? onReview : onBudget}>{attention ? reviewLabel ?? '월간 상세 열기' : '예산 살펴보기'} <ArrowRight size={15} /></button>
       </section>
       {isCurrentMonth && <WeeklyReview transactions={transactions} />}
     </div>
