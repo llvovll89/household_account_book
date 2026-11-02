@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:verify": "tsc -b && vite build --outDir dist2",
+    "build:verify": "tsc -b && vite build --outDir dist2 && node scripts/measure-startup.mjs dist2 --check",
+    "measure:startup": "node scripts/measure-startup.mjs dist2",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

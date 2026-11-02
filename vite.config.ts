@@ -8,6 +8,7 @@ import { pwaShortcuts } from './src/lib/pwaShortcuts'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   build: {
+    manifest: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('papaparse')) return 'vendor-csv'
           if (id.includes('firebase')) return 'vendor-firebase'
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts'
-          if (id.includes('react') || id.includes('scheduler')) return 'vendor-react'
+          if (/node_modules\/(?:react|react-dom|react-is|scheduler)\//.test(id.replaceAll('\\', '/'))) return 'vendor-react'
         },
       },
     },
@@ -81,11 +82,19 @@ export default defineConfig(({ mode }) => ({
           '**/assets/CategoryModal-*.js',
           '**/assets/PaymentMethodsModal-*.js',
           '**/assets/ResetAllDataModal-*.js',
+          '**/assets/vendor-charts-*.js',
+          '**/assets/MonthlyDashboard-*.js',
+          '**/assets/CalendarDatePicker-*.js',
         ],
         clientsClaim: true,
         skipWaiting: true,
         // 폰트 등 외부 리소스는 네트워크 우선, 나머지는 캐시 우선
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/.*\.(?:js|css)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'deferred-assets', expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 365 } },
+          },
           {
             urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
             handler: 'StaleWhileRevalidate',
