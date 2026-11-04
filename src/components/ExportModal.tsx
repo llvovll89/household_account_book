@@ -2,9 +2,8 @@ import { useState, useMemo } from 'react'
 import { X, Download, FileText, Archive, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import type { Transaction } from '../types'
 import { exportTransactionsCSV, exportTransactionsXLSX } from '../lib/exportCsv'
-import { archiveTransactionsBefore, getLocalStorageUsageBytes } from '../lib/storage'
+import { archiveTransactionsByIds, getLocalStorageUsageBytes } from '../lib/storage'
 import { showToast } from '../lib/toast'
-import { parseYmdLocal, toLocalDateStr } from '../lib/format'
 import FancyDatePicker from './FancyDatePicker'
 import { useModalClose } from '../hooks/useModalClose'
 
@@ -12,7 +11,7 @@ interface Props {
   transactions: Transaction[]
   yearMonth: string
   onClose: () => void
-  onArchiveDone: (cutoff: string) => void
+  onArchiveDone: (transactionIds: string[]) => void
 }
 
 type Range = 'thisMonth' | 'lastMonth' | 'thisYear' | 'all' | 'custom'
@@ -80,34 +79,8 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
     }
   }
 
-  // 아카이브 기준일: 선택 범위의 마지막 날 다음 날
-  function getArchiveCutoff(): string | null {
-    switch (range) {
-      case 'lastMonth': {
-        const last = getYearMonth(-1)
-        const d = parseYmdLocal(`${last}-01`)
-        d.setMonth(d.getMonth() + 1)
-        return toLocalDateStr(d)
-      }
-      case 'custom': {
-        const d = parseYmdLocal(customTo)
-        d.setDate(d.getDate() + 1)
-        return toLocalDateStr(d)
-      }
-      case 'thisYear': {
-        const year = new Date().getFullYear()
-        return `${year + 1}-01-01`
-      }
-      case 'all':
-        return null // 전체 삭제는 허용하지 않음
-      default:
-        return null
-    }
-  }
-
   const filtered = getFiltered()
-  const archiveCutoff = getArchiveCutoff()
-  const canArchive = archiveCutoff !== null && filtered.length > 0
+  const canArchive = (range === 'lastMonth' || range === 'custom' || range === 'thisYear') && filtered.length > 0
 
   function handleExport() {
     if (filtered.length === 0) return
@@ -131,14 +104,15 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
   }
 
   async function handleArchive() {
-    if (!archiveCutoff) return
+    if (!canArchive || archiving) return
+    const transactionIds = filtered.map(t => t.id)
     setArchiving(true)
     try {
       // 먼저 CSV 내보내기
       exportTransactionsCSV(filtered, getFilename())
       // 그 다음 삭제
-      const removed = await archiveTransactionsBefore(archiveCutoff)
-      onArchiveDone(archiveCutoff)
+      const removed = await archiveTransactionsByIds(transactionIds)
+      onArchiveDone(transactionIds)
       showToast(`${removed}개 내역을 내보내고 삭제했어요`)
       handleClose()
     } catch {

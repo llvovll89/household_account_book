@@ -83,3 +83,27 @@ it('moves linked records, preserves budget totals, and applies recurring transfe
   expect(state.transactions[0].category).toBe('보험')
   expect(saveRecurring).toHaveBeenCalled()
 })
+
+it('removes only exported IDs from the latest application state and persistence snapshot', async () => {
+  const records: Transaction[] = [
+    ['september', '2026-09-10'], ['october', '2026-10-15'], ['same-day', '2026-10-15'], ['november', '2026-11-01'],
+  ].map(([id, date]) => ({ id, date, type: 'expense', amount: 1000, category: '식비', description: '', createdAt: 1 }))
+  let state = records
+  const tasks: (() => Promise<void>)[] = []
+  const { result } = renderHook(() => useAppHandlers({
+    transactions: records, editingTransaction: null, yearMonth: '2026-10',
+    customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
+    persist: task => { tasks.push(task) }, dispatchUI: vi.fn(),
+    setTransactions: value => { state = typeof value === 'function' ? value(state) : value },
+    setRecurring: vi.fn(), setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
+    setCustomExpenseCategories: vi.fn(), setCustomIncomeCategories: vi.fn(), setUserPaymentMethods: vi.fn(),
+    setTransactionTemplates: vi.fn(), setAutoCategoryRules: vi.fn(), setHiddenWidgets: vi.fn(),
+  }))
+  const added = { ...records[1], id: 'added-after-preview' }
+  state = [...state, added]
+  act(() => result.current.handleTransactionArchive(['october']))
+  const expected = [...records.filter(t => t.id !== 'october'), added]
+  expect(state).toEqual(expected)
+  await tasks[0]()
+  expect(saveTransactions).toHaveBeenLastCalledWith(expected)
+})

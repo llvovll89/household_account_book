@@ -578,15 +578,17 @@ export function getLocalStorageUsageBytes(): number {
 // ─── 내역 아카이브 ────────────────────────────────────────────────
 
 /**
- * `before` 이전(미포함) 날짜의 거래 내역을 로컬 스토리지에서 삭제한다.
+ * CSV로 내보낸 거래 ID만 로컬 스토리지에서 삭제한다.
  * Firebase 모드에서도 로컬 스토리지를 직접 조작하며,
  * 호출 전에 반드시 CSV 내보내기를 완료해야 한다.
  *
  * @returns 삭제된 건수
  */
-export async function archiveTransactionsBefore(before: string): Promise<number> {
+export async function archiveTransactionsByIds(transactionIds: readonly string[]): Promise<number> {
+  const ids = new Set(transactionIds)
+  if (ids.size === 0) return 0
   const all = loadLocalTransactions()
-  const keep = all.filter(t => t.date >= before)
+  const keep = all.filter(t => !ids.has(t.id))
   const removed = all.length - keep.length
   if (removed === 0) return 0
 

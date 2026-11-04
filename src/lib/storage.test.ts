@@ -13,7 +13,7 @@ vi.mock('firebase/firestore', () => ({
 
 import { getDoc, runTransaction } from 'firebase/firestore'
 import {
-  archiveTransactionsBefore,
+  archiveTransactionsByIds,
   clearLocalData,
   getLocalStorageUsageBytes,
   hasLocalMigratableData,
@@ -232,7 +232,28 @@ describe('storage util', () => {
     expect(backupKeys.length).toBeGreaterThan(0)
   })
 
-  it('archiveTransactionsBefore는 Firebase 저장 실패 시에도 로컬 삭제 후 pending_sync를 남긴다', async () => {
+  it('archives only selected IDs, preserving older and same-day unselected records', async () => {
+    const records = [
+      { ...TX, id: 'september', date: '2026-09-10' },
+      { ...TX, id: 'october', date: '2026-10-15' },
+      { ...TX, id: 'same-day', date: '2026-10-15' },
+      { ...TX, id: 'november', date: '2026-11-01' },
+    ]
+    await saveTransactions(records)
+    expect(await archiveTransactionsByIds(['october', 'october', 'missing'])).toBe(1)
+    expect(await loadTransactions()).toEqual(records.filter(t => t.id !== 'october'))
+  })
+
+  it('does not write anything for empty or unknown archive IDs', async () => {
+    await saveTransactions([TX])
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    expect(await archiveTransactionsByIds([])).toBe(0)
+    expect(await archiveTransactionsByIds(['missing'])).toBe(0)
+    expect(setItem).not.toHaveBeenCalled()
+    expect(await loadTransactions()).toEqual([TX])
+  })
+
+  it('archiveTransactionsByIds는 Firebase 저장 실패 시에도 선택한 ID만 삭제하고 pending_sync를 남긴다', async () => {
     setStorageContext('firebase', 'uid-1')
 
     localStorage.setItem('hb_transactions', JSON.stringify([
@@ -242,7 +263,7 @@ describe('storage util', () => {
 
     vi.mocked(runTransaction).mockRejectedValue(new Error('firebase down'))
 
-    const removed = await archiveTransactionsBefore('2026-06-15')
+    const removed = await archiveTransactionsByIds(['tx-old'])
 
     expect(removed).toBe(1)
     const saved = JSON.parse(localStorage.getItem('hb_transactions') ?? '[]')
