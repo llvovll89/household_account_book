@@ -44,7 +44,7 @@ interface Props {
   onTransactionDelete: (id: string) => void
   onBulkDeleteTransactions?: (ids: string[]) => void
   onBulkEditTransactions?: (ids: string[], category: string) => void
-  onTransactionArchive: (cutoff: string) => void
+  onTransactionArchive: (transactionIds: string[]) => void
   onMemoAdd: (title: string, content: string, category?: string, date?: string, dateEnd?: string) => void
   onMemoUpdate: (id: string, title: string, content: string, category?: string, date?: string, dateEnd?: string) => void
   onMemoDelete: (id: string) => void

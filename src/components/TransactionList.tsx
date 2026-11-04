@@ -49,7 +49,7 @@ interface Props {
     onDelete: (id: string) => void;
     onBulkDelete?: (ids: string[]) => void;
     onBulkEdit?: (ids: string[], category: string) => void;
-    onArchiveDone?: (cutoff: string) => void;
+    onArchiveDone?: (transactionIds: string[]) => void;
     onOpenTagManager?: () => void;
 }
 
@@ -3065,9 +3065,9 @@ export default function TransactionList({
                     transactions={transactions}
                     yearMonth={yearMonth}
                     onClose={() => setShowExport(false)}
-                    onArchiveDone={(cutoff) => {
+                    onArchiveDone={(transactionIds) => {
                         setShowExport(false);
-                        onArchiveDone?.(cutoff);
+                        onArchiveDone?.(transactionIds);
                     }}
                 />
             )}

@@ -126,9 +126,10 @@ export function useAppHandlers({
     })
   }, [persist, setTransactions, dispatchUI])
 
-  const handleTransactionArchive = useCallback((cutoff: string) => {
+  const handleTransactionArchive = useCallback((transactionIds: string[]) => {
+    const ids = new Set(transactionIds)
     setTransactions((prev) => {
-      const next = prev.filter(t => t.date >= cutoff)
+      const next = prev.filter(t => !ids.has(t.id))
       persist(() => saveTransactions(next), '아카이브 저장에 실패했습니다.', 'transactions')
       return next
     })
