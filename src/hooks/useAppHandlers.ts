@@ -7,6 +7,7 @@ import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, Re
 import type { RemoteVersionKey } from '../lib/storage'
 import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings, loadTransactions } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
+import { deleteTransactionTag, renameTransactionTag } from '../lib/tags'
 import { showToast } from '../lib/toast'
 import { getTransactionFeedback } from '../lib/transactionFeedback'
 import { updateUsageFlow } from '../lib/usageFlow'
@@ -269,22 +270,11 @@ export function useAppHandlers({
   }, [persist, setAutoCategoryRules])
 
   const handleRenameTag = useCallback((oldName: string, newName: string) => {
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.tags?.includes(oldName)
-          ? { ...t, tags: t.tags.map((tag) => (tag === oldName ? newName : tag)) }
-          : t
-      )
-    )
+    setTransactions((prev) => prev.map((t) => renameTransactionTag(t, oldName, newName)))
     persist(
       async () => {
         const current = await loadTransactions()
-        const updated = current.map((t) =>
-          t.tags?.includes(oldName)
-            ? { ...t, tags: t.tags.map((tag: string) => (tag === oldName ? newName : tag)) }
-            : t
-        )
-        await saveTransactions(updated)
+        await saveTransactions(current.map((t) => renameTransactionTag(t, oldName, newName)))
       },
       '태그 이름 변경에 실패했습니다.',
       'transactions'
@@ -298,22 +288,11 @@ export function useAppHandlers({
       confirmLabel: '삭제',
       confirmVariant: 'danger',
       onConfirm: () => {
-        setTransactions((prev) =>
-          prev.map((t) =>
-            t.tags?.includes(name)
-              ? { ...t, tags: t.tags.filter((tag) => tag !== name) }
-              : t
-          )
-        )
+        setTransactions((prev) => prev.map((t) => deleteTransactionTag(t, name)))
         persist(
           async () => {
             const current = await loadTransactions()
-            const updated = current.map((t) =>
-              t.tags?.includes(name)
-                ? { ...t, tags: t.tags.filter((tag: string) => tag !== name) }
-                : t
-            )
-            await saveTransactions(updated)
+            await saveTransactions(current.map((t) => deleteTransactionTag(t, name)))
           },
           '태그 삭제에 실패했습니다.',
           'transactions'
