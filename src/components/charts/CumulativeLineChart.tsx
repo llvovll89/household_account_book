@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import type { Transaction } from '../../types'
+import { toYearMonth } from '../../lib/format'
 import {
   CHART_COLORS, TOOLTIP_CONTENT_STYLE, TOOLTIP_CURSOR_STYLE,
   TOOLTIP_LABEL_STYLE, GRID_PROPS, AXIS_TICK_STYLE, fmtKRW,
@@ -25,7 +26,7 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
     const [y, m] = yearMonth.split('-').map(Number)
     const daysInMonth = new Date(y, m, 0).getDate()
     const today = new Date()
-    const isCurrentMonth = yearMonth === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+    const isCurrentMonth = yearMonth === toYearMonth(today)
     const maxDay = isCurrentMonth ? today.getDate() : daysInMonth
 
     const monthlyTx = transactions.filter(t => t.date.startsWith(yearMonth))

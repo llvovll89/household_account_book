@@ -20,7 +20,7 @@ import {
 } from "../types";
 import FancyDatePicker from "./FancyDatePicker";
 import EmptyState from "./ui/EmptyState";
-import {parseYmdLocal, toLocalDateStr} from "../lib/format";
+import {parseYmdLocal, toLocalDateStr, toYearMonth} from "../lib/format";
 import {showToast} from "../lib/toast";
 
 interface Props {
@@ -168,7 +168,7 @@ export default function MemoSection({
         return map;
     }, [memos]);
 
-    const calendarYearMonth = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, "0")}`;
+    const calendarYearMonth = toYearMonth(calendarMonth);
 
     const calendarCells = useMemo(() => {
         const year = calendarMonth.getFullYear();

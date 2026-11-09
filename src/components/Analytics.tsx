@@ -25,7 +25,7 @@ import ExpenseBreakdown from "./ExpenseBreakdown";
 import SpendingAnalysisView from "./SpendingAnalysisView";
 import EmptyState from "./ui/EmptyState";
 import {useMonthlyData} from "../lib/useMonthlyData";
-import {fmt as fmtFull, fmtShort as fmt, parseYmdLocal} from "../lib/format";
+import {fmt as fmtFull, fmtShort as fmt, parseYmdLocal, shiftYM} from "../lib/format";
 import TrendAreaChart from "./charts/TrendAreaChart";
 import WeekdayBarChart from "./charts/WeekdayBarChart";
 import DonutChart from "./charts/DonutChart";
@@ -38,7 +38,6 @@ import {
     formatBillingRange,
     getCardBillingRange,
     isCreditPaymentMethod,
-    shiftYM,
 } from "../lib/cardBilling";
 import {loadSettings} from "../lib/storage";
 
@@ -227,9 +226,7 @@ export default function Analytics({
 
     // ── 전월 대비 카테고리 지출 비교 ────────────────────────
     const categoryMomComparison = useMemo(() => {
-        const [y, m] = yearMonth.split("-").map(Number);
-        const prevYM =
-            m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+        const prevYM = shiftYM(yearMonth, -1);
         const prevMonthly = transactions.filter(
             (t) => t.date.startsWith(prevYM) && t.type === "expense",
         );
@@ -671,9 +668,7 @@ export default function Analytics({
         const todayDayStr = String(dayOfMonth).padStart(2, "0");
         const cutoffThis = `${yearMonth}-${todayDayStr}`;
 
-        const prevY = m === 1 ? y - 1 : y;
-        const prevM = m === 1 ? 12 : m - 1;
-        const prevYM = `${prevY}-${String(prevM).padStart(2, "0")}`;
+        const prevYM = shiftYM(yearMonth, -1);
         const cutoffPrev = `${prevYM}-${todayDayStr}`;
 
         const thisMTD = transactions

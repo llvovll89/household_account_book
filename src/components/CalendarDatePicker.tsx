@@ -2,6 +2,7 @@ import { forwardRef } from 'react'
 import DatePicker from 'react-datepicker'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ko } from 'date-fns/locale'
+import { toLocalDateStr } from '../lib/format'
 
 export interface FancyDatePickerProps {
   initiallyOpen?: boolean
@@ -18,12 +19,6 @@ function parseYmd(value: string): Date | null {
   return new Date(y, m - 1, d)
 }
 
-function toYmd(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
 
 const PickerTrigger = forwardRef<HTMLButtonElement, {
   value?: string
@@ -58,7 +53,7 @@ export default function FancyDatePicker({ value, onChange, min, max, size = 'md'
       selected={selected}
       onChange={(next: Date | null) => {
         if (!next) return
-        onChange(toYmd(next))
+        onChange(toLocalDateStr(next))
       }}
       minDate={minDate}
       maxDate={maxDate}

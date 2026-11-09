@@ -1,5 +1,5 @@
 import type { Transaction, Budget } from '../types'
-import { parseYmdLocal } from './format'
+import { parseYmdLocal, toLocalDateStr } from './format'
 import { getEffectiveBudgets } from './budgets'
 
 export type PresetKey = 'this_month' | 'last_month' | 'last_30' | 'last_90'
@@ -15,14 +15,11 @@ export interface Suggestion {
 
 // ── Date helpers ────────────────────────────────────────────────
 
-function toYmd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function dateMinusDays(ymd: string, days: number): string {
   const d = parseYmdLocal(ymd)
   d.setDate(d.getDate() - days)
-  return toYmd(d)
+  return toLocalDateStr(d)
 }
 
 export function daysBetween(start: string, end: string): number {
@@ -33,7 +30,7 @@ export function daysBetween(start: string, end: string): number {
 
 export function getPresetRange(preset: PresetKey): { start: string; end: string } {
   const today = new Date()
-  const todayYmd = toYmd(today)
+  const todayYmd = toLocalDateStr(today)
 
   if (preset === 'this_month') {
     return { start: `${todayYmd.slice(0, 7)}-01`, end: todayYmd }
@@ -43,7 +40,7 @@ export function getPresetRange(preset: PresetKey): { start: string; end: string 
     const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     const lastOfPrev = new Date(firstOfThisMonth.getTime() - 86_400_000)
     const firstOfPrev = new Date(lastOfPrev.getFullYear(), lastOfPrev.getMonth(), 1)
-    return { start: toYmd(firstOfPrev), end: toYmd(lastOfPrev) }
+    return { start: toLocalDateStr(firstOfPrev), end: toLocalDateStr(lastOfPrev) }
   }
 
   if (preset === 'last_30') {

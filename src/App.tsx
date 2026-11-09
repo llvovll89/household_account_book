@@ -50,7 +50,8 @@ import {discardPendingSync, hasPendingSync as hasPendingSyncRecord, loadAllData,
 import {isRecurringDueToday} from "./lib/recurringSchedule";
 import type {AppDataSnapshot, RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
-import {calculateCardDueAmount, shiftYM} from "./lib/cardBilling";
+import {calculateCardDueAmount} from "./lib/cardBilling";
+import {shiftYM, toYearMonth} from "./lib/format";
 import {usePWAInstall} from "./hooks/usePWAInstall";
 import {consumeEntryShortcut} from "./lib/pwaShortcuts";
 import {useAuthSync} from "./hooks/useAuthSync";
@@ -124,10 +125,6 @@ const DEFAULT_HIDDEN_WIDGETS: DashboardWidgetId[] = [
 ];
 
 type AutoApplyRecurringMode = "ask" | "always" | "never";
-
-function getYearMonth(date: Date) {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
 
 function formatRecurringToastSummary(items: RecurringTransaction[], limit = 3) {
     const preview = items
@@ -693,7 +690,7 @@ export default function App() {
         return () => clearInterval(timer);
     }, []);
 
-    const yearMonth = getYearMonth(currentDate);
+    const yearMonth = toYearMonth(currentDate);
     const applyDataSnapshot = useCallback((snapshot: AppDataSnapshot) => {
         setTransactions(snapshot.transactions);
         setMemos(snapshot.memos);
@@ -1249,7 +1246,7 @@ export default function App() {
         autoApplyCheckedRef.current = true;
 
         const today = new Date();
-        const todayYM = getYearMonth(today);
+        const todayYM = toYearMonth(today);
 
         const pending = recurring.filter((r) =>
             isRecurringDueToday(r, today, todayYM),
@@ -2569,7 +2566,7 @@ export default function App() {
                         mode={autoApplyMode}
                         onModeChange={setAutoApplyMode}
                         onConfirm={async () => {
-                            const todayYM = getYearMonth(new Date());
+                            const todayYM = toYearMonth(new Date());
                             setShowAutoApplyModal(false);
                             await handleApplyRecurring(
                                 autoApplyPending,

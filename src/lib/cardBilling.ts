@@ -1,6 +1,6 @@
 import type { PaymentMethod, Transaction, UserPaymentMethod } from '../types'
 import { PAYMENT_METHOD_LABEL } from '../types'
-import { parseYmdLocal, toLocalDateStr } from './format'
+import { parseYmdLocal, shiftYM, toLocalDateStr } from './format'
 
 export interface CardBillingRange {
   start: string
@@ -21,24 +21,6 @@ function clampDay(year: number, month: number, day: number): number {
   return Math.min(Math.max(day, 1), lastDay)
 }
 
-function toPrevYM(ym: string): string {
-  const { year, month } = parseYM(ym)
-  if (month === 1) return `${year - 1}-12`
-  return `${year}-${String(month - 1).padStart(2, '0')}`
-}
-
-function toNextYM(ym: string): string {
-  const { year, month } = parseYM(ym)
-  if (month === 12) return `${year + 1}-01`
-  return `${year}-${String(month + 1).padStart(2, '0')}`
-}
-
-export function shiftYM(ym: string, monthOffset: number): string {
-  const { year, month } = parseYM(ym)
-  const base = new Date(year, month - 1 + monthOffset, 1)
-  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`
-}
-
 function ymToMonthIndex(ym: string): number {
   const { year, month } = parseYM(ym)
   return year * 12 + (month - 1)
@@ -52,7 +34,7 @@ function addDays(ymd: string, days: number): string {
 
 export function getCardBillingRange(statementYM: string, billingDay: number): CardBillingRange {
   const current = parseYM(statementYM)
-  const previous = parseYM(toPrevYM(statementYM))
+  const previous = parseYM(shiftYM(statementYM, -1))
 
   const currentDay = clampDay(current.year, current.month, billingDay)
   const previousDay = clampDay(previous.year, previous.month, billingDay)
@@ -90,7 +72,7 @@ export function getStatementYMForCardExpense(date: string, billingDay: number): 
   const day = Number(date.slice(8, 10))
 
   if (!Number.isFinite(day)) return ym
-  return day <= billingDay ? ym : toNextYM(ym)
+  return day <= billingDay ? ym : shiftYM(ym, 1)
 }
 
 export function isCreditPaymentMethod(method?: PaymentMethod): boolean {
