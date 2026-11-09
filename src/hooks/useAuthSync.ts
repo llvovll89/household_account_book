@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { FirebaseError } from 'firebase/app'
 import {
+  browserPopupRedirectResolver,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -185,7 +186,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
 
   const handleGoogleLogin = useCallback(async () => {
     try {
-      await signInWithPopup(auth, googleProvider)
+      // resolver를 로그인 시점에만 넘겨, 앱 시작 때 Google 로그인 iframe·gapi를 받지 않게 한다
+      await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver)
       setShowAuthModal(false)
     } catch (error) {
       showToast(getGoogleAuthErrorMessage(error))

@@ -43,6 +43,7 @@ vi.mock('firebase/auth', () => ({
   sendPasswordResetEmail: mocks.sendPasswordResetEmailMock,
   signInWithPopup: mocks.signInWithPopupMock,
   signOut: mocks.signOutMock,
+  browserPopupRedirectResolver: { name: 'popup-resolver' },
 }))
 
 import { useAuthSync } from './useAuthSync'
@@ -283,6 +284,21 @@ describe('useAuthSync', () => {
     })
 
     expect(mocks.showToastMock).toHaveBeenCalledWith('비밀번호가 너무 약합니다. 더 강한 비밀번호를 사용해주세요.')
+  })
+
+  it('구글 로그인 때만 팝업 resolver를 넘겨 시작 시 로그인 iframe을 받지 않는다', async () => {
+    const hydrateData = vi.fn().mockResolvedValue(undefined)
+    mocks.signInWithPopupMock.mockResolvedValue({})
+
+    const { result } = renderHook(() => useAuthSync({ hydrateData }))
+    await waitFor(() => {
+      expect(result.current.authReady).toBe(true)
+    })
+    await act(async () => {
+      await result.current.handleGoogleLogin()
+    })
+
+    expect(mocks.signInWithPopupMock).toHaveBeenCalledWith(expect.anything(), expect.anything(), { name: 'popup-resolver' })
   })
 
   it('구글 로그인 도메인 오류 코드에 맞는 메시지를 노출한다', async () => {
