@@ -4,6 +4,7 @@ import { Moon, Sun } from 'lucide-react'
 type Theme = 'light' | 'dark'
 
 export default function ThemeToggle() {
+  // 초기값 규칙은 index.html의 theme-init 스크립트와 같아야 한다 (첫 페인트 전 적용용)
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('hb_interface_theme')
     return saved === 'light' || saved === 'dark' ? saved : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'

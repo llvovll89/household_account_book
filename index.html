@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="잔고플랜" />
+    <!-- 첫 페인트 전에 테마를 적용한다. ThemeToggle은 인증 이후에 마운트되므로 그 전 로딩 화면이 항상 다크로 보이던 문제 방지.
+         판정 규칙은 ThemeToggle의 초기값과 같다 (저장값 → 시스템 설정) -->
+    <script id="theme-init">try{const s=localStorage.getItem('hb_interface_theme');document.documentElement.dataset.theme=s==='light'||s==='dark'?s:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch(e){}</script>
     <!-- SEO_HEAD -->
     <link rel="stylesheet" href="/seo.css">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
