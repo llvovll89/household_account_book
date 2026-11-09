@@ -14,7 +14,7 @@
 | 차트 | Recharts 3 |
 | 가져오기·내보내기 | PapaParse, SheetJS `xlsx` 0.20 (CDN tarball), pdfjs-dist |
 | PWA | vite-plugin-pwa (workbox) |
-| 테스트 | Vitest 3 + Testing Library (jsdom) |
+| 테스트 | Vitest 5 + Testing Library (jsdom), Node 22 |
 
 ## 명령어
 
