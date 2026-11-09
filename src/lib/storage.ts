@@ -26,7 +26,7 @@ const RECURRING_KEY = 'hb_recurring'
 const SUBSCRIPTIONS_KEY = 'hb_subscriptions'
 const GOALS_KEY = 'hb_goals'
 const SETTINGS_KEY = 'hb_settings'
-// Firebase 저장 실패 시 로컬에 미동기화 변경사항이 있음을 표시
+// Firebase 저장 실패 시 동기화되지 않은 계정·키·기준 버전을 기록 (구형 값은 'true')
 const PENDING_SYNC_KEY = 'hb_pending_sync'
 // Firebase 모드에서 폴백 용도로 저장한 로컬 캐시 여부를 표시
 const FIREBASE_CACHE_KEY = 'hb_firebase_cache'
@@ -206,6 +206,65 @@ function normalizeVersions(raw: unknown): RemoteVersions {
     base[key] = Number.isInteger(value) ? Number(value) : 0
   }
   return base
+}
+
+interface PendingSync {
+  uid: string
+  keys: RemoteVersionKey[]
+  // 저장 실패 시점에 알고 있던 원격 버전. 재전송은 이 버전과 같을 때만 커밋한다
+  base: Partial<RemoteVersions>
+}
+
+function readPendingSync(): PendingSync | 'legacy' | null {
+  const raw = localStorage.getItem(PENDING_SYNC_KEY)
+  if (raw === null) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (isObj(parsed) && typeof parsed.uid === 'string' && Array.isArray(parsed.keys)) {
+      const keys = parsed.keys as unknown[]
+      const base: Partial<RemoteVersions> = {}
+      if (isObj(parsed.base)) {
+        for (const key of VERSION_KEYS) {
+          if (Number.isInteger(parsed.base[key])) base[key] = Number(parsed.base[key])
+        }
+      }
+      return { uid: parsed.uid, keys: VERSION_KEYS.filter((key) => keys.includes(key)), base }
+    }
+  } catch { /* 구형 플래그 */ }
+  return 'legacy'
+}
+
+function markPendingSync(uid: string, keys: RemoteVersionKey[]): void {
+  const current = readPendingSync()
+  const same = current && current !== 'legacy' && current.uid === uid ? current : null
+  const base: Partial<RemoteVersions> = { ...same?.base }
+  for (const key of keys) {
+    if (same?.keys.includes(key)) continue
+    if (cachedRemoteVersions) base[key] = cachedRemoteVersions[key]
+  }
+  const next: PendingSync = {
+    uid,
+    keys: VERSION_KEYS.filter((key) => keys.includes(key) || !!same?.keys.includes(key)),
+    base,
+  }
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(next))
+}
+
+function clearPendingKeys(uid: string, keys: RemoteVersionKey[]): void {
+  const current = readPendingSync()
+  if (!current || current === 'legacy' || current.uid !== uid) return
+  const rest = current.keys.filter((key) => !keys.includes(key))
+  if (rest.length === 0) localStorage.removeItem(PENDING_SYNC_KEY)
+  else localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify({ ...current, keys: rest }))
+}
+
+export function hasPendingSync(): boolean {
+  return localStorage.getItem(PENDING_SYNC_KEY) !== null
+}
+
+/** 사용자가 원격 데이터를 선택했을 때 미동기화 기록을 버린다 */
+export function discardPendingSync(): void {
+  localStorage.removeItem(PENDING_SYNC_KEY)
 }
 
 function extractPatchKeys(patch: Partial<RemoteState>): RemoteVersionKey[] {
@@ -408,15 +467,34 @@ function normalizeRemoteState(raw: unknown): RemoteState {
   }
 }
 
-async function loadRemoteState(uid: string): Promise<RemoteState> {
+/**
+ * 원격 상태를 읽고, 호출자가 화면에 반영하는 키의 기준 버전만 갱신한다.
+ * 일부 키만 쓰는 로드가 다른 키의 낙관적 잠금 기준을 덮어쓰지 않게 하기 위함이다.
+ */
+async function loadRemoteState(uid: string, refreshKeys: readonly RemoteVersionKey[] = VERSION_KEYS): Promise<RemoteState> {
   const snap = await getDoc(getUserDocRef(uid))
   const raw = snap.data()
-  cachedRemoteVersions = normalizeVersions(raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined)
+  const versions = normalizeVersions(raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined)
+  if (!cachedRemoteVersions) {
+    cachedRemoteVersions = versions
+  } else {
+    const next = { ...cachedRemoteVersions }
+    for (const key of refreshKeys) next[key] = versions[key]
+    cachedRemoteVersions = next
+  }
   return normalizeRemoteState(raw)
 }
 
-async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promise<void> {
+interface RemotePatchOptions {
+  // 지정한 키는 캐시 대신 이 버전과 비교한다 (미동기화 재전송용)
+  expected?: Partial<RemoteVersions>
+  // false면 실패해도 미동기화 기록을 남기지 않는다
+  trackPending?: boolean
+}
+
+async function saveRemotePatch(uid: string, patch: Partial<RemoteState>, options: RemotePatchOptions = {}): Promise<void> {
   if (restoreInProgress) throw new Error('백업 복원이 진행 중이에요. 완료 후 다시 저장해주세요.')
+  const { expected, trackPending = true } = options
   const patchKeys = extractPatchKeys(patch)
   if (patchKeys.length === 0) return
 
@@ -430,7 +508,9 @@ async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promis
       const remoteVersions = normalizeVersions(
         raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined
       )
-      const expectedVersions = cachedRemoteVersions ?? remoteVersions
+      const expectedVersions = expected
+        ? { ...remoteVersions, ...expected }
+        : (cachedRemoteVersions ?? remoteVersions)
 
       const conflictKeys = patchKeys.filter((key) => remoteVersions[key] !== expectedVersions[key])
       if (conflictKeys.length > 0) {
@@ -458,9 +538,9 @@ async function saveRemotePatch(uid: string, patch: Partial<RemoteState>): Promis
     if (committedVersions) {
       cachedRemoteVersions = committedVersions
     }
-    localStorage.removeItem(PENDING_SYNC_KEY)
+    clearPendingKeys(uid, patchKeys)
   } catch (e) {
-    localStorage.setItem(PENDING_SYNC_KEY, 'true')
+    if (trackPending) markPendingSync(uid, patchKeys)
     throw e
   } finally { remoteWritesInFlight -= 1 }
 }
@@ -507,18 +587,24 @@ function mergeUniqueByKey<T>(base: T[], incoming: T[], keyFn: (item: T) => strin
   return Array.from(map.values())
 }
 
+/**
+ * id 기준으로 합치고, 내용이 같은 항목은 로컬→원격 사이에서만 중복 제거한다.
+ * 원격 안에 내용이 같은 정상 기록(같은 날 같은 금액 커피 2잔 등)은 그대로 보존한다.
+ */
+function mergeByIdThenContent<T extends { id: string }>(remote: T[], local: T[], keyFn: (item: T) => string): T[] {
+  const byId = new Map(remote.map((item) => [item.id, item]))
+  const remoteKeys = new Set(remote.map(keyFn))
+  for (const item of local) {
+    if (byId.has(item.id) || !remoteKeys.has(keyFn(item))) byId.set(item.id, item)
+  }
+  return Array.from(byId.values())
+}
+
 function mergeBudgets(remote: Budget[], local: Budget[]): Budget[] {
   const map = new Map<string, Budget>()
   for (const item of remote) map.set(JSON.stringify([item.category, item.yearMonth ?? null]), item)
   for (const item of local) map.set(JSON.stringify([item.category, item.yearMonth ?? null]), item)
   return Array.from(map.values())
-}
-
-function mergeRecurring(remote: RecurringTransaction[], local: RecurringTransaction[]): RecurringTransaction[] {
-  const byId = new Map<string, RecurringTransaction>()
-  for (const item of remote) byId.set(item.id, item)
-  for (const item of local) byId.set(item.id, item)
-  return mergeUniqueByKey([], Array.from(byId.values()), recurringKey)
 }
 
 function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
@@ -545,6 +631,26 @@ function backupAndClearLocalData(): void {
     localStorage.removeItem(key)
   }
 
+  localStorage.removeItem(FIREBASE_CACHE_KEY)
+  // 남은 미동기화 기록이 비워진 로컬을 원격에 밀어넣지 않도록 함께 정리
+  localStorage.removeItem(PENDING_SYNC_KEY)
+}
+
+// 지정한 키의 로컬 값을 hb_backup_* 으로 복사해 둔다 (원격에 반영하지 못한 변경 보존용)
+function backupLocalKeys(keys: readonly RemoteVersionKey[]): void {
+  const backupPrefix = `hb_backup_${Date.now()}`
+  for (const key of keys) {
+    const localKey = SNAPSHOT_LOCAL_KEYS[VERSION_KEYS.indexOf(key)]
+    const value = localStorage.getItem(localKey)
+    if (value !== null) localStorage.setItem(`${backupPrefix}_${localKey}`, value)
+  }
+}
+
+/** 로그아웃 시 이전 계정의 Firebase 캐시를 지운다. 로컬 모드에서 만든 데이터는 남긴다. */
+export function clearFirebaseCacheOnSignOut(): void {
+  localStorage.removeItem(PENDING_SYNC_KEY)
+  if (localStorage.getItem(FIREBASE_CACHE_KEY) !== 'true') return
+  for (const key of SNAPSHOT_LOCAL_KEYS) localStorage.removeItem(key)
   localStorage.removeItem(FIREBASE_CACHE_KEY)
 }
 
@@ -598,7 +704,7 @@ export async function archiveTransactionsByIds(transactionIds: readonly string[]
     try {
       await saveRemotePatch(getStorageUid(), { transactions: keep })
     } catch {
-      localStorage.setItem(PENDING_SYNC_KEY, 'true')
+      // saveRemotePatch가 미동기화 기록을 남기므로 다음 로드 때 재전송된다
     }
   }
 
@@ -668,11 +774,7 @@ export function clearLocalData(): void {
  * clearLocalData와 달리 hb_backup_* 백업을 남기지 않고 완전히 삭제한다.
  */
 export async function resetAllData(): Promise<void> {
-  const keys = [TRANSACTIONS_KEY, MEMOS_KEY, BUDGETS_KEY, RECURRING_KEY, SUBSCRIPTIONS_KEY, GOALS_KEY, SETTINGS_KEY]
-  for (const key of keys) localStorage.removeItem(key)
-  localStorage.removeItem(FIREBASE_CACHE_KEY)
-  localStorage.removeItem(PENDING_SYNC_KEY)
-
+  // 원격 초기화가 확정된 뒤에만 로컬을 지운다. 실패 시 로컬 데이터와 화면이 어긋나지 않게 한다.
   if (storageMode === 'firebase') {
     const uid = getStorageUid()
     // 캐시된 버전을 지워 현재 원격 버전을 그대로 기준점으로 삼는다 → 충돌 없이 항상 덮어써진다
@@ -688,10 +790,14 @@ export async function resetAllData(): Promise<void> {
         subscriptions: [],
         goals: [],
         settings: { ...DEFAULT_SETTINGS },
-      }),
+      }, { trackPending: false }),
       REMOTE_WRITE_TIMEOUT_MS
     )
   }
+
+  for (const key of SNAPSHOT_LOCAL_KEYS) localStorage.removeItem(key)
+  localStorage.removeItem(FIREBASE_CACHE_KEY)
+  localStorage.removeItem(PENDING_SYNC_KEY)
 
   emitSettingsUpdatedEvent()
 }
@@ -715,20 +821,15 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
     }
   }
 
-  let remote: RemoteState
-  try {
-    remote = await loadRemoteState(uid)
-  } catch (e) {
-    // Firebase 조회 실패 — 로컬 데이터는 보존되며 다음 로드 시 재시도한다
-    localStorage.setItem(PENDING_SYNC_KEY, 'true')
-    throw e
-  }
+  // 조회 실패 시 로컬 데이터는 그대로 남아 다음 로그인 때 다시 병합을 묻는다.
+  // 미동기화 기록을 남기면 로컬 전용 데이터가 원격 전체를 덮어쓰므로 남기지 않는다.
+  const remote = await loadRemoteState(uid)
 
   const merged: RemoteState = {
-    transactions: mergeUniqueByKey(remote.transactions, local.transactions, txKey),
-    memos: mergeUniqueByKey(remote.memos, local.memos, memoKey),
+    transactions: mergeByIdThenContent(remote.transactions, local.transactions, txKey),
+    memos: mergeByIdThenContent(remote.memos, local.memos, memoKey),
     budgets: mergeBudgets(remote.budgets, local.budgets),
-    recurring: mergeRecurring(remote.recurring, local.recurring),
+    recurring: mergeByIdThenContent(remote.recurring, local.recurring, recurringKey),
     subscriptions: mergeUniqueByKey(remote.subscriptions, local.subscriptions, (s) => s.id),
     goals: mergeUniqueByKey(remote.goals, local.goals, (g) => g.id),
     settings: mergeSettings(remote.settings, local.settings),
@@ -760,6 +861,37 @@ export async function mergeLocalIntoFirebase(): Promise<MergeResult> {
   }
 }
 
+/**
+ * 이전 저장 실패로 남은 변경을 원격에 재전송한다.
+ * - 실패한 키만, 실패 당시 기준 버전과 같을 때만 커밋한다.
+ * - 그 사이 다른 기기가 바꾼 키(충돌)는 로컬 값을 백업으로 옮기고 원격을 따른다.
+ * - 다른 계정의 기록이나 키 정보가 없는 구형 플래그는 백업만 하고 버린다.
+ */
+async function flushPendingSync(uid: string): Promise<void> {
+  const pending = readPendingSync()
+  if (!pending) return
+  if (pending === 'legacy' || pending.uid !== uid) {
+    if (pending === 'legacy') backupLocalKeys(VERSION_KEYS)
+    localStorage.removeItem(PENDING_SYNC_KEY)
+    return
+  }
+
+  let keys = pending.keys.filter((key) => localStorage.getItem(SNAPSHOT_LOCAL_KEYS[VERSION_KEYS.indexOf(key)]) !== null)
+  while (keys.length > 0) {
+    const local = localSnapshot()
+    const patch = Object.fromEntries(keys.map((key) => [key, local[key]])) as Partial<RemoteState>
+    try {
+      await saveRemotePatch(uid, patch, { expected: pending.base, trackPending: false })
+      break
+    } catch (e) {
+      if (!isStorageConflictError(e)) throw e
+      backupLocalKeys(e.conflictKeys)
+      keys = keys.filter((key) => !e.conflictKeys.includes(key))
+    }
+  }
+  localStorage.removeItem(PENDING_SYNC_KEY)
+}
+
 export async function loadAllData(): Promise<AppDataSnapshot> {
   if (restoreInProgress) throw new Error('백업 복원이 진행 중이에요.')
   if (storageMode === 'local') {
@@ -768,16 +900,11 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
 
   const uid = getStorageUid()
 
-  // 이전 Firebase 저장 실패로 로컬에 미동기화 변경사항이 있으면,
-  // 로컬 데이터를 Firebase에 먼저 밀어넣은 뒤 로드한다.
-  if (localStorage.getItem(PENDING_SYNC_KEY) === 'true') {
-    try {
-      const local = localSnapshot()
-      await saveRemotePatch(uid, local) // 성공 시 PENDING_SYNC_KEY 자동 삭제
-      return local
-    } catch {
-      return localSnapshot()
-    }
+  try {
+    await flushPendingSync(uid)
+  } catch {
+    // 여전히 오프라인 — 미동기화 기록은 남겨 두고 로컬 캐시로 표시한다
+    return localSnapshot()
   }
 
   try {
@@ -790,7 +917,7 @@ export async function loadAllData(): Promise<AppDataSnapshot> {
 export async function loadTransactions(): Promise<Transaction[]> {
   if (storageMode === 'local') return loadLocalTransactions()
   try {
-    return (await loadRemoteState(getStorageUid())).transactions
+    return (await loadRemoteState(getStorageUid(), ['transactions'])).transactions
   } catch {
     return loadLocalTransactions()
   }
@@ -810,7 +937,7 @@ export async function saveTransactions(t: Transaction[]): Promise<void> {
 export async function loadMemos(): Promise<Memo[]> {
   if (storageMode === 'local') return loadLocalMemos()
   try {
-    return (await loadRemoteState(getStorageUid())).memos
+    return (await loadRemoteState(getStorageUid(), ['memos'])).memos
   } catch {
     return loadLocalMemos()
   }
@@ -829,7 +956,7 @@ export async function saveMemos(m: Memo[]): Promise<void> {
 export async function loadBudgets(): Promise<Budget[]> {
   if (storageMode === 'local') return loadLocalBudgets()
   try {
-    return (await loadRemoteState(getStorageUid())).budgets
+    return (await loadRemoteState(getStorageUid(), ['budgets'])).budgets
   } catch {
     return loadLocalBudgets()
   }
@@ -848,7 +975,7 @@ export async function saveBudgets(b: Budget[]): Promise<void> {
 export async function loadRecurring(): Promise<RecurringTransaction[]> {
   if (storageMode === 'local') return loadLocalRecurring()
   try {
-    return (await loadRemoteState(getStorageUid())).recurring
+    return (await loadRemoteState(getStorageUid(), ['recurring'])).recurring
   } catch {
     return loadLocalRecurring()
   }
@@ -867,7 +994,7 @@ export async function saveRecurring(r: RecurringTransaction[]): Promise<void> {
 export async function loadSubscriptions(): Promise<Subscription[]> {
   if (storageMode === 'local') return loadLocalSubscriptions()
   try {
-    return (await loadRemoteState(getStorageUid())).subscriptions
+    return (await loadRemoteState(getStorageUid(), ['subscriptions'])).subscriptions
   } catch {
     return loadLocalSubscriptions()
   }
@@ -886,7 +1013,7 @@ export async function saveSubscriptions(subs: Subscription[]): Promise<void> {
 export async function loadGoals(): Promise<SavingsGoal[]> {
   if (storageMode === 'local') return loadLocalGoals()
   try {
-    return (await loadRemoteState(getStorageUid())).goals
+    return (await loadRemoteState(getStorageUid(), ['goals'])).goals
   } catch {
     return loadLocalGoals()
   }
@@ -904,7 +1031,7 @@ export async function saveGoals(goals: SavingsGoal[]): Promise<void> {
 
 export async function loadSettings(): Promise<AppSettings> {
   if (storageMode === 'local') return loadLocalSettings()
-  return (await loadRemoteState(getStorageUid())).settings
+  return (await loadRemoteState(getStorageUid(), ['settings'])).settings
 }
 
 export async function saveSettings(s: AppSettings): Promise<void> {
@@ -914,7 +1041,8 @@ export async function saveSettings(s: AppSettings): Promise<void> {
     emitSettingsUpdatedEvent()
     return
   }
-  await saveRemotePatch(getStorageUid(), { settings: s })
+  // Firebase 모드의 설정은 로컬에 캐시하지 않아 재전송할 값이 없으므로 미동기화 기록을 남기지 않는다
+  await saveRemotePatch(getStorageUid(), { settings: s }, { trackPending: false })
   emitSettingsUpdatedEvent()
 }
 
@@ -932,7 +1060,7 @@ export interface BackupState {
 
 function assertBackupReady(mode: StorageMode, uid: string | null): void {
   if (storageMode !== mode || storageUid !== uid) throw new Error('저장소 또는 계정이 바뀌었어요. 파일을 다시 선택해주세요.')
-  if (restoreInProgress || remoteWritesInFlight > 0 || (mode === 'firebase' && localStorage.getItem(PENDING_SYNC_KEY) === 'true')) {
+  if (restoreInProgress || remoteWritesInFlight > 0 || (mode === 'firebase' && hasPendingSync())) {
     throw new Error('저장 또는 동기화할 변경사항이 있어요. 동기화를 마친 뒤 다시 시도해주세요.')
   }
 }

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getLocalDataCountsMock: vi.fn(),
   mergeLocalIntoFirebaseMock: vi.fn(),
   clearLocalDataMock: vi.fn(),
+  clearFirebaseCacheOnSignOutMock: vi.fn(),
   onAuthStateChangedMock: vi.fn(),
   createUserWithEmailAndPasswordMock: vi.fn(),
   signInWithEmailAndPasswordMock: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('../lib/toast', () => ({
 }))
 
 vi.mock('../lib/storage', () => ({
+  clearFirebaseCacheOnSignOut: mocks.clearFirebaseCacheOnSignOutMock,
   clearLocalData: mocks.clearLocalDataMock,
   getLocalDataCounts: mocks.getLocalDataCountsMock,
   hasLocalMigratableData: mocks.hasLocalMigratableDataMock,
@@ -67,6 +69,7 @@ describe('useAuthSync', () => {
       expect(result.current.authReady).toBe(true)
     })
 
+    expect(mocks.clearFirebaseCacheOnSignOutMock).toHaveBeenCalledTimes(1)
     expect(mocks.setStorageContextMock).toHaveBeenCalledWith('local', null)
     expect(hydrateData).toHaveBeenCalledTimes(1)
     expect(result.current.showMergeModal).toBe(false)

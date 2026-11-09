@@ -46,7 +46,7 @@ import type {
 } from "./types";
 import {CATEGORY_EMOJI} from "./types";
 import type {Tab} from "./types/navigation";
-import {loadAllData, loadSettings, resetAllData} from "./lib/storage";
+import {discardPendingSync, hasPendingSync as hasPendingSyncRecord, loadAllData, loadSettings, resetAllData} from "./lib/storage";
 import {isRecurringDueToday} from "./lib/recurringSchedule";
 import type {AppDataSnapshot, RemoteVersionKey} from "./lib/storage";
 import {isStorageConflictError} from "./lib/storage";
@@ -517,7 +517,7 @@ export default function App() {
     // 오프라인 / 미동기화 상태
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [hasPendingSync, setHasPendingSync] = useState(
-        () => localStorage.getItem("hb_pending_sync") === "true",
+        () => hasPendingSyncRecord(),
     );
     const [failedPersistTasks, setFailedPersistTasks] = useState<
         FailedPersistTask[]
@@ -620,9 +620,7 @@ export default function App() {
     useEffect(() => {
         const onOnline = () => {
             setIsOnline(true);
-            setHasPendingSync(
-                localStorage.getItem("hb_pending_sync") === "true",
-            );
+            setHasPendingSync(hasPendingSyncRecord());
             showToast(
                 "온라인으로 전환됐어요. 미동기화 항목을 다시 저장할 수 있어요.",
             );
@@ -1126,6 +1124,8 @@ export default function App() {
         setLastRetryReasons({});
         setLastRetryResult(null);
         setHasPendingSync(false);
+        // 미동기화 기록을 남기면 다음 로드 때 내 데이터가 다시 원격을 덮어쓰려 한다
+        discardPendingSync();
         void hydrateData()
             .then(() => {
                 setLastSyncSuccessAt(Date.now());

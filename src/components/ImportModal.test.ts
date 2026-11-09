@@ -23,7 +23,8 @@ it('imports a different description at the same amount after category review', a
   fireEvent.click(screen.getByRole('button', { name: '포함' }))
   fireEvent.click(screen.getByRole('button', { name: '1개 가져오기' }))
   expect(onImport.mock.calls[0][0]).toEqual([expect.objectContaining({ description: '점심', amount: 9000 })])
-})
+  // 파일의 첫 테스트가 모달 렌더링 초기 비용을 떠안아 전체 병렬 실행 시 5초를 넘길 수 있다
+}, 15000)
 
 it('excludes an existing exact match by default but allows explicitly including it', async () => {
   const onImport = vi.fn()

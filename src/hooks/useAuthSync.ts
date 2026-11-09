@@ -10,7 +10,7 @@ import {
   type User,
 } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase/firebase'
-import { type LocalDataCounts, clearLocalData, getLocalDataCounts, hasLocalMigratableData, mergeLocalIntoFirebase, setStorageContext } from '../lib/storage'
+import { type LocalDataCounts, clearFirebaseCacheOnSignOut, clearLocalData,getLocalDataCounts, hasLocalMigratableData, mergeLocalIntoFirebase, setStorageContext } from '../lib/storage'
 import { showToast } from '../lib/toast'
 
 interface UseAuthSyncParams {
@@ -156,6 +156,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       setIsSyncing(false)
 
       if (!nextUser) {
+        // 이전 계정 캐시가 로컬 모드에 노출되거나 다음 계정에 병합되지 않도록 정리
+        clearFirebaseCacheOnSignOut()
         setStorageContext('local', null)
         setSettingsVersion((prev) => prev + 1)
         await hydrateWithGuard('로컬 데이터를 불러오지 못했습니다.')
