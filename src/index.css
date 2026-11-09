@@ -1,6 +1,39 @@
 @import "tailwindcss";
 @import "react-datepicker/dist/react-datepicker.css";
 
+/* 테마 토큰 → Tailwind 색상 유틸리티 (bg-surface, text-muted, bg-tone-blue/15 …).
+   값은 interface.css의 :root / :root[data-theme="light"] 변수에서 오므로 두 테마에 자동 대응한다.
+   새 코드에서는 bg-[#1C1C1E] 같은 hex 클래스 대신 이 토큰을 쓴다. */
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-fg: var(--text);
+  --color-fg-strong: var(--fg-strong);
+  --color-muted: var(--muted);
+  --color-warning: var(--warning);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-action: var(--action);
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-red: var(--tone-red);
+  --color-tone-green: var(--tone-green);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-slate: var(--tone-slate);
+  --color-tone-gray: var(--tone-gray);
+  --color-tone-hover: var(--tone-hover);
+  --color-tone-chip: var(--tone-chip);
+  --color-tone-faint: var(--tone-faint);
+  --color-tone-red-soft: var(--tone-red-soft);
+  --color-tone-red-pale: var(--tone-red-pale);
+  --color-tone-green-pale: var(--tone-green-pale);
+  --color-tone-teal-pale: var(--tone-teal-pale);
+  --color-tone-blue-pale: var(--tone-blue-pale);
+}
+
 /* Responsive workspace: compact navigation on phones, persistent rail on desktop. */
 .skip-link { position: fixed; top: -80px; left: 16px; z-index: 100; padding: 12px 20px; border-radius: 12px; background: #fff; color: #111; }
 .skip-link:focus { top: 12px; }

@@ -120,7 +120,11 @@ CATEGORY_EMOJI      // Record<string, string>
 - **다크 테마 기본**, 라이트 모드는 `ThemeToggle`로 전환 (`:root[data-theme="light"]`, `src/interface.css`)
   - 첫 페인트 전 테마는 `index.html`의 `theme-init` 스크립트가 적용 (ThemeToggle 초기값 규칙과 동일하게 유지)
 - 색상은 CSS 변수(`var(--surface)`, `var(--muted)`, `var(--accent)`, `var(--category-*)` 등) 사용. hex 뒤에 알파를 붙이는 `${color}25` 대신 `color-mix(in srgb, ${color} 15%, transparent)` 사용
-- 기존 코드의 hex 클래스(`bg-[#1C1C1E]` 등)는 `interface.css`에서 일부만 토큰으로 연결됨. 새 코드에서 hex 클래스를 늘리지 말 것 (감사 결과: `docs/tech-debt-audit-2026-11-09.md`)
+- **Tailwind 색상은 테마 토큰 클래스 사용** (`src/index.css`의 `@theme`, 값은 `interface.css`):
+  - 의미: `bg-page` `bg-surface` `bg-raised` `text-fg` `text-muted` `text-accent` `text-income` `text-expense` `text-warning` `border-line`
+  - 틴트·테두리·링: `bg-tone-blue/15` `border-tone-red/20` `ring-tone-green/40` 등 (`tone-blue|red|green|amber|teal|slate`, 두 테마 모두 원래 밝은 색)
+  - 중립·연한 글자: `hover:bg-tone-hover` `hover:text-tone-gray` `to-tone-chip` `text-tone-faint` `text-fg-strong` `text-tone-*-pale|soft`
+  - hex 클래스(`bg-[#1C1C1E]` 등)는 쓰지 말 것. 토큰으로 옮긴 파일은 ESLint가 막는다. 기존 파일 치환: `node scripts/migrate-theme-tokens.mjs <파일>`
 - **배경 팔레트**: `#111111` (앱 배경), `#1C1C1E` (카드), `#2C2C2E` (입력/칩)
 - **강조색**: `#3D8EF8` (파랑/기본), `#2ACF6A` (수입), `#F25260` (지출)
 - **텍스트**: `#F1F3F6` (기본), `#8B95A1` (보조), `#4E5968` (비활성)
