@@ -66,10 +66,16 @@ export function getCardBillingRange(statementYM: string, billingDay: number): Ca
   }
 }
 
-export function calculateCardDueAmount(transactions: Transaction[], statementYM: string, billingDay: number): number {
+/** 거래 목록·상세와 같은 결제일 기준(resolveCardBillingDay)으로 청구월 합계를 계산한다 */
+export function calculateCardDueAmount(
+  transactions: Transaction[],
+  statementYM: string,
+  billingDay: number,
+  methods: UserPaymentMethod[] = [],
+): number {
   return transactions
     .filter((t) => t.type === 'expense' && isCreditPaymentMethod(t.paymentMethod))
-    .filter((t) => getStatementYMForCardExpense(t.date, getTransactionBillingDay(t, billingDay)) === statementYM)
+    .filter((t) => getStatementYMForCardExpense(t.date, resolveCardBillingDay(t, methods, billingDay)) === statementYM)
     .reduce((sum, t) => sum + t.amount, 0)
 }
 
