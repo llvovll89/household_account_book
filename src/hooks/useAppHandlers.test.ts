@@ -107,3 +107,40 @@ it('removes only exported IDs from the latest application state and persistence 
   await tasks[0]()
   expect(saveTransactions).toHaveBeenLastCalledWith(expected)
 })
+
+function renderRecurringHandlers(recurring: RecurringTransaction[], yearMonth: string) {
+  const state = { transactions: [] as Transaction[], recurring }
+  const { result } = renderHook(() => useAppHandlers({
+    transactions: state.transactions, editingTransaction: null, yearMonth,
+    customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
+    persist: task => { void task() }, dispatchUI: vi.fn(),
+    setTransactions: value => { state.transactions = typeof value === 'function' ? value(state.transactions) : value },
+    setRecurring: value => { state.recurring = typeof value === 'function' ? value(state.recurring) : value },
+    setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
+    setCustomExpenseCategories: vi.fn(), setCustomIncomeCategories: vi.fn(), setUserPaymentMethods: vi.fn(),
+    setTransactionTemplates: vi.fn(), setAutoCategoryRules: vi.fn(), setHiddenWidgets: vi.fn(),
+  }))
+  return { result, state }
+}
+
+it('applying a monthly item from a past month never moves lastAppliedMonth backwards', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 10, 9))
+  const rent: RecurringTransaction = { id: 'rent', type: 'expense', category: '주거비', amount: 500000, description: '월세', dayOfMonth: 1, lastAppliedMonth: '2026-11', createdAt: 1 }
+  const { result, state } = renderRecurringHandlers([rent], '2026-10')
+  await act(async () => { await result.current.handleApplyRecurring([rent]) })
+  expect(state.transactions.map(t => t.date)).toEqual(['2026-10-01'])
+  expect(state.recurring[0].lastAppliedMonth).toBe('2026-11')
+  vi.useRealTimers()
+})
+
+it('applying a weekly item records every missed occurrence on its real date', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 7, 20))
+  const lesson: RecurringTransaction = { id: 'w', type: 'expense', category: '교육', amount: 30000, description: '레슨', dayOfMonth: 1, frequency: 'weekly', weekday: 6, lastAppliedMonth: '', lastAppliedDate: '2026-08-01', createdAt: 1 }
+  const { result, state } = renderRecurringHandlers([lesson], '2026-08')
+  await act(async () => { await result.current.handleApplyRecurring([lesson], '2026-08') })
+  expect(state.transactions.map(t => t.date)).toEqual(['2026-08-08', '2026-08-15'])
+  expect(state.recurring[0].lastAppliedDate).toBe('2026-08-15')
+  vi.useRealTimers()
+})

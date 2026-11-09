@@ -1336,8 +1336,9 @@ export default function App() {
                 transactions,
                 yearMonth,
                 cardBillingDay ?? 25,
+                userPaymentMethods,
             ),
-        [transactions, yearMonth, cardBillingDay],
+        [transactions, yearMonth, cardBillingDay, userPaymentMethods],
     );
     const nextMonthCardDue = useMemo(
         () =>
@@ -1345,8 +1346,9 @@ export default function App() {
                 transactions,
                 shiftYM(yearMonth, 1),
                 cardBillingDay ?? 25,
+                userPaymentMethods,
             ),
-        [transactions, yearMonth, cardBillingDay],
+        [transactions, yearMonth, cardBillingDay, userPaymentMethods],
     );
     const retryReasonTotals = useMemo(
         () => getRetryReasonTotals(lastRetryReasons),

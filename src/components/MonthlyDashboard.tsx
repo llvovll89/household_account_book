@@ -8,7 +8,7 @@ import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
-import { formatRecurringSchedule } from '../lib/recurringSchedule'
+import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -190,24 +190,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
     if (!payday) return null
     const today = new Date()
     const todayNum = today.getDate()
-    const currentYear = today.getFullYear()
-    const currentMonth = today.getMonth()
-
-    let daysLeft: number
-    if (payday === 'last') {
-      const lastDayOfCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
-      daysLeft = lastDayOfCurrentMonth - todayNum
-    } else if (payday > todayNum) {
-      daysLeft = payday - todayNum
-    } else if (payday === todayNum) {
-      daysLeft = 0
-    } else {
-      // 다음 달에 해당 날짜가 없을 경우(예: 31일 → 2월) 마지막 날로 보정
-      const lastDayOfNextMonth = new Date(currentYear, currentMonth + 2, 0).getDate()
-      const adjustedPayday = Math.min(payday, lastDayOfNextMonth)
-      const nextPayday = new Date(currentYear, currentMonth + 1, adjustedPayday)
-      daysLeft = Math.round((nextPayday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    }
+    const daysLeft = getDaysUntilMonthDay(payday, today)
 
     const [y, m] = yearMonth.split('-').map(Number)
     const monthlyTx = transactions.filter((t) => t.date.startsWith(yearMonth))
@@ -322,15 +305,15 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
   )
 
   const monthlyCardDue = useMemo(
-    () => calculateCardDueAmount(transactions, yearMonth, effectiveBillingDay),
-    [transactions, yearMonth, effectiveBillingDay]
+    () => calculateCardDueAmount(transactions, yearMonth, effectiveBillingDay, userPaymentMethods),
+    [transactions, yearMonth, effectiveBillingDay, userPaymentMethods]
   )
 
   const nextStatementYM = useMemo(() => shiftYM(yearMonth, 1), [yearMonth])
 
   const nextMonthlyCardDue = useMemo(
-    () => calculateCardDueAmount(transactions, nextStatementYM, effectiveBillingDay),
-    [transactions, nextStatementYM, effectiveBillingDay]
+    () => calculateCardDueAmount(transactions, nextStatementYM, effectiveBillingDay, userPaymentMethods),
+    [transactions, nextStatementYM, effectiveBillingDay, userPaymentMethods]
   )
 
   const cardBillingRangeLabel = useMemo(() => {
@@ -357,7 +340,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
 
   // 이번 달 미적용 정기 항목 (월간 반복만 — 주/격주 반복은 자동 감지로만 적용됨)
   const pendingRecurring = useMemo(
-    () => recurring.filter((r) => (r.frequency ?? 'monthly') === 'monthly' && r.lastAppliedMonth !== yearMonth),
+    () => recurring.filter((r) => isRecurringPendingForMonth(r, yearMonth)),
     [recurring, yearMonth]
   )
 

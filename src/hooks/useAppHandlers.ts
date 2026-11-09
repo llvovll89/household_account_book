@@ -1,4 +1,4 @@
-import { createRecurringTransaction } from '../lib/recurringSchedule'
+import { createRecurringTransaction, getDueRecurringDates } from '../lib/recurringSchedule'
 import { getCategoryDestination, migrateBudgets, migrateTypedCategory } from '../lib/categoryMigration'
 import type { CategoryMoves } from '../lib/categoryMigration'
 import { useCallback } from 'react'
@@ -197,8 +197,15 @@ export function useAppHandlers({
 
   const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
     const ym = targetYM ?? yearMonth
-    const todayStr = toLocalDateStr()
-    const newTx: Transaction[] = pending.map(r => createRecurringTransaction(r, ym, todayStr, generateId()))
+    const today = new Date()
+    const todayStr = toLocalDateStr(today)
+    // 주간·격주는 놓친 회차마다 실제 발생일로 한 건씩 등록한다
+    const occurrences = new Map(pending.map((r) => {
+      const dates = getDueRecurringDates(r, today)
+      return [r.id, dates.length > 0 ? dates : [todayStr]] as const
+    }))
+    const newTx: Transaction[] = pending.flatMap(r => (occurrences.get(r.id) ?? [todayStr]).map(date =>
+      createRecurringTransaction(r, ym, date, generateId())))
     const newTxIds = new Set(newTx.map((t) => t.id))
     const nextTxs = [...transactions, ...newTx]
     setTransactions(nextTxs)
@@ -214,9 +221,11 @@ export function useAppHandlers({
       const ids = new Set(pending.map((r) => r.id))
       const next = prev.map((r) => {
         if (!ids.has(r.id)) return r
-        return (r.frequency === 'weekly' || r.frequency === 'biweekly')
-          ? { ...r, lastAppliedDate: todayStr }
-          : { ...r, lastAppliedMonth: ym }
+        if (r.frequency === 'weekly' || r.frequency === 'biweekly') {
+          return { ...r, lastAppliedDate: occurrences.get(r.id)?.at(-1) ?? todayStr }
+        }
+        // 지난 달을 수동 적용해도 기준 월을 되돌리지 않는다 (되돌리면 이번 달이 다시 자동 적용됨)
+        return { ...r, lastAppliedMonth: r.lastAppliedMonth && r.lastAppliedMonth > ym ? r.lastAppliedMonth : ym }
       })
       persist(() => saveRecurring(next), '정기내역 상태 저장에 실패했습니다.', 'recurring')
       return next

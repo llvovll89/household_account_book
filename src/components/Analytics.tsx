@@ -398,11 +398,13 @@ export default function Analytics({
                 transactions,
                 yearMonth,
                 cardBillingDay,
+                userPaymentMethods,
             ),
             nextCardDue: calculateCardDueAmount(
                 transactions,
                 nextStatementYM,
                 cardBillingDay,
+                userPaymentMethods,
             ),
             cardBillingRangeLabel: formatBillingRange(
                 getCardBillingRange(yearMonth, cardBillingDay),
@@ -411,7 +413,7 @@ export default function Analytics({
                 getCardBillingRange(nextStatementYM, cardBillingDay),
             ),
         };
-    }, [currentMonthly, transactions, yearMonth, cardBillingDay]);
+    }, [currentMonthly, transactions, yearMonth, cardBillingDay, userPaymentMethods]);
 
     const paymentMethodTrend = useMemo(
         () =>
@@ -456,9 +458,9 @@ export default function Analytics({
         () =>
             monthlyData.map((m) => ({
                 label: m.label,
-                due: calculateCardDueAmount(transactions, m.ym, cardBillingDay),
+                due: calculateCardDueAmount(transactions, m.ym, cardBillingDay, userPaymentMethods),
             })),
-        [monthlyData, transactions, cardBillingDay],
+        [monthlyData, transactions, cardBillingDay, userPaymentMethods],
     );
 
     // ── 스마트 인사이트 ───────────────────────────────────
