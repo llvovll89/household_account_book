@@ -51,7 +51,7 @@
 }
 
 * {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
     'Noto Sans KR', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -276,7 +276,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background: #1C1C1E !important;
   color: #f1f3f6 !important;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6) !important;
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif !important;
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif !important;
 }
 
 .fancy-date-calendar .react-datepicker__header {

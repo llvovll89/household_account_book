@@ -102,7 +102,8 @@ export default defineConfig(({ mode }) => ({
             options: {
               cacheName: 'cdn-fonts',
               expiration: {
-                maxEntries: 10,
+                // 가변 폰트 dynamic subset은 CSS 1개 + 글자 범위별 woff2 최대 92개로 나뉜다
+                maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1년
               },
               cacheableResponse: {
