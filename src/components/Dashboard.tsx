@@ -3,6 +3,7 @@ import HomeOverview from './HomeOverview'
 import type { DashboardProps } from './MonthlyDashboard'
 import type { TransactionReviewScope } from './TransactionReviewModal'
 import { getBudgetCarryoverAmounts, getBudgetProgress, getEffectiveBudgets } from '../lib/budgets'
+import { isRecurringPendingForMonth } from '../lib/recurringSchedule'
 
 const MonthlyDashboard = lazy(() => import('./MonthlyDashboard'))
 const BudgetModal = lazy(() => import('./BudgetModal'))
@@ -22,7 +23,7 @@ export default function Dashboard(props: DashboardProps) {
   const attention = useMemo(() => {
     const over = getBudgetProgress(budgets, transactions, yearMonth).find(b => b.remaining < 0)
     if (over) return { kind: 'budget' as const, category: over.category, text: `${over.category} 예산을 초과했어요. 카테고리별 내역을 확인해보세요.`, label: `${over.category} 지출 보기` }
-    const pending = recurring.filter(r => (r.frequency ?? 'monthly') === 'monthly' && r.lastAppliedMonth !== yearMonth)
+    const pending = recurring.filter(r => isRecurringPendingForMonth(r, yearMonth))
     if (!hiddenWidgets.includes('recurring-pending') && pending.length) return { kind: 'recurring' as const, text: `아직 반영하지 않은 정기 내역이 ${pending.length}건 있어요.`, label: '정기 내역 관리' }
     const today = new Date()
     const day = today.getDate()

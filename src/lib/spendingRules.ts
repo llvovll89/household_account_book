@@ -1,5 +1,6 @@
 import type { Transaction, Budget } from '../types'
 import { parseYmdLocal } from './format'
+import { getEffectiveBudgets } from './budgets'
 
 export type PresetKey = 'this_month' | 'last_month' | 'last_30' | 'last_90'
 
@@ -143,30 +144,28 @@ export function generateSuggestions(
   }
 
   // Rule 6: 예산 초과
-  if (budgets.length > 0) {
-    const over = budgets
-      .filter((b) => {
-        const spent = catMap[b.category] || 0
-        const prorated = days < 30 ? (b.limit / 30) * days : b.limit
-        return spent > prorated && spent > 0
-      })
-      .sort((a, b) => {
-        const oa = (catMap[a.category] || 0) - a.limit
-        const ob = (catMap[b.category] || 0) - b.limit
-        return ob - oa
-      })
+  // 기간 종료 월의 유효 예산만 사용하고, 한 달(28~31일)이 아닌 기간은 30일 기준으로 환산한다
+  const effectiveBudgets = getEffectiveBudgets(budgets, end.slice(0, 7))
+  if (effectiveBudgets.length > 0) {
+    const periodLimit = (b: Budget) => (days >= 28 && days <= 31 ? b.limit : Math.round((b.limit / 30) * days))
+    const overage = (b: Budget) => (catMap[b.category] || 0) - periodLimit(b)
+    const over = effectiveBudgets
+      .filter((b) => periodLimit(b) > 0 && overage(b) > 0)
+      .sort((a, b) => overage(b) - overage(a))
 
     if (over.length > 0) {
       const b     = over[0]
       const spent = catMap[b.category] || 0
-      const pct   = Math.round((spent / b.limit) * 100)
+      const limit = periodLimit(b)
+      const pct   = Math.round((spent / limit) * 100)
+      const limitLabel = limit === b.limit ? '예산' : '기간 환산 예산'
       suggestions.push({
         id: 'over_budget',
         priority: 'high',
         icon: '🚨',
         title: `${b.category} 예산을 ${pct - 100}% 초과했어요`,
-        body: `예산 ${b.limit.toLocaleString('ko-KR')}원에 ${spent.toLocaleString('ko-KR')}원을 지출했어요. ${b.category} 지출을 조절해보세요.`,
-        savingHint: `${(spent - b.limit).toLocaleString('ko-KR')}원 초과`,
+        body: `${limitLabel} ${limit.toLocaleString('ko-KR')}원에 ${spent.toLocaleString('ko-KR')}원을 지출했어요. ${b.category} 지출을 조절해보세요.`,
+        savingHint: `${(spent - limit).toLocaleString('ko-KR')}원 초과`,
       })
     }
   }

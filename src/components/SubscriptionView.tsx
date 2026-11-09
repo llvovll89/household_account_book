@@ -5,6 +5,7 @@ import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
 import { fmt, fmtPrice } from '../lib/format'
 import { generateId } from '../lib/format'
 import EmptyState from './ui/EmptyState'
+import { getDaysUntilMonthDay } from '../lib/recurringSchedule'
 
 interface Props {
   subscriptions: Subscription[]
@@ -22,12 +23,7 @@ function getInitial(name: string) {
 }
 
 function daysUntilBilling(billingDay: number): number {
-  const today = new Date()
-  const day = today.getDate()
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  if (billingDay >= day) return billingDay - day
-  // 이번 달 이미 지남 → 다음 달
-  return daysInMonth - day + billingDay
+  return getDaysUntilMonthDay(billingDay, new Date())
 }
 
 const EMPTY: Omit<Subscription, 'id' | 'createdAt'> = {

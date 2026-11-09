@@ -85,3 +85,19 @@ describe('cardBilling', () => {
     expect(getBillingStage('2026-07', '2026-06')).toBe('past')
   })
 })
+
+describe('calculateCardDueAmount with payment methods', () => {
+  const methods: UserPaymentMethod[] = [{ id: 'credit_1', type: 'credit', label: '신용카드', billingDay: 15 }]
+
+  it('assigns a card expense to the same statement as the transaction list does', () => {
+    // 결제일 15일 카드의 11/20 사용분은 12월 청구 (목록·상세와 같은 기준)
+    const imported = tx({ type: 'expense', paymentMethod: 'card', amount: 10000, date: '2026-11-20' })
+    expect(calculateCardDueAmount([imported], '2026-11', 25, methods)).toBe(0)
+    expect(calculateCardDueAmount([imported], '2026-12', 25, methods)).toBe(10000)
+  })
+
+  it('keeps the previous behaviour when no payment methods are given', () => {
+    const imported = tx({ type: 'expense', paymentMethod: 'card', amount: 10000, date: '2026-11-20' })
+    expect(calculateCardDueAmount([imported], '2026-11', 25)).toBe(10000)
+  })
+})
