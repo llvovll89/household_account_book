@@ -24,8 +24,11 @@ const DATE_PATTERNS = /^(거래일자|거래일시|거래일|날짜|일자|trans
 const DEPOSIT_PATTERNS = /^(입금|입금액|입금금액|맡기신금액|입금\(원\)|입금액\(원\)|credit)/i
 const WITHDRAWAL_PATTERNS = /^(출금|출금액|출금금액|찾으신금액|출금\(원\)|출금액\(원\)|debit)/i
 const AMOUNT_PATTERNS = /^(거래금액|금액|amount)/i
-const TYPE_PATTERNS = /^(구분|거래구분|입출금구분|type)/i
-const DESC_PATTERNS = /^(적요|기재내용|거래내용|내용|메모|거래메모|적요내용|summary|description|remarks)/i
+// 유형·설명: 앱에서 내보낸 CSV를 다시 가져올 때의 헤더
+const TYPE_PATTERNS = /^(구분|거래구분|입출금구분|유형|type)/i
+const DESC_PATTERNS = /^(적요|기재내용|거래내용|내용|메모|거래메모|적요내용|설명|summary|description|remarks)/i
+// 구분 값이 이 단어로 시작할 때만 수입 ('구입', '입출금', '출금(입금취소)' 등은 지출)
+const INCOME_TYPE_VALUE = /^(입금|수입|credit|deposit)/i
 
 function normalize(s: string) {
   return s.trim().replace(/\s+/g, '').replace(/[()（）원]/g, '')
@@ -60,11 +63,12 @@ function isValidYMD(ymd: string): boolean {
 
 function parseDate(raw: string): string {
   const s = raw.trim().replace(/[./\s]/g, '-').replace(/[^0-9-]/g, '')
+  const ymd = /^(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/.exec(s)
   let result: string
   // YYYYMMDD
   if (/^\d{8}$/.test(s)) result = `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`
-  // YYYY-MM-DD (already)
-  else if (/^\d{4}-\d{2}-\d{2}/.test(s)) result = s.slice(0, 10)
+  // YYYY-M-D, YYYY-MM-DD
+  else if (ymd) result = `${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`
   // YY-MM-DD: 현재 연도 이하면 2000년대, 초과면 1900년대
   else if (/^\d{2}-\d{2}-\d{2}$/.test(s)) {
     const yy = parseInt(s.slice(0, 2), 10)
@@ -79,9 +83,19 @@ function parseDate(raw: string): string {
 // ────────────────────────────────────────────
 //  금액 정규화
 // ────────────────────────────────────────────
+/** 부호 있는 금액. 전각 문자·쉼표·통화 기호를 정리하고 (1,000)은 음수로 본다. 원 단위로 반올림한다. */
+function parseSignedAmount(raw: string): number {
+  const cleaned = raw
+    .normalize('NFKC')
+    .replace(/[\s,원￦₩]/g, '')
+    .replace(/^\((.+)\)$/, '-$1')
+  if (!cleaned) return 0
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? Math.round(n) : 0
+}
+
 function parseAmount(raw: string): number {
-  const n = parseInt(raw.replace(/[^0-9]/g, ''), 10)
-  return isNaN(n) ? 0 : n
+  return Math.abs(parseSignedAmount(raw))
 }
 
 // ────────────────────────────────────────────
@@ -189,11 +203,16 @@ function rowHasValue(row: string[]): boolean {
 async function parseSpreadsheet(file: File): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
   const XLSX = await import('xlsx')
   const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array' })
+  const workbook = XLSX.read(buffer, { type: 'array', cellNF: true })
 
   if (!workbook.SheetNames.length) return { headers: [], rows: [] }
 
   const sheet = workbook.Sheets[workbook.SheetNames[0]]
+  // 날짜 셀은 기본 표시 서식(m/d/yy 등)이 연도를 잃으므로 serial 값에서 직접 YYYY-MM-DD로 만든다
+  for (const [address, cell] of Object.entries(sheet)) {
+    if (address.startsWith('!') || cell.t !== 'n' || !cell.z || !XLSX.SSF.is_date(cell.z)) continue
+    cell.w = XLSX.SSF.format('yyyy-mm-dd', cell.v)
+  }
   const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
     header: 1,
     raw: false,
@@ -311,6 +330,10 @@ export function applyMapping(
   mapping: ColumnMapping
 ): ParsedRow[] {
   const results: ParsedRow[] = []
+  // 단일 금액 컬럼에 음수가 있으면 부호로 입출금을 구분하는 파일로 본다.
+  // 음수가 없으면(카드 명세서 등) 양수를 지출로 유지한다.
+  const signDistinguishesType = !!mapping.amount && !mapping.typeCol
+    && rows.some((row) => parseSignedAmount(row[mapping.amount] ?? '') < 0)
 
   for (const row of rows) {
     const dateRaw = row[mapping.date] ?? ''
@@ -324,20 +347,23 @@ export function applyMapping(
     let amount = 0
     let type: 'income' | 'expense' = 'expense'
 
-    if (mapping.deposit && mapping.withdrawal) {
-      // 입금/출금 컬럼 분리형
-      const dep = parseAmount(row[mapping.deposit] ?? '')
-      const wit = parseAmount(row[mapping.withdrawal] ?? '')
+    if (mapping.deposit || mapping.withdrawal) {
+      // 입금/출금 컬럼 분리형 (한쪽만 매핑해도 처리)
+      const dep = mapping.deposit ? parseAmount(row[mapping.deposit] ?? '') : 0
+      const wit = mapping.withdrawal ? parseAmount(row[mapping.withdrawal] ?? '') : 0
       if (dep > 0) { amount = dep; type = 'income' }
       else if (wit > 0) { amount = wit; type = 'expense' }
       else continue
     } else if (mapping.amount) {
-      // 단일 금액 + 구분 컬럼
-      amount = parseAmount(row[mapping.amount] ?? '')
+      // 단일 금액 + 구분 컬럼 또는 부호
+      const signed = parseSignedAmount(row[mapping.amount] ?? '')
+      amount = Math.abs(signed)
       if (amount === 0) continue
       if (mapping.typeCol) {
         const t = (row[mapping.typeCol] ?? '').trim()
-        type = /입금|credit|수입|입/i.test(t) ? 'income' : 'expense'
+        type = INCOME_TYPE_VALUE.test(t) ? 'income' : 'expense'
+      } else if (signDistinguishesType) {
+        type = signed > 0 ? 'income' : 'expense'
       }
     } else {
       continue

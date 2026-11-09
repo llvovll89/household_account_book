@@ -60,11 +60,13 @@ export async function deleteReceiptImage(uid: string, transactionId: string): Pr
  * 이미지 압축 함수 (Canvas 사용)
  */
 async function compressImage(file: File): Promise<File> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader()
+        reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했습니다.'))
         reader.readAsDataURL(file)
         reader.onload = (e) => {
             const img = new Image()
+            img.onerror = () => reject(new Error('유효하지 않은 이미지 파일입니다.'))
             img.src = e.target?.result as string
             img.onload = () => {
                 const canvas = document.createElement('canvas')
@@ -92,8 +94,12 @@ async function compressImage(file: File): Promise<File> {
 
                 canvas.toBlob(
                     (blob) => {
-                        const compressedFile = new File([blob!], file.name, { type: 'image/jpeg' })
-                        resolve(compressedFile)
+                        // 변환 실패 시 null이 오며, 그대로 쓰면 "null" 문자열 파일이 업로드된다
+                        if (!blob) {
+                            reject(new Error('이미지 압축에 실패했습니다.'))
+                            return
+                        }
+                        resolve(new File([blob], file.name, { type: 'image/jpeg' }))
                     },
                     'image/jpeg',
                     0.8
@@ -111,6 +117,7 @@ async function compressImage(file: File): Promise<File> {
 async function validateReceiptImage(file: File): Promise<void> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()
+        reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했습니다.'))
         reader.onload = (e) => {
             const img = new Image()
             img.src = e.target?.result as string

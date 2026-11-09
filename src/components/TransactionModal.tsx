@@ -10,6 +10,7 @@ import { auth } from '../firebase/firebase'
 import { formatBillingRange, getBillingStage, getCardBillingRange, getStatementYMForCardExpense, isCreditPaymentMethod } from '../lib/cardBilling'
 import { loadSettings } from '../lib/storage'
 import { fmt, generateId, toLocalDateStr } from '../lib/format'
+import { removeHashtag } from '../lib/tags'
 import { applyAutoCategory, getCorrectionKeyword, mergeCategoryCorrections } from '../lib/autoCategoryRules'
 import CategoryRuleOffer from './CategoryRuleOffer'
 import { useUsageFlow } from '../hooks/useUsageFlow'
@@ -389,11 +390,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   }
 
   function removeTag(tag: string) {
-    const newDesc = description
-      .replace(new RegExp(`#${tag}(?=\\s|$)`, 'g'), '')
-      .replace(/\s+/g, ' ')
-      .trim()
-    setDescription(newDesc)
+    setDescription(removeHashtag(description, tag))
   }
 
   function handleSaveAsTemplate() {
