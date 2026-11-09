@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 영수증 이미지: 본인만 읽기·삭제, 업로드는 5MB 이하 이미지로 제한 (receiptStorage.ts와 동일 기준)
+    match /users/{uid}/receipts/{transactionId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
