@@ -4,6 +4,7 @@ import type { Transaction } from '../types'
 import { exportTransactionsCSV, exportTransactionsXLSX } from '../lib/exportCsv'
 import { archiveTransactionsByIds, getLocalStorageUsageBytes } from '../lib/storage'
 import { showToast } from '../lib/toast'
+import { shiftYM, toYearMonth } from '../lib/format'
 import FancyDatePicker from './FancyDatePicker'
 import { useModalClose } from '../hooks/useModalClose'
 
@@ -19,12 +20,6 @@ type Range = 'thisMonth' | 'lastMonth' | 'thisYear' | 'all' | 'custom'
 const LOCAL_STORAGE_MAX_BYTES = 5 * 1024 * 1024 // 5MB
 const LOCAL_STORAGE_WARN_BYTES = 4 * 1024 * 1024 // 4MB
 
-function getYearMonth(offset = 0) {
-  const d = new Date()
-  d.setDate(1)
-  d.setMonth(d.getMonth() + offset)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 function fmtBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`
@@ -56,7 +51,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
       case 'thisMonth':
         return transactions.filter((t) => t.date.startsWith(yearMonth))
       case 'lastMonth': {
-        const last = getYearMonth(-1)
+        const last = shiftYM(toYearMonth(), -1)
         return transactions.filter((t) => t.date.startsWith(last))
       }
       case 'thisYear':
@@ -72,7 +67,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
     const now = new Date()
     switch (range) {
       case 'thisMonth': return `잔고플랜_${yearMonth}.${ext}`
-      case 'lastMonth': return `잔고플랜_${getYearMonth(-1)}.${ext}`
+      case 'lastMonth': return `잔고플랜_${shiftYM(toYearMonth(), -1)}.${ext}`
       case 'thisYear': return `잔고플랜_${now.getFullYear()}년.${ext}`
       case 'custom': return `잔고플랜_${customFrom}_${customTo}.${ext}`
       default: return `잔고플랜_전체.${ext}`

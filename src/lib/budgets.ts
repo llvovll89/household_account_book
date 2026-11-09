@@ -1,4 +1,5 @@
 import type { Budget, Transaction } from '../types'
+import { shiftYM } from './format'
 
 /** 해당 월의 설정을 우선 적용하고 나머지 카테고리는 기본 예산을 사용한다. */
 export function getEffectiveBudgets(budgets: Budget[], yearMonth: string): Budget[] {
@@ -9,8 +10,7 @@ export function getEffectiveBudgets(budgets: Budget[], yearMonth: string): Budge
 
 /** Carry only the previous month's unused base allowance, when that month enabled it. */
 export function getBudgetCarryoverAmounts(budgets: Budget[], transactions: Transaction[], yearMonth: string): Record<string, number> {
-  const [year, month] = yearMonth.split('-').map(Number)
-  const previousMonth = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`
+  const previousMonth = shiftYM(yearMonth, -1)
   const amounts: Record<string, number> = {}
   const previousBudgets = getEffectiveBudgets(budgets, previousMonth)
   for (const budget of getEffectiveBudgets(budgets, yearMonth)) {

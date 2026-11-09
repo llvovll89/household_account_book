@@ -47,6 +47,17 @@ export function toLocalDateStr(d: Date = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 로컬 날짜의 YYYY-MM */
+export function toYearMonth(d: Date = new Date()): string {
+  return toLocalDateStr(d).slice(0, 7)
+}
+
+/** YYYY-MM에 개월 수를 더한다 (연도 넘김 포함, 음수면 이전 달) */
+export function shiftYM(ym: string, monthOffset: number): string {
+  const [year, month] = ym.split('-').map(Number)
+  return toYearMonth(new Date(year, month - 1 + monthOffset, 1))
+}
+
 /** 고유 ID 생성 */
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)

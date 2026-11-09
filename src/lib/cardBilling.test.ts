@@ -6,8 +6,8 @@ import {
   getStatementYMForCardExpense,
   resolveCardBillingDay,
   resolvePaymentMethod,
-  shiftYM,
 } from './cardBilling'
+import { shiftYM } from './format'
 import type { Transaction, UserPaymentMethod } from '../types'
 
 function tx(overrides: Partial<Transaction>): Transaction {

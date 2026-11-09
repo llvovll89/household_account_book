@@ -41,7 +41,7 @@ src/
 ├── lib/                     # UI 없는 로직 (테스트는 같은 이름 .test.ts)
 │   ├── storage.ts           # localStorage ↔ Firestore 추상화, 동기화·백업·복원
 │   ├── backup.ts            # 백업 파일 검증
-│   ├── format.ts            # fmt, fmtShort, fmtPrice, parseYmdLocal, toLocalDateStr, generateId
+│   ├── format.ts            # fmt, fmtShort, fmtPrice, generateId + 날짜: parseYmdLocal, toLocalDateStr, toYearMonth, shiftYM
 │   ├── recurringSchedule.ts # 정기 내역 도래 판정·회차 계산, 월 반복일까지 남은 일수
 │   ├── cardBilling.ts       # 카드 청구월·결제일 계산
 │   ├── budgets.ts           # 월별 유효 예산, 이월
@@ -112,7 +112,7 @@ CATEGORY_EMOJI      // Record<string, string>
 ## 날짜 규칙
 
 - 날짜는 `YYYY-MM-DD` 문자열. `new Date('YYYY-MM-DD')`는 UTC로 파싱되므로 금지 → `parseYmdLocal` 사용
-- 오늘 날짜 문자열은 `toLocalDateStr()`. 일수 차이는 자정 기준 날짜끼리 계산
+- 오늘 날짜 문자열은 `toLocalDateStr()`, 연월은 `toYearMonth()`, 이전·다음 달은 `shiftYM(ym, n)` (직접 `m === 1 ? ...` 계산 금지). 일수 차이는 자정 기준 날짜끼리 계산
 - 매월 반복일(월급일·결제일·정기 내역)은 말일 보정 필요 → `recurringSchedule.ts`의 헬퍼 사용
 
 ## UI 컨벤션

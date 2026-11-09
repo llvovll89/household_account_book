@@ -13,9 +13,9 @@ import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
-import { fmt, fmtPrice, fmtShort, parseYmdLocal, toLocalDateStr } from '../lib/format'
+import { fmt, fmtPrice, fmtShort, parseYmdLocal, shiftYM, toLocalDateStr } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod, shiftYM } from '../lib/cardBilling'
+import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod } from '../lib/cardBilling'
 
 export interface DashboardProps {
   transactions: Transaction[]
@@ -557,8 +557,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
 
   // 전월 카테고리별 지출 (예산 목록 비교용)
   const prevMonthCategorySpend = useMemo(() => {
-    const [y, m] = yearMonth.split('-').map(Number)
-    const prevYM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+    const prevYM = shiftYM(yearMonth, -1)
     const map: Record<string, number> = {}
     transactions.filter(t => t.type === 'expense' && t.date.startsWith(prevYM)).forEach(t => {
       map[t.category] = (map[t.category] || 0) + t.amount
@@ -1784,8 +1783,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             {effectiveBudgets.length > 0 && (
               <button
                 onClick={() => {
-                  const [y, m] = yearMonth.split('-').map(Number)
-                  const nextYM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+                  const nextYM = shiftYM(yearMonth, 1)
                   const filtered = budgets.filter((b) => b.yearMonth !== nextYM)
                   const nextMonthBudgets = effectiveBudgets.map((b) => ({ ...b, yearMonth: nextYM }))
                   onBudgetsChange([...filtered, ...nextMonthBudgets])
