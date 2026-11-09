@@ -17,6 +17,7 @@ import {
   clearLocalData,
   getLocalStorageUsageBytes,
   hasLocalMigratableData,
+  hasPendingSync,
   loadSettings,
   loadTransactions,
   loadRecurring,
@@ -91,7 +92,7 @@ describe('storage util', () => {
     vi.mocked(getDoc).mockRejectedValue(new Error('offline'))
     await expect(save()).rejects.toThrow('offline')
     expect(JSON.parse(localStorage.getItem(key)!)).toEqual(value)
-    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(hasPendingSync()).toBe(true)
     expect(localStorage.getItem('hb_firebase_cache')).toBe('true')
     expect(await load()).toEqual(value)
   })
@@ -269,7 +270,7 @@ describe('storage util', () => {
     const saved = JSON.parse(localStorage.getItem('hb_transactions') ?? '[]')
     expect(saved).toHaveLength(1)
     expect(saved[0].id).toBe('tx-new')
-    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(hasPendingSync()).toBe(true)
   })
 
   it('saveTransactions는 충돌 오류 시 pending_sync를 남기고 로컬 데이터는 유지한다', async () => {
@@ -304,7 +305,7 @@ describe('storage util', () => {
     const cached = JSON.parse(localStorage.getItem('hb_transactions') ?? '[]')
     expect(cached).toHaveLength(1)
     expect(cached[0].id).toBe('tx-conflict')
-    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(hasPendingSync()).toBe(true)
     expect(localStorage.getItem('hb_firebase_cache')).toBe('true')
   })
 
@@ -358,7 +359,7 @@ describe('storage util', () => {
 
     await expect(mergeLocalIntoFirebase()).rejects.toBe(conflict)
     expect(localStorage.getItem('hb_transactions')).not.toBeNull()
-    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(hasPendingSync()).toBe(true)
   })
 
   it('mergeLocalIntoFirebase는 원격 저장 실패 시 로컬을 병합된(원격+로컬) 데이터로 갱신한다', async () => {
@@ -396,7 +397,7 @@ describe('storage util', () => {
     const saved = JSON.parse(localStorage.getItem('hb_transactions') ?? '[]')
     expect(saved).toHaveLength(2)
     expect(saved.map((t: Transaction) => t.id).sort()).toEqual(['tx-local-only', 'tx-remote-only'])
-    expect(localStorage.getItem('hb_pending_sync')).toBe('true')
+    expect(hasPendingSync()).toBe(true)
   })
 
   it('resetAllData(로컬 모드)는 모든 키를 지우고 백업 키를 남기지 않는다', async () => {
