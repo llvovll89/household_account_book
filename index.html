@@ -13,8 +13,10 @@
     <!-- SEO_HEAD -->
     <link rel="stylesheet" href="/seo.css">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" />
-    <!-- 화면에 쓰인 글자 범위의 subset만 내려받는 가변 폰트 (정적 5종 전체 약 3.8MB 대신) -->
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+    <!-- 화면에 쓰인 글자 범위의 subset만 내려받는 가변 폰트 (정적 5종 전체 약 3.8MB 대신).
+         외부 CSS가 첫 렌더링을 막지 않도록 print로 받은 뒤 적용한다 (font-display: swap) -->
+    <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" /></noscript>
   </head>
   <body>
     <div id="root" data-nosnippet></div>
