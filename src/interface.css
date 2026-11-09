@@ -141,7 +141,7 @@ select option { background: var(--surface); color: var(--text); }
 .ledger-navigation-brand { color: var(--text); font-weight: 700; }
 .ledger-navigation-brand svg { color: var(--accent); }
 .ledger-navigation-caption, .ledger-navigation-footer { color: var(--muted); }
-.dashboard-grid > [class*="bg-[#1C1C1E]"] { border: 1px solid var(--line); box-shadow: none; }
+.dashboard-grid > :is([class*="bg-[#1C1C1E]"], .bg-surface) { border: 1px solid var(--line); box-shadow: none; }
 .dashboard-summary { background: var(--surface); border: 1px solid var(--line); }
 .summary-heading > p { font-size: 13px; font-weight: 500; }
 .summary-heading button { width: 36px; height: 36px; background: transparent; border: 1px solid var(--line); border-radius: 10px; }
@@ -392,4 +392,20 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .transaction-dialog .modal-panel {
     padding-top: max(20px, env(safe-area-inset-top, 0px));
   }
+}
+/* Tone tokens. Hue tones (blue…slate) are for tints, borders and rings and keep their bright hex in
+   both themes, so light tints stay clean. Text and neutral tones swap to readable values in light.
+   Dark values equal the hex the components used before, so dark mode renders unchanged.
+   Exposed to Tailwind as bg-tone-*, text-warning … via @theme in index.css. */
+:root {
+  --tone-blue: #3D8EF8; --tone-red: #F25260; --tone-green: #2ACF6A; --tone-amber: #F5BE3A;
+  --tone-teal: #6AD3C0; --tone-slate: #4E5968;
+  --warning: #F5BE3A; --tone-gray: #8B95A1; --tone-hover: #3A3A3C; --tone-chip: #2C2C2E;
+  --tone-faint: #2C2C2E; --fg-strong: #F5F7FA; --tone-red-soft: #FF8D98; --tone-red-pale: #FF9AA4;
+  --tone-green-pale: #D8FFE8; --tone-teal-pale: #D7FFF7; --tone-blue-pale: #DCEBFF;
+}
+:root[data-theme="light"] {
+  --warning: #836015; --tone-gray: #596674; --tone-hover: #dde3e9; --tone-chip: var(--raised);
+  --tone-faint: #c4ccd5; --fg-strong: var(--text); --tone-red-soft: var(--expense); --tone-red-pale: var(--expense);
+  --tone-green-pale: var(--income); --tone-teal-pale: #24665c; --tone-blue-pale: var(--text);
 }
