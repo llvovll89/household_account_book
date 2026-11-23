@@ -6,6 +6,8 @@ interface LedgerTabItem {
   id: Tab
   label: string
   Icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+  /** 이 메뉴가 묶어서 가리키는 탭들 (더보기) */
+  matches?: Tab[]
 }
 
 interface Props {
@@ -27,12 +29,12 @@ export default function BottomNavigation({
         <div className="ledger-navigation-brand"><BrandMark /><span className="brand-wordmark">잔고플랜</span></div>
         <p className="ledger-navigation-caption">매일의 기록, 가벼운 돈 관리</p>
         <div className="ledger-navigation-items pb-safe">
-          {ledgerTabs.map(({ id, label, Icon }) => {
-            const isActive = activeTab === id
+          {ledgerTabs.map(({ id, label, Icon, matches }) => {
+            const isActive = activeTab === id || !!matches?.includes(activeTab)
             return (
               <button
                 type="button"
-                key={id}
+                key={label}
                 onClick={() => onLedgerTabChange(id)}
                 onMouseEnter={() => onLedgerTabHover?.(id)}
                 onFocus={() => onLedgerTabHover?.(id)}
