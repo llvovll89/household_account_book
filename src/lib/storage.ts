@@ -302,8 +302,9 @@ function defaultPaymentMethods(billingDay: number): UserPaymentMethod[] {
 // migrateSettings가 채운 기본 3종 그대로인지 (결제일은 설정값을 따라가므로 비교하지 않음)
 function isUntouchedDefaultPaymentMethods(methods: UserPaymentMethod[]): boolean {
   const defaults = defaultPaymentMethods(0)
+  // 잔액을 입력했다면 사용자가 손댄 것이다
   return methods.length === defaults.length && methods.every((m, i) => (
-    m.id === defaults[i].id && m.type === defaults[i].type && m.label === defaults[i].label
+    m.id === defaults[i].id && m.type === defaults[i].type && m.label === defaults[i].label && m.openingBalance === undefined
   ))
 }
 

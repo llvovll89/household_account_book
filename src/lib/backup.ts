@@ -9,6 +9,7 @@ const text: Reader = (v, p) => typeof v === 'string' ? v : invalid(p)
 const nonempty: Reader = (v, p) => typeof v === 'string' && v.trim() ? v : invalid(p)
 const bool: Reader = (v, p) => typeof v === 'boolean' ? v : invalid(p)
 const money: Reader = (v, p) => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 ? v : invalid(p)
+const integer: Reader = (v, p) => typeof v === 'number' && Number.isSafeInteger(v) ? v : invalid(p)
 const decimal: Reader = (v, p) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= Number.MAX_SAFE_INTEGER ? v : invalid(p)
 const range = (min: number, max: number): Reader => (v, p) => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : invalid(p)
 const choice = (...values: unknown[]): Reader => (v, p) => values.includes(v) ? v : invalid(p)
@@ -57,7 +58,7 @@ const subscription = object({ id: nonempty, name: nonempty, amount: decimal, cur
 const goal = object({ id: nonempty, name: nonempty, targetAmount: money, currentAmount: money, emoji: text, color: text, deadline: optional(emptyOr(date)), memo: text, createdAt: money, linkedCategory: optional(text), linkedTags: optional(list(text)) })
 const settings = object({
   payday: nullable((v, p) => v === 'last' ? v : day(v, p)), cardBillingDay: nullable(day),
-  userPaymentMethods: list(object({ id: nonempty, type: choice('cash', 'check', 'credit', 'transfer'), label: nonempty, billingDay: optional(day) }), byId),
+  userPaymentMethods: list(object({ id: nonempty, type: choice('cash', 'check', 'credit', 'transfer'), label: nonempty, billingDay: optional(day), openingBalance: optional(integer), balanceAsOf: optional(date) }), byId),
   customExpenseCategories: list(nonempty), customIncomeCategories: list(nonempty),
   transactionTemplates: list(object({ ...baseEntry, label: nonempty }), byId),
   swipeSensitivity: optional(choice('low', 'medium', 'high')),
