@@ -31,11 +31,12 @@ src/
 ├── App.tsx                  # 앱 전체 상태 + 탭 라우팅 + 모달 관리 (가장 큰 파일)
 ├── main.tsx
 ├── types/index.ts           # 도메인 인터페이스 + 카테고리 상수 + 색상/이모지 맵
-├── types/navigation.ts      # Tab: home | transactions | analytics | memos | subscriptions | goals
-├── firebase/firebase.ts     # Firebase 초기화 (Auth는 initializeAuth, Analytics는 load 이후 지연)
+├── types/navigation.ts      # Tab: home | transactions | analytics | memos | subscriptions | goals (하단 메뉴는 홈·내역·분석·더보기, 더보기 = 목표·구독·메모)
+├── firebase/firebase.ts     # Firebase 초기화 (Auth는 initializeAuth, Analytics는 load 이후 지연, Firestore·Storage는 getDb()/getStorageInstance()로 지연)
 ├── hooks/
 │   ├── useAppHandlers.ts    # 거래·예산·정기내역·태그·설정 CRUD 핸들러 (App에서 사용)
 │   ├── useAuthSync.ts       # 로그인 상태 + 로컬→Firebase 병합 + 하이드레이션
+│   ├── useSyncPersistence.ts # persist(원격 저장)·실패 재시도·저장 충돌·온라인 상태
 │   ├── useModalClose.ts     # 모달 포커스 트랩·Escape·스크롤 잠금 공통 훅
 │   ├── usePWAInstall.ts / useUsageFlow.ts / useCountUp.ts
 ├── lib/                     # UI 없는 로직 (테스트는 같은 이름 .test.ts)
@@ -50,6 +51,8 @@ src/
 │   ├── importDuplicates.ts / importMappings.ts / autoCategoryRules.ts
 │   ├── exportCsv.ts         # CSV/XLSX 내보내기 (수식 주입 방지)
 │   ├── tags.ts              # 태그 이름 변경·삭제 시 설명의 #태그 동기화
+│   ├── accountBalances.ts / loans.ts / subscriptions.ts / goals.ts  # 계좌 잔액, 대출 원금, 구독 주기·환산, 목표 집계
+│   ├── monthEndForecast.ts / notifications.ts  # 월말 예상 지출, 앱 내 알림 목록
 │   ├── weeklyReview.ts / expenseBreakdown.ts / useMonthlyData.ts / chartTheme.ts
 │   └── receiptStorage.ts / toast.ts / usageFlow.ts / pwaShortcuts.ts / categoryMigration.ts
 ├── components/
@@ -147,3 +150,5 @@ CATEGORY_EMOJI      // Record<string, string>
 - Tailwind config 파일 생성 금지 (v4는 설정 파일 불필요)
 - 태그는 `tags` 필드로 읽는다. 저장 시 설명의 `#태그`에서 만들어지므로, 태그를 바꿀 때는 `lib/tags.ts` 헬퍼로 설명과 함께 바꿀 것
 - `getAuth()` 대신 `firebase/firebase.ts`의 `auth` 사용 (시작 시 로그인 iframe 로드 방지)
+- `firebase/firestore`·`firebase/storage`를 정적으로 import하지 말 것 → `getDb()`·`getStorageInstance()`와 동적 import (로그아웃 사용자 시작 번들에서 제외, #50)
+- 화면 안에서 조건부로 띄우는 시트·모달은 `components/ui/InlineDialog`로 감싼다 (포커스·Escape·dialog 역할)
