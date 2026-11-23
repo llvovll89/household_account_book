@@ -344,7 +344,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
         aria-modal="true"
         aria-labelledby="import-modal-title"
         onClick={(e) => e.target === e.currentTarget && handleClose()}>
-        <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+        <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] max-h-[92vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
 
           {/* 핸들 */}
           <div className="flex justify-center pt-3 pb-1 shrink-0">
@@ -355,10 +355,10 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
           <div className="flex items-start justify-between px-6 pt-2 pb-4 shrink-0">
             <div>
               <h2 id="import-modal-title" className="text-[18px] font-bold text-white">은행 내역 가져오기</h2>
-              <p className="text-xs text-[#4E5968] mt-0.5">CSV · PDF · 농협 · 대구 · 국민 · 신한 · 우리 · 하나</p>
+              <p className="text-xs text-muted mt-0.5">CSV · PDF · 농협 · 대구 · 국민 · 신한 · 우리 · 하나</p>
             </div>
-            <button aria-label="가져오기 모달 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center mt-0.5">
-              <X size={16} className="text-[#8B95A1]" />
+            <button aria-label="가져오기 모달 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-raised flex items-center justify-center mt-0.5">
+              <X size={16} className="text-muted" />
             </button>
           </div>
 
@@ -369,9 +369,9 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
               return (
                 <div key={s} className="flex items-center gap-1 flex-1">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    step === s ? 'bg-[#3D8EF8] text-white' : done ? 'bg-[#2ACF6A] text-white' : 'bg-[#2C2C2E] text-[#4E5968]'
+                    step === s ? 'bg-[#3D8EF8] text-white' : done ? 'bg-tone-green text-white' : 'bg-raised text-muted'
                   }`}>{done ? '✓' : i + 1}</div>
-                  <span className={`text-[11px] font-semibold ${step === s ? 'text-[#3D8EF8]' : 'text-[#4E5968]'}`}>
+                  <span className={`text-[11px] font-semibold ${step === s ? 'text-accent' : 'text-muted'}`}>
                     {s === 'upload' ? '파일' : s === 'mapping' ? '컬럼' : '확인'}
                   </span>
                   {i < 2 && <div className="flex-1 h-px bg-white/6 ml-1" />}
@@ -389,39 +389,39 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
                 onClick={() => fileInputRef.current?.click()}
                 className={`rounded-2xl p-10 flex flex-col items-center gap-5 cursor-pointer transition-all border ${
-                  isDragging ? 'bg-[#3D8EF8]/10 border-[#3D8EF8]/40' : 'bg-[#2C2C2E] border-white/5 hover:border-white/10'
+                  isDragging ? 'bg-tone-blue/10 border-tone-blue/40' : 'bg-raised border-white/5 hover:border-white/10'
                 }`}
               >
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDragging ? 'bg-[#3D8EF8]/20' : 'bg-[#3A3A3C]'}`}>
-                  <Upload size={28} className={isDragging ? 'text-[#3D8EF8]' : 'text-[#4E5968]'} />
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isDragging ? 'bg-tone-blue/20' : 'bg-raised'}`}>
+                  <Upload size={28} className={isDragging ? 'text-accent' : 'text-muted'} />
                 </div>
                 <div className="text-center">
                   <p className="font-bold text-white text-[15px]">파일을 여기에 올려주세요</p>
-                  <p className="text-sm text-[#4E5968] mt-1">CSV, PDF 형식 지원</p>
+                  <p className="text-sm text-muted mt-1">CSV, PDF 형식 지원</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {['농협', '대구은행', '국민', '신한', '우리', '하나', 'IBK'].map((b) => (
-                    <span key={b} className="px-2.5 py-1 bg-[#3A3A3C] rounded-full text-xs font-medium text-[#8B95A1]">{b}</span>
+                    <span key={b} className="px-2.5 py-1 bg-raised rounded-full text-xs font-medium text-muted">{b}</span>
                   ))}
                 </div>
                 <input ref={fileInputRef} type="file" accept=".csv,.pdf,.xls,.xlsx,.txt" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
               </div>
               {error && (
-                <div role="alert" className="mt-3 flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
-                  <AlertCircle size={13} className="text-[#F25260] shrink-0" />
-                  <p className="text-sm text-[#F25260] font-medium">{error}</p>
+                <div role="alert" className="mt-3 flex items-center gap-2 p-3.5 bg-tone-red/10 rounded-2xl border border-tone-red/15">
+                  <AlertCircle size={13} className="text-expense shrink-0" />
+                  <p className="text-sm text-expense font-medium">{error}</p>
                 </div>
               )}
-              {loading && <div role="status" aria-live="polite" className="mt-6 text-center text-sm text-[#4E5968] font-medium animate-pulse">파일 분석 중...</div>}
+              {loading && <div role="status" aria-live="polite" className="mt-6 text-center text-sm text-muted font-medium animate-pulse">파일 분석 중...</div>}
             </div>
           )}
 
           {/* ── STEP 2: 컬럼 매핑 ── */}
           {step === 'mapping' && (
             <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
-              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                <p className="text-sm text-[#8B95A1]">
+              <div className="bg-raised rounded-2xl px-4 py-3">
+                <p className="text-sm text-muted">
                   <span className="font-bold text-white">{csvRows.length}개</span> 행을 읽었습니다. 컬럼을 지정해주세요.
                 </p>
               </div>
@@ -438,9 +438,9 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 }}>기억한 설정 지우기</button>}
               </div>
               {mappingIssueCount > 0 && (
-                <div className="flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
-                  <AlertCircle size={13} className="text-[#F25260] shrink-0" />
-                  <p className="text-xs text-[#F25260] font-medium">
+                <div className="flex items-center gap-2 p-3.5 bg-tone-red/10 rounded-2xl border border-tone-red/15">
+                  <AlertCircle size={13} className="text-expense shrink-0" />
+                  <p className="text-xs text-expense font-medium">
                     날짜 또는 금액이 비어 보이는 행이 {mappingIssueCount}개 있어요. 빨간 행을 눌러 원본 값을 확인해보세요.
                   </p>
                 </div>
@@ -466,12 +466,12 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 }}
               >
                 <table className="w-max text-xs table-auto">
-                  <thead className="bg-[#2C2C2E] sticky top-0 z-10">
+                  <thead className="bg-raised sticky top-0 z-10">
                     <tr>
                       {csvHeaders.map((h) => (
                         <th
                           key={h}
-                          className={`py-2 font-semibold text-[#4E5968] ${
+                          className={`py-2 font-semibold text-muted ${
                             isNarrowColumn(h)
                               ? 'px-2 w-8 min-w-8 max-w-8 text-center whitespace-nowrap'
                               : isWideTextColumn(h)
@@ -496,7 +496,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                         onClick={() => setMappingDetailIdx(i)}
                         className={`cursor-pointer transition-colors ${
                           hasIssue
-                            ? 'bg-[#F25260]/6 hover:bg-[#F25260]/10 active:bg-[#F25260]/15'
+                            ? 'bg-tone-red/6 hover:bg-tone-red/10 active:bg-tone-red/15'
                             : 'hover:bg-white/4 active:bg-white/7'
                         }`}
                       >
@@ -504,7 +504,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                           <td
                             key={h}
                             title={row[h]}
-                            className={`py-2 text-[#8B95A1] ${
+                            className={`py-2 text-muted ${
                               isNarrowColumn(h)
                                 ? 'px-2 w-8 min-w-8 max-w-8 text-center whitespace-nowrap'
                                 : isWideTextColumn(h)
@@ -523,12 +523,12 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                   </tbody>
                 </table>
                 {mappingVisibleCount < csvRows.length && (
-                  <div className="py-2 text-center text-[11px] text-[#4E5968] space-y-1">
+                  <div className="py-2 text-center text-[11px] text-muted space-y-1">
                     <p>{mappingVisibleCount} / {csvRows.length}행</p>
                     <button
                       type="button"
                       onClick={() => setMappingVisibleCount((n) => Math.min(n + MAPPING_PAGE_SIZE, csvRows.length))}
-                      className="text-[#3D8EF8] hover:text-[#5AA0FF] font-semibold"
+                      className="text-accent hover:text-tone-blue font-semibold"
                     >
                       더 보기
                     </button>
@@ -536,9 +536,9 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 )}
               </div>
               {error && (
-                <div className="flex items-center gap-2 p-3.5 bg-[#F25260]/10 rounded-2xl border border-[#F25260]/15">
-                  <AlertCircle size={13} className="text-[#F25260] shrink-0" />
-                  <p className="text-sm text-[#F25260] font-medium">{error}</p>
+                <div className="flex items-center gap-2 p-3.5 bg-tone-red/10 rounded-2xl border border-tone-red/15">
+                  <AlertCircle size={13} className="text-expense shrink-0" />
+                  <p className="text-sm text-expense font-medium">{error}</p>
                 </div>
               )}
               <button onClick={proceedToPreview} className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
@@ -553,28 +553,28 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
               {/* 요약 카드 */}
               <div className="px-6 pb-3 shrink-0 space-y-3">
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#3D8EF8]/10 rounded-2xl p-3 text-center border border-[#3D8EF8]/15">
-                    <p className="text-xl font-bold text-[#3D8EF8] num">{importCount}</p>
-                    <p className="text-[10px] text-[#3D8EF8]/70 font-semibold mt-0.5">가져올 내역</p>
+                  <div className="bg-tone-blue/10 rounded-2xl p-3 text-center border border-tone-blue/15">
+                    <p className="text-xl font-bold text-accent num">{importCount}</p>
+                    <p className="text-[10px] text-tone-blue/70 font-semibold mt-0.5">가져올 내역</p>
                   </div>
-                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-[#F5BE3A]/10 border-[#F5BE3A]/15' : 'bg-[#2C2C2E] border-white/4'}`}>
-                    <p className={`text-xl font-bold num ${dupCount > 0 ? 'text-[#F5BE3A]' : 'text-[#4E5968]'}`}>{dupCount}</p>
-                    <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-[#F5BE3A]/70' : 'text-[#4E5968]'}`}>기존 기록과 일치</p>
+                  <div className={`rounded-2xl p-3 text-center border ${dupCount > 0 ? 'bg-tone-amber/10 border-tone-amber/15' : 'bg-raised border-white/4'}`}>
+                    <p className={`text-xl font-bold num ${dupCount > 0 ? 'text-warning' : 'text-muted'}`}>{dupCount}</p>
+                    <p className={`text-[10px] font-semibold mt-0.5 ${dupCount > 0 ? 'text-warning/70' : 'text-muted'}`}>기존 기록과 일치</p>
                   </div>
-                  <div className={`rounded-2xl p-3 text-center border ${reviewCount > 0 ? 'bg-[#F25260]/10 border-[#F25260]/15' : 'bg-[#2C2C2E] border-white/4'}`}>
-                    <p className={`text-xl font-bold num ${reviewCount > 0 ? 'text-[#F25260]' : 'text-[#8B95A1]'}`}>{reviewCount}</p>
-                    <p className={`text-[10px] font-semibold mt-0.5 ${reviewCount > 0 ? 'text-[#F25260]/70' : 'text-[#4E5968]'}`}>검토 필요</p>
+                  <div className={`rounded-2xl p-3 text-center border ${reviewCount > 0 ? 'bg-tone-red/10 border-tone-red/15' : 'bg-raised border-white/4'}`}>
+                    <p className={`text-xl font-bold num ${reviewCount > 0 ? 'text-expense' : 'text-muted'}`}>{reviewCount}</p>
+                    <p className={`text-[10px] font-semibold mt-0.5 ${reviewCount > 0 ? 'text-tone-red/70' : 'text-muted'}`}>검토 필요</p>
                   </div>
                 </div>
                 {isPDF && (
-                  <div className="flex items-center gap-2 p-3.5 bg-[#3D8EF8]/10 rounded-2xl border border-[#3D8EF8]/15">
-                    <AlertCircle size={13} className="text-[#3D8EF8] shrink-0" />
-                    <p className="text-xs text-[#3D8EF8] font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
+                  <div className="flex items-center gap-2 p-3.5 bg-tone-blue/10 rounded-2xl border border-tone-blue/15">
+                    <AlertCircle size={13} className="text-accent shrink-0" />
+                    <p className="text-xs text-accent font-medium">PDF 파싱 정확도가 낮을 수 있어요. 가져온 후 확인해주세요.</p>
                   </div>
                 )}
                 {dupCount > 0 && <p className="home-description">날짜·금액·수입/지출·적요가 같은 기존 기록을 건수만큼 제외했어요. 다른 결제라면 행에서 포함을 선택할 수 있어요.</p>}
                 {reviewCount > 0 && (
-                  <p className="mx-1 rounded-xl border border-[#F25260]/20 bg-[#F25260]/8 px-3 py-2 text-[11px] leading-relaxed text-[#F25260]">
+                  <p className="mx-1 rounded-xl border border-tone-red/20 bg-tone-red/8 px-3 py-2 text-[11px] leading-relaxed text-expense">
                     검토 필요 {reviewCount}건은 기본으로 제외했어요. 분류를 확인한 뒤 행에서 포함하거나 아래 빠른 처리로 선택해주세요.
                   </p>
                 )}
@@ -584,8 +584,8 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                     onClick={() => setPreviewFilter('all')}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
                       previewFilter === 'all'
-                        ? 'bg-[#3D8EF8]/20 text-[#3D8EF8] border border-[#3D8EF8]/30'
-                        : 'bg-[#2C2C2E] text-[#8B95A1] border border-white/6'
+                        ? 'bg-tone-blue/20 text-accent border border-tone-blue/30'
+                        : 'bg-raised text-muted border border-white/6'
                     }`}
                   >
                     전체 {previewRows.length}
@@ -595,28 +595,28 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                     onClick={() => setPreviewFilter('review')}
                     className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
                       previewFilter === 'review'
-                        ? 'bg-[#F25260]/20 text-[#F25260] border border-[#F25260]/30'
-                        : 'bg-[#2C2C2E] text-[#8B95A1] border border-white/6'
+                        ? 'bg-tone-red/20 text-expense border border-tone-red/30'
+                        : 'bg-raised text-muted border border-white/6'
                     }`}
                   >
                     검토 필요 {reviewCount}
                   </button>
                 </div>
                 {reviewCount > 0 && (
-                  <div className="mx-1 rounded-2xl border border-[#F25260]/15 bg-[#F25260]/8 px-3 py-3 space-y-2">
-                    <p className="text-[11px] font-semibold text-[#F25260]">검토 필요 행 빠른 처리</p>
+                  <div className="mx-1 rounded-2xl border border-tone-red/15 bg-tone-red/8 px-3 py-3 space-y-2">
+                    <p className="text-[11px] font-semibold text-expense">검토 필요 행 빠른 처리</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => applyBulkSkipToReview(false)}
-                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-[#2ACF6A]/18 text-[#2ACF6A] border border-[#2ACF6A]/30"
+                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-tone-green/18 text-income border border-tone-green/30"
                       >
                         검토 행 전부 포함
                       </button>
                       <button
                         type="button"
                         onClick={() => applyBulkSkipToReview(true)}
-                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-[#F25260]/18 text-[#F25260] border border-[#F25260]/30"
+                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-tone-red/18 text-expense border border-tone-red/30"
                       >
                         검토 행 전부 제외
                       </button>
@@ -626,7 +626,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                         <select
                           value={bulkExpenseCategory}
                           onChange={(e) => setBulkExpenseCategory(e.target.value)}
-                          className="flex-1 bg-[#2C2C2E] border border-white/8 rounded-xl px-3 py-2 text-[11px] font-medium text-white"
+                          className="flex-1 bg-raised border border-white/8 rounded-xl px-3 py-2 text-[11px] font-medium text-white"
                         >
                           {EXPENSE_CATEGORIES.map((c) => (
                             <option key={c} value={c}>{c}</option>
@@ -645,7 +645,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                         <select
                           value={bulkIncomeCategory}
                           onChange={(e) => setBulkIncomeCategory(e.target.value)}
-                          className="flex-1 bg-[#2C2C2E] border border-white/8 rounded-xl px-3 py-2 text-[11px] font-medium text-white"
+                          className="flex-1 bg-raised border border-white/8 rounded-xl px-3 py-2 text-[11px] font-medium text-white"
                         >
                           {INCOME_CATEGORIES.map((c) => (
                             <option key={c} value={c}>{c}</option>
@@ -663,7 +663,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                     </div>
                   </div>
                 )}
-                <p className="text-[11px] text-[#4E5968] px-1">리스트에서 체크박스 제외 아무 영역을 누르면 상세 편집 창이 열립니다.</p>
+                <p className="text-[11px] text-muted px-1">리스트에서 체크박스 제외 아무 영역을 누르면 상세 편집 창이 열립니다.</p>
               </div>
 
               {/* 테이블 — 단일 테이블 + sticky thead + flex-1로 남은 공간 채움 */}
@@ -679,7 +679,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 }}
               >
                 <table className="w-max min-w-full text-xs">
-                  <thead className="bg-[#2C2C2E] sticky top-0 z-10">
+                  <thead className="bg-raised sticky top-0 z-10">
                     <tr>
                       <th className="px-3 py-2.5 w-10">
                         <input type="checkbox" aria-label="검토 필요 항목을 제외한 전체 선택" checked={previewRows.some((r) => !r.needsReview) && previewRows.every((r) => r.needsReview || !r.skip)}
@@ -688,7 +688,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                           className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
                       </th>
                       {['날짜', '설명', '카테고리', '금액'].map(h => (
-                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-[#4E5968]">{h}</th>
+                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-muted">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -698,26 +698,26 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                       return (
                       <tr key={rowIdx}
                         title="행 클릭: 상세 보기"
-                        className={`cursor-pointer transition-colors hover:bg-white/4 active:bg-white/7 ${row.skip ? 'opacity-30' : ''} ${row.needsReview ? 'bg-[#F25260]/6' : ''}`}
+                        className={`cursor-pointer transition-colors hover:bg-white/4 active:bg-white/7 ${row.skip ? 'opacity-30' : ''} ${row.needsReview ? 'bg-tone-red/6' : ''}`}
                         onClick={() => openDetail(rowIdx)}>
                         <td className="px-3 py-2.5 w-10" onClick={(e) => e.stopPropagation()}>
                           <input type="checkbox" checked={!row.skip}
                             onChange={(e) => updateRow(rowIdx, { skip: !e.target.checked })}
                             className="rounded w-3.5 h-3.5 accent-[#3D8EF8]" />
                         </td>
-                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap min-w-22">{row.date}</td>
-                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] max-w-22.5 truncate">
+                        <td className="px-3 py-2.5 text-[11px] text-muted whitespace-nowrap min-w-22">{row.date}</td>
+                        <td className="px-3 py-2.5 text-[11px] text-muted max-w-22.5 truncate">
                           <span>{row.description || '-'}</span>
                           {row.needsReview && (
-                            <span className="ml-2 inline-flex items-center rounded-full border border-[#F25260]/25 bg-[#F25260]/15 px-1.5 py-0.5 text-[9px] font-semibold text-[#F25260] align-middle">
+                            <span className="ml-2 inline-flex items-center rounded-full border border-tone-red/25 bg-tone-red/15 px-1.5 py-0.5 text-[9px] font-semibold text-expense align-middle">
                               검토
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-[11px] text-[#8B95A1] whitespace-nowrap">
+                        <td className="px-3 py-2.5 text-[11px] text-muted whitespace-nowrap">
                           {CATEGORY_EMOJI[row.category]} {row.category}
                         </td>
-                        <td className={`px-3 py-2.5 text-[11px] font-bold text-right num whitespace-nowrap min-w-23 ${row.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
+                        <td className={`px-3 py-2.5 text-[11px] font-bold text-right num whitespace-nowrap min-w-23 ${row.type === 'income' ? 'text-income' : 'text-white'}`}>
                           {row.type === 'income' ? '+' : '-'}{row.amount.toLocaleString()}원
                         </td>
                       </tr>
@@ -727,7 +727,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                 </table>
                 {/* 무한 스크롤 상태 */}
                 {visibleCount < previewDisplayRows.length && (
-                  <div className="py-3 text-center text-[11px] text-[#4E5968]">
+                  <div className="py-3 text-center text-[11px] text-muted">
                     {visibleCount} / {previewDisplayRows.length}행
                   </div>
                 )}
@@ -736,7 +736,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
               {/* 하단 버튼 */}
               <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0 flex gap-3">
                 <button onClick={() => { setStep(isPDF ? 'upload' : 'mapping'); usage.step(isPDF ? 'upload' : 'mapping') }}
-                  className="flex-1 py-4 rounded-2xl font-bold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors">
+                  className="flex-1 py-4 rounded-2xl font-bold text-muted bg-raised hover:bg-tone-hover transition-colors">
                   이전
                 </button>
                 <button onClick={handleImport} disabled={importCount === 0}
@@ -782,14 +782,14 @@ function MappingSelect({ label, value, headers, optional, onChange }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-[#4E5968] mb-1.5">{label}</label>
+      <label className="block text-[11px] font-semibold text-muted mb-1.5">{label}</label>
       <div className="relative">
         <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full bg-[#2C2C2E] border border-white/6 rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40 appearance-none">
-          <option value="" className="text-[#4E5968]">{optional ? '없음' : '선택'}</option>
+          className="w-full bg-raised border border-white/6 rounded-xl px-3 py-2.5 pr-8 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-tone-blue/40 appearance-none">
+          <option value="" className="text-muted">{optional ? '없음' : '선택'}</option>
           {headers.map((h) => <option key={h} value={h}>{h}</option>)}
         </select>
-        <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+        <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
       </div>
     </div>
   )

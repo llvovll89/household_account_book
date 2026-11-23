@@ -1428,8 +1428,8 @@ export default function App() {
                     pendingCount > 0
                         ? `남은 실패 ${pendingCount}건`
                         : "실패 항목 복구 중",
-                toneClass: "bg-[#203047] border-[#3D8EF8]/30",
-                iconClass: "text-[#79B2FF]",
+                toneClass: "bg-raised border-tone-blue/30",
+                iconClass: "text-accent",
             };
         }
 
@@ -1441,8 +1441,8 @@ export default function App() {
                 detail: hasPendingSync
                     ? "연결 복구 시 자동 재시도할 수 있어요"
                     : "변경사항은 로컬에 임시 저장됩니다",
-                toneClass: "bg-[#2B1E1E] border-[#F25260]/25",
-                iconClass: "text-[#FF8A95]",
+                toneClass: "bg-tone-red/10 border-tone-red/25",
+                iconClass: "text-tone-red-soft",
             };
         }
 
@@ -1453,16 +1453,16 @@ export default function App() {
                     Object.keys(lastRetryReasons).length > 0
                         ? `최근 원인: 충돌 ${retryReasonTotals.conflict}범위 · 저장오류 ${retryReasonTotals.saveFailed}범위`
                         : "네트워크 복구 후 다시 저장해주세요",
-                toneClass: "bg-[#2B1E1E] border-[#F25260]/25",
-                iconClass: "text-[#FF8A95]",
+                toneClass: "bg-tone-red/10 border-tone-red/25",
+                iconClass: "text-tone-red-soft",
             };
         }
 
         return {
             title: "동기화 대기 중",
             detail: "저장 대기 항목이 있습니다",
-            toneClass: "bg-[#1F2434] border-[#3D8EF8]/25",
-            iconClass: "text-[#79B2FF]",
+            toneClass: "bg-raised border-tone-blue/25",
+            iconClass: "text-accent",
         };
     }, [
         hasPendingSync,
@@ -1494,21 +1494,21 @@ export default function App() {
 
     if (!authReady || isSyncing) {
         return (
-            <div className="min-h-screen bg-[#111111] flex items-center justify-center px-6">
-                <div className="w-full max-w-sm rounded-3xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 p-6 text-center">
-                    <div className="mx-auto w-11 h-11 rounded-2xl bg-[#3D8EF8]/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
+            <div className="min-h-screen bg-page flex items-center justify-center px-6">
+                <div className="w-full max-w-sm rounded-3xl bg-surface border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 p-6 text-center">
+                    <div className="mx-auto w-11 h-11 rounded-2xl bg-tone-blue/10 border border-[rgba(255,255,255,0.08)] flex items-center justify-center">
                         <BrandMark className="brand-mark-loading" />
                     </div>
                     <h2 className="mt-4 text-[17px] font-extrabold text-white tracking-tight">
                         잔고플랜 준비 중
                     </h2>
-                    <p className="mt-1 text-sm text-[#8B95A1] font-medium">
+                    <p className="mt-1 text-sm text-muted font-medium">
                         데이터를 안전하게 불러오고 있어요
                     </p>
                     <div className="mt-4 flex items-center justify-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8] animate-pulse" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8]/80 animate-pulse [animation-delay:180ms]" />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8]/65 animate-pulse [animation-delay:360ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-tone-blue/80 animate-pulse [animation-delay:180ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-tone-blue/65 animate-pulse [animation-delay:360ms]" />
                     </div>
                 </div>
             </div>
@@ -1516,14 +1516,14 @@ export default function App() {
     }
 
     return (
-        <div className="ledger-app min-h-dvh bg-[#111111] pb-nav-safe">
+        <div className="ledger-app min-h-dvh bg-page pb-nav-safe">
             <a href="#ledger-main" className="skip-link">본문으로 건너뛰기</a>
             {needRefresh && (
                 <div className="fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm">
-                    <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
+                    <div className="flex items-center gap-3 bg-surface border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3.5 shadow-xl">
                         <RefreshCw
                             size={16}
-                            className="text-[#3D8EF8] shrink-0 animate-spin"
+                            className="text-accent shrink-0 animate-spin"
                             style={{animationDuration: "2s"}}
                         />
                         <p className="text-sm font-semibold text-white flex-1">
@@ -1539,7 +1539,7 @@ export default function App() {
                 </div>
             )}
 
-            <header className="ledger-header bg-[#111111] sticky top-0 z-40">
+            <header className="ledger-header bg-page sticky top-0 z-40">
                 <div className="ledger-header-inner max-w-lg mx-auto px-5 pt-header-safe pb-3">
                     <div className="flex items-center justify-between">
                         <div className="ledger-header-brand flex items-center gap-2">
@@ -1556,20 +1556,20 @@ export default function App() {
                             {(!isOnline || hasPendingSync) && (
                                 <div
                                     title={syncStatus.title}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#2C2C2E] border border-white/6"
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-raised border border-white/6"
                                 >
                                     {!isOnline ? (
                                         <WifiOff
                                             size={11}
-                                            className="text-[#F25260]"
+                                            className="text-expense"
                                         />
                                     ) : (
                                         <CloudOff
                                             size={11}
-                                            className="text-[#F5BE3A]"
+                                            className="text-warning"
                                         />
                                     )}
-                                    <span className="text-[10px] font-bold text-[#8B95A1]">
+                                    <span className="text-[10px] font-bold text-muted">
                                         {syncStatus.label}
                                     </span>
                                 </div>
@@ -1584,12 +1584,12 @@ export default function App() {
                                         onFocus={prefetchImportUtilities}
                                         onTouchStart={prefetchImportUtilities}
                                         aria-label="메뉴"
-                                        className="w-8 h-8 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center overflow-hidden"
+                                        className="w-8 h-8 rounded-xl bg-raised hover:bg-tone-hover transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center overflow-hidden"
                                     >
                                         {!user ? (
                                             <Menu
                                                 size={14}
-                                                className="text-[#8B95A1]"
+                                                className="text-muted"
                                             />
                                         ) : user.photoURL ? (
                                             <img
@@ -1599,7 +1599,7 @@ export default function App() {
                                                 referrerPolicy="no-referrer"
                                             />
                                         ) : (
-                                            <span className="text-[12px] font-bold text-[#79B2FF]">
+                                            <span className="text-[12px] font-bold text-accent">
                                                 {(
                                                     user.email?.[0] ?? "U"
                                                 ).toUpperCase()}
@@ -1607,13 +1607,13 @@ export default function App() {
                                         )}
                                     </button>
                                     {showUserMenu && (
-                                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 rounded-2xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 overflow-hidden">
+                                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 rounded-2xl bg-surface border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 overflow-hidden">
                                             {user && (
                                                 <div className="px-3.5 py-3 border-b border-[rgba(255,255,255,0.06)]">
-                                                    <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide mb-0.5">
+                                                    <p className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-0.5">
                                                         로그인 계정
                                                     </p>
-                                                    <p className="text-[12px] font-semibold text-[#C8D1DC] truncate">
+                                                    <p className="text-[12px] font-semibold text-fg truncate">
                                                         {user.email ??
                                                             "로그인 사용자"}
                                                     </p>
@@ -1630,11 +1630,11 @@ export default function App() {
                                                             false,
                                                         );
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-fg hover:bg-tone-chip transition-colors text-left"
                                                 >
                                                     <FileDown
                                                         size={14}
-                                                        className="text-[#8B95A1]"
+                                                        className="text-muted"
                                                     />
                                                     가져오기
                                                 </button>
@@ -1648,11 +1648,11 @@ export default function App() {
                                                             false,
                                                         );
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-fg hover:bg-tone-chip transition-colors text-left"
                                                 >
                                                     <CreditCard
                                                         size={14}
-                                                        className="text-[#8B95A1]"
+                                                        className="text-muted"
                                                     />
                                                     결제수단 관리
                                                 </button>
@@ -1665,11 +1665,11 @@ export default function App() {
                                                             false,
                                                         );
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-fg hover:bg-tone-chip transition-colors text-left"
                                                 >
                                                     <Target
                                                         size={14}
-                                                        className="text-[#8B95A1]"
+                                                        className="text-muted"
                                                     />
                                                     자동 분류 규칙
                                                 </button>
@@ -1680,11 +1680,11 @@ export default function App() {
                                                             false,
                                                         );
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-fg hover:bg-tone-chip transition-colors text-left"
                                                 >
                                                     <DatabaseBackup
                                                         size={14}
-                                                        className="text-[#8B95A1]"
+                                                        className="text-muted"
                                                     />
                                                     백업·복원
                                                 </button>
@@ -1697,11 +1697,11 @@ export default function App() {
                                                             value: true,
                                                         });
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#F25260] hover:bg-[#F25260]/10 transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-expense hover:bg-tone-red/10 transition-colors text-left"
                                                 >
                                                     <Trash2
                                                         size={14}
-                                                        className="text-[#F25260]"
+                                                        className="text-expense"
                                                     />
                                                     전부 초기화
                                                 </button>
@@ -1721,7 +1721,7 @@ export default function App() {
                                                                 "danger",
                                                         });
                                                     }}
-                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#F25260] hover:bg-[#F25260]/10 transition-colors text-left"
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-expense hover:bg-tone-red/10 transition-colors text-left"
                                                 >
                                                     <LogOut size={14} />
                                                     로그아웃
@@ -1735,7 +1735,7 @@ export default function App() {
                                     <button
                                         aria-label="로그인 모달 열기"
                                         onClick={() => setShowAuthModal(true)}
-                                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#2ACF6A] bg-[#2ACF6A]/10 hover:bg-[#2ACF6A]/20 transition-colors border border-[#2ACF6A]/15"
+                                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-income bg-tone-green/10 hover:bg-tone-green/20 transition-colors border border-tone-green/15"
                                     >
                                         로그인
                                     </button>
@@ -1748,11 +1748,11 @@ export default function App() {
                                 <button
                                     aria-label="이전 달 보기"
                                     onClick={prevMonth}
-                                    className="w-11 h-11 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-11 h-11 rounded-full bg-surface border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
                                 >
                                     <ChevronLeft
                                         size={16}
-                                        className="text-[#8B95A1]"
+                                        className="text-muted"
                                     />
                                 </button>
                                 <button
@@ -1760,7 +1760,7 @@ export default function App() {
                                     title="누르면 이번 달로 돌아가요"
                                     data-current-month={isCurrentMonth()}
                                     onClick={() => setCurrentDate(new Date())}
-                                    className={`px-5 min-h-11 rounded-2xl text-base font-bold transition-all ${isCurrentMonth() ? "bg-white text-[#111111]" : "bg-[#1C1C1E] text-[#8B95A1] border border-[rgba(255,255,255,0.06)]"}`}
+                                    className={`px-5 min-h-11 rounded-2xl text-base font-bold transition-all ${isCurrentMonth() ? "bg-white text-fg" : "bg-surface text-muted border border-[rgba(255,255,255,0.06)]"}`}
                                 >
                                     {currentDate.getFullYear()}년{" "}
                                     {currentDate.getMonth() + 1}월
@@ -1768,16 +1768,16 @@ export default function App() {
                                 <button
                                     aria-label="다음 달 보기"
                                     onClick={nextMonth}
-                                    className="w-11 h-11 rounded-full bg-[#1C1C1E] border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-11 h-11 rounded-full bg-surface border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
                                 >
                                     <ChevronRight
                                         size={16}
-                                        className="text-[#8B95A1]"
+                                        className="text-muted"
                                     />
                                 </button>
                                 {!isCurrentMonth() && (
                                     <button type="button" onClick={() => setCurrentDate(new Date())}
-                                        className="min-h-11 px-3 rounded-xl bg-[#3D8EF8]/10 text-[#9CC7FF] text-xs font-semibold shrink-0">
+                                        className="min-h-11 px-3 rounded-xl bg-tone-blue/10 text-accent text-xs font-semibold shrink-0">
                                         이번 달
                                     </button>
                                 )}
@@ -1787,15 +1787,15 @@ export default function App() {
                                 <div className="mt-3 pb-1 space-y-1.5">
                                     <dl className="ledger-month-totals">
                                       <div><dt>수입</dt>
-                                        <dd className="text-xs font-semibold text-[#2ACF6A] num">
+                                        <dd className="text-xs font-semibold text-income num">
                                             {monthIncome.toLocaleString()}원
                                         </dd></div>
                                       <div><dt>지출</dt>
-                                        <dd className="text-xs font-semibold text-[#F25260] num">
+                                        <dd className="text-xs font-semibold text-expense num">
                                             {monthExpense.toLocaleString()}원
                                         </dd></div>
                                       <div><dt>차액</dt><dd
-                                            className={`text-xs font-bold num ${monthBalance >= 0 ? "text-white" : "text-[#F25260]"}`}
+                                            className={`text-xs font-bold num ${monthBalance >= 0 ? "text-white" : "text-expense"}`}
                                         >
                                             {monthBalance.toLocaleString()}원
                                         </dd></div>
@@ -1812,7 +1812,7 @@ export default function App() {
                                                     )
                                                 }
                                                 aria-label="카드 이번 청구 내역 필터 보기"
-                                                className="text-[10px] font-bold text-[#F5BE3A] num hover:text-[#FFD66A] transition-colors px-2 py-0.5 rounded-full bg-[#F5BE3A]/12"
+                                                className="text-[10px] font-bold text-warning num hover:text-warning transition-colors px-2 py-0.5 rounded-full bg-tone-amber/12"
                                                 title="카드 이번 청구 내역 보기"
                                             >
                                                 이번청구{" "}
@@ -1826,7 +1826,7 @@ export default function App() {
                                                     )
                                                 }
                                                 aria-label="카드 다음 청구 내역 필터 보기"
-                                                className="text-[10px] font-bold text-[#79B2FF] num hover:text-[#A9CCFF] transition-colors px-2 py-0.5 rounded-full bg-[#3D8EF8]/12"
+                                                className="text-[10px] font-bold text-accent num hover:text-tone-blue-pale transition-colors px-2 py-0.5 rounded-full bg-tone-blue/12"
                                                 title="카드 다음 청구 내역 보기"
                                             >
                                                 다음청구{" "}
@@ -1858,16 +1858,16 @@ export default function App() {
                                 />
                             )}
                             <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-bold text-[#E8EDF5]">
+                                <p className="text-[11px] font-bold text-fg">
                                     {syncStatusBarMeta.title}
                                 </p>
-                                <p className="text-[10px] text-[#B6C0CE] truncate">
+                                <p className="text-[10px] text-muted truncate">
                                     {syncStatusBarMeta.detail}
                                 </p>
                                 {lastSyncSuccessAt && (
                                     <p
                                         title={`최근 저장 시각: ${formatAbsoluteSyncTime(lastSyncSuccessAt)}`}
-                                        className="text-[10px] text-[#8B95A1] mt-0.5 truncate"
+                                        className="text-[10px] text-muted mt-0.5 truncate"
                                     >
                                         마지막 저장:{" "}
                                         {formatRelativeSyncTime(
@@ -1877,7 +1877,7 @@ export default function App() {
                                     </p>
                                 )}
                                 {isRetryingPersist && retryProgress && (
-                                    <div className="mt-1.5 h-1.5 rounded-full bg-[#2C2C2E] overflow-hidden">
+                                    <div className="mt-1.5 h-1.5 rounded-full bg-raised overflow-hidden">
                                         <div
                                             className="h-full bg-[#3D8EF8] transition-all"
                                             style={{width: `${retryRatio}%`}}
@@ -1892,10 +1892,10 @@ export default function App() {
                                                 .map((item) => (
                                                     <div
                                                         key={item.scope}
-                                                        className="flex items-center justify-between px-2 py-1 rounded-lg bg-[#111827]/45 border border-white/5"
+                                                        className="flex items-center justify-between px-2 py-1 rounded-lg bg-raised border border-white/5"
                                                     >
                                                         <div className="min-w-0">
-                                                            <span className="text-[10px] text-[#C8D1DC] font-semibold">
+                                                            <span className="text-[10px] text-fg font-semibold">
                                                                 {scopeLabel(
                                                                     item.scope,
                                                                 )}
@@ -1906,21 +1906,21 @@ export default function App() {
                                                                     {item.reasons.includes(
                                                                         "conflict",
                                                                     ) && (
-                                                                        <span className="text-[9px] px-1 py-0.5 rounded bg-[#F25260]/15 text-[#FFD5D9]">
+                                                                        <span className="text-[9px] px-1 py-0.5 rounded bg-tone-red/15 text-tone-red-pale">
                                                                             충돌
                                                                         </span>
                                                                     )}
                                                                     {item.reasons.includes(
                                                                         "save-failed",
                                                                     ) && (
-                                                                        <span className="text-[9px] px-1 py-0.5 rounded bg-[#3D8EF8]/15 text-[#CFE2FF]">
+                                                                        <span className="text-[9px] px-1 py-0.5 rounded bg-tone-blue/15 text-tone-blue-pale">
                                                                             저장오류
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <span className="text-[10px] text-[#8B95A1] num">
+                                                        <span className="text-[10px] text-muted num">
                                                             {item.count}건 ·
                                                             재시도{" "}
                                                             {item.maxAttempts}회
@@ -1939,7 +1939,7 @@ export default function App() {
                                                     (v) => !v,
                                                 )
                                             }
-                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
+                                            className="px-2 py-1.5 rounded-lg bg-raised text-fg text-[11px] font-bold border border-white/10"
                                         >
                                             {showSyncStatusDetails
                                                 ? "상세 닫기"
@@ -1959,7 +1959,7 @@ export default function App() {
                                                     "현재 충돌 항목이 없어요.",
                                                 );
                                             }}
-                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#FFD5D9] text-[11px] font-bold border border-[#F25260]/30"
+                                            className="px-2 py-1.5 rounded-lg bg-raised text-tone-red-pale text-[11px] font-bold border border-tone-red/30"
                                         >
                                             충돌 해결
                                         </button>
@@ -1972,7 +1972,7 @@ export default function App() {
                                                     true,
                                                 )
                                             }
-                                            className="px-2 py-1.5 rounded-lg bg-[#2C2C2E] text-[#C8D1DC] text-[11px] font-bold border border-white/10"
+                                            className="px-2 py-1.5 rounded-lg bg-raised text-fg text-[11px] font-bold border border-white/10"
                                         >
                                             가이드
                                         </button>
@@ -1988,7 +1988,7 @@ export default function App() {
                                             isRetryingPersist ||
                                             pendingCount === 0
                                         }
-                                        className="px-2.5 py-1.5 rounded-lg bg-[#F25260] disabled:opacity-40 text-white text-[11px] font-bold hover:bg-[#FF6E7A] transition-colors"
+                                        className="px-2.5 py-1.5 rounded-lg bg-tone-red disabled:opacity-40 text-white text-[11px] font-bold hover:bg-tone-red-soft transition-colors"
                                     >
                                         {isRetryingPersist
                                             ? "재시도 중..."
@@ -2017,7 +2017,7 @@ export default function App() {
                                                 isRetryingPersist ||
                                                 conflictRetryScopes.length === 0
                                             }
-                                            className="px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#FFD5D9] text-[10px] font-bold border border-[#F25260]/30 disabled:opacity-40"
+                                            className="px-2 py-1 rounded-lg bg-raised text-tone-red-pale text-[10px] font-bold border border-tone-red/30 disabled:opacity-40"
                                         >
                                             충돌만
                                         </button>
@@ -2042,7 +2042,7 @@ export default function App() {
                                                 saveFailedRetryScopes.length ===
                                                     0
                                             }
-                                            className="px-2 py-1 rounded-lg bg-[#2C2C2E] text-[#CFE2FF] text-[10px] font-bold border border-[#3D8EF8]/30 disabled:opacity-40"
+                                            className="px-2 py-1 rounded-lg bg-raised text-tone-blue-pale text-[10px] font-bold border border-tone-blue/30 disabled:opacity-40"
                                         >
                                             저장오류만
                                         </button>
@@ -2222,7 +2222,7 @@ export default function App() {
                                             fabExpanded ? "추가 메뉴 닫기" : activeTab === "memos" ? "메모 추가" : activeTab === "subscriptions" ? "구독 추가" : activeTab === "goals" ? "목표 추가" : "내역 추가"
                                         }
                                         aria-expanded={fabExpanded}
-                                        className={`ledger-add-button pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-[#3A3A3C] shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-[#3D8EF8]/30"}`}
+                                        className={`ledger-add-button pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-raised shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-tone-blue/30"}`}
                                     >
                                         <Plus
                                             size={20}
@@ -2242,7 +2242,7 @@ export default function App() {
                         onFocus={prefetchHelp}
                         onTouchStart={prefetchHelp}
                         aria-label="사용 가이드"
-                        className="pointer-events-auto absolute left-5 bottom-fab-safe w-10 h-10 bg-[#1C1C1E] border border-white/10 hover:bg-[#2C2C2E] active:scale-95 text-[#8B95A1] hover:text-white rounded-full flex items-center justify-center transition-all text-sm font-bold"
+                        className="pointer-events-auto absolute left-5 bottom-fab-safe w-10 h-10 bg-surface border border-white/10 hover:bg-tone-chip active:scale-95 text-muted hover:text-white rounded-full flex items-center justify-center transition-all text-sm font-bold"
                     >
                         ?
                     </button>
@@ -2274,29 +2274,29 @@ export default function App() {
                     aria-atomic="true"
                     className={`fixed bottom-toast-safe left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-sm ${toastAction ? "pointer-events-auto" : "pointer-events-none"}`}
                 >
-                    <div className="flex items-center gap-3 bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">
+                    <div className="flex items-center gap-3 bg-surface border border-[rgba(255,255,255,0.08)] rounded-2xl px-4 py-3 shadow-xl">
                         {toastVariant === "success" && (
                             <CheckCircle2
                                 size={16}
-                                className="text-[#2ACF6A] shrink-0"
+                                className="text-income shrink-0"
                             />
                         )}
                         {toastVariant === "warning" && (
                             <AlertTriangle
                                 size={16}
-                                className="text-[#F5BE3A] shrink-0"
+                                className="text-warning shrink-0"
                             />
                         )}
                         {toastVariant === "error" && (
                             <AlertTriangle
                                 size={16}
-                                className="text-[#F25260] shrink-0"
+                                className="text-expense shrink-0"
                             />
                         )}
                         {toastVariant === "info" && (
                             <Info
                                 size={16}
-                                className="text-[#3D8EF8] shrink-0"
+                                className="text-accent shrink-0"
                             />
                         )}
                         <p className="text-sm font-semibold text-white whitespace-pre-line flex-1">
@@ -2309,7 +2309,7 @@ export default function App() {
                                     setToastMsg(null);
                                     setToastAction(null);
                                 }}
-                                className="shrink-0 text-[13px] font-bold text-[#3D8EF8] hover:text-[#79B2FF] transition-colors px-2 py-1 rounded-lg hover:bg-[#3D8EF8]/10"
+                                className="shrink-0 text-[13px] font-bold text-accent hover:text-accent transition-colors px-2 py-1 rounded-lg hover:bg-tone-blue/10"
                             >
                                 {toastAction.label}
                             </button>
@@ -2648,7 +2648,7 @@ export default function App() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 type="email"
                                 placeholder="이메일"
-                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-[#3D8EF8]"
+                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-tone-blue"
                             />
                             <input
                                 aria-label="비밀번호"
@@ -2656,7 +2656,7 @@ export default function App() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 type="password"
                                 placeholder="비밀번호 (6자 이상)"
-                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-[#3D8EF8]"
+                                className="auth-input w-full px-3 py-2 rounded-xl text-sm outline-none focus:border-tone-blue"
                             />
                             {authMode === "login" && (
                                 <button type="button" onClick={handlePasswordReset} disabled={authBusy} className="auth-secondary block ml-auto text-xs font-semibold disabled:opacity-50">
@@ -2699,7 +2699,7 @@ export default function App() {
                     onClick={() => dispatchUI({type: "CLOSE_CONFIRM"})}
                 >
                     <div
-                        className="bg-[#1C1C1E] rounded-3xl p-6 mx-4 max-w-xs w-full border border-white/8"
+                        className="bg-surface rounded-3xl p-6 mx-4 max-w-xs w-full border border-white/8"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <p className="text-white font-semibold text-center text-[15px] mb-6">
@@ -2710,7 +2710,7 @@ export default function App() {
                                 onClick={() =>
                                     dispatchUI({type: "CLOSE_CONFIRM"})
                                 }
-                                className="flex-1 py-3 rounded-2xl bg-[#2C2C2E] text-[#8B95A1] font-bold text-sm"
+                                className="flex-1 py-3 rounded-2xl bg-raised text-muted font-bold text-sm"
                             >
                                 취소
                             </button>
@@ -2719,7 +2719,7 @@ export default function App() {
                                     confirmModal.onConfirm();
                                     dispatchUI({type: "CLOSE_CONFIRM"});
                                 }}
-                                className={`flex-1 py-3 rounded-2xl font-bold text-sm ${confirmModal.confirmVariant === "primary" ? "bg-[#3D8EF8]/20 text-[#3D8EF8]" : "bg-[#F25260]/20 text-[#F25260]"}`}
+                                className={`flex-1 py-3 rounded-2xl font-bold text-sm ${confirmModal.confirmVariant === "primary" ? "bg-tone-blue/20 text-accent" : "bg-tone-red/20 text-expense"}`}
                             >
                                 {confirmModal.confirmLabel ?? "삭제"}
                             </button>

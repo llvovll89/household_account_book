@@ -353,8 +353,8 @@ export default function GoalsView({
     return (
         <div className="space-y-3 tab-content">
             {/* 요약 카드 */}
-            <div className="bg-[#1C1C1E] rounded-2xl p-5">
-                <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide mb-2">
+            <div className="bg-surface rounded-2xl p-5">
+                <p className="text-[11px] font-semibold text-muted uppercase tracking-wide mb-2">
                     저축 목표 현황
                 </p>
                 {goals.length === 0 ? (
@@ -371,11 +371,11 @@ export default function GoalsView({
                             <div>
                                 <p className="text-2xl font-bold text-white num">
                                     {fmt(totalCurrent)}
-                                    <span className="text-sm text-[#8B95A1] ml-1">
+                                    <span className="text-sm text-muted ml-1">
                                         원
                                     </span>
                                 </p>
-                                <p className="text-[11px] text-[#4E5968] mt-0.5">
+                                <p className="text-[11px] text-muted mt-0.5">
                                     목표 {fmt(totalTarget)}원 중
                                 </p>
                             </div>
@@ -392,13 +392,13 @@ export default function GoalsView({
                                         : 0}
                                     %
                                 </p>
-                                <p className="text-[11px] text-[#4E5968]">
+                                <p className="text-[11px] text-muted">
                                     {doneCount}/{goals.length} 완료
                                 </p>
                             </div>
                         </div>
                         {/* 전체 진행률 바 */}
-                        <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
+                        <div className="h-2 bg-raised rounded-full overflow-hidden">
                             <div
                                 className="h-full rounded-full transition-all duration-700"
                                 style={{
@@ -421,7 +421,7 @@ export default function GoalsView({
                         <div className="flex justify-end">
                             <button
                                 onClick={() => setSortByPct((v) => !v)}
-                                className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors ${sortByPct ? "bg-[#3D8EF8]/20 text-[#3D8EF8]" : "bg-[#2C2C2E] text-[#4E5968]"}`}
+                                className={`text-[11px] font-bold px-3 py-1.5 rounded-xl transition-colors ${sortByPct ? "bg-tone-blue/20 text-accent" : "bg-raised text-muted"}`}
                             >
                                 {sortByPct ? "달성률 순" : "등록 순"}
                             </button>
@@ -441,7 +441,7 @@ export default function GoalsView({
                         return (
                             <div
                                 key={g.id}
-                                className={`rounded-2xl p-4 list-item-enter ${done ? "goal-done-shimmer bg-[#1C1C1E] border border-[#2ACF6A]/20" : "bg-[#1C1C1E]"}`}
+                                className={`rounded-2xl p-4 list-item-enter ${done ? "goal-done-shimmer bg-surface border border-tone-green/20" : "bg-surface"}`}
                                 style={{animationDelay: `${gIdx * 60}ms`}}
                             >
                                 {/* 헤더 */}
@@ -498,14 +498,14 @@ export default function GoalsView({
                                                 {g.name}
                                             </p>
                                             {done && (
-                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#2ACF6A]/15 text-[#2ACF6A] shrink-0">
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-tone-green/15 text-income shrink-0">
                                                     완료 🎉
                                                 </span>
                                             )}
                                         </div>
                                         {days !== null && (
                                             <p
-                                                className={`text-[11px] mt-0.5 ${days < 0 ? "text-[#F25260]" : days <= 7 ? "text-[#F5BE3A]" : "text-[#4E5968]"}`}
+                                                className={`text-[11px] mt-0.5 ${days < 0 ? "text-expense" : days <= 7 ? "text-warning" : "text-muted"}`}
                                             >
                                                 {days < 0
                                                     ? `${Math.abs(days)}일 초과`
@@ -515,7 +515,7 @@ export default function GoalsView({
                                             </p>
                                         )}
                                         {g.memo && (
-                                            <p className="text-[10px] text-[#4E5968] mt-0.5 truncate">
+                                            <p className="text-[10px] text-muted mt-0.5 truncate">
                                                 {g.memo}
                                             </p>
                                         )}
@@ -526,9 +526,9 @@ export default function GoalsView({
                                                 <p className="text-[10px] mt-0.5 flex items-center gap-1">
                                                     <Link
                                                         size={9}
-                                                        className="text-[#3D8EF8] shrink-0"
+                                                        className="text-accent shrink-0"
                                                     />
-                                                    <span className="text-[#3D8EF8] font-bold">
+                                                    <span className="text-accent font-bold">
                                                         자동 집계{" "}
                                                         {fmt(
                                                             Math.max(
@@ -550,7 +550,7 @@ export default function GoalsView({
                                                     onClick={() =>
                                                         setConfirmingId(null)
                                                     }
-                                                    className="px-2 h-7 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-[10px] font-bold"
+                                                    className="px-2 h-7 rounded-lg bg-raised text-muted text-[10px] font-bold"
                                                 >
                                                     취소
                                                 </button>
@@ -558,7 +558,7 @@ export default function GoalsView({
                                                     onClick={() =>
                                                         confirmDelete(g.id)
                                                     }
-                                                    className="px-2 h-7 rounded-lg bg-[#F25260]/20 text-[#F25260] text-[10px] font-bold"
+                                                    className="px-2 h-7 rounded-lg bg-tone-red/20 text-expense text-[10px] font-bold"
                                                 >
                                                     삭제
                                                 </button>
@@ -568,7 +568,7 @@ export default function GoalsView({
                                                 <button
                                                     onClick={() => openEdit(g)}
                                                     aria-label={`${g.name} 목표 수정`}
-                                                    className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                                                    className="w-9 h-9 rounded-lg bg-raised flex items-center justify-center text-muted hover:text-white transition-colors"
                                                 >
                                                     <Pencil size={11} />
                                                 </button>
@@ -577,7 +577,7 @@ export default function GoalsView({
                                                         handleDelete(g.id)
                                                     }
                                                     aria-label={`${g.name} 목표 삭제`}
-                                                    className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                                                    className="w-9 h-9 rounded-lg bg-raised flex items-center justify-center text-muted hover:text-tone-red transition-colors"
                                                 >
                                                     <Trash2 size={11} />
                                                 </button>
@@ -588,7 +588,7 @@ export default function GoalsView({
 
                                 {/* 마일스톤 체크포인트 */}
                                 <div className="relative mb-3">
-                                    <div className="h-1 bg-[#2C2C2E] rounded-full">
+                                    <div className="h-1 bg-raised rounded-full">
                                         <div
                                             className="h-full rounded-full transition-all duration-700"
                                             style={{
@@ -627,7 +627,7 @@ export default function GoalsView({
                                         {[25, 50, 75, 100].map((ms) => (
                                             <span
                                                 key={ms}
-                                                className={`text-[8px] font-bold transition-colors ${pct >= ms ? "text-[#8B95A1]" : "text-[#3A3A3C]"}`}
+                                                className={`text-[8px] font-bold transition-colors ${pct >= ms ? "text-muted" : "text-tone-hover"}`}
                                             >
                                                 {ms}%
                                             </span>
@@ -648,11 +648,11 @@ export default function GoalsView({
                                         >
                                             {fmt(g.currentAmount)}
                                         </span>
-                                        <span className="text-[11px] text-[#4E5968]">
+                                        <span className="text-[11px] text-muted">
                                             {" "}
                                             / {fmt(g.targetAmount)}원
                                         </span>
-                                        <span className="text-[11px] text-[#8B95A1] ml-2">
+                                        <span className="text-[11px] text-muted ml-2">
                                             ({Math.round(pct)}%)
                                         </span>
                                         {!done &&
@@ -666,7 +666,7 @@ export default function GoalsView({
                                                     remaining / days,
                                                 );
                                                 return (
-                                                    <span className="text-[10px] text-[#4E5968] ml-2">
+                                                    <span className="text-[10px] text-muted ml-2">
                                                         · 하루 {fmt(perDay)}원
                                                     </span>
                                                 );
@@ -680,7 +680,7 @@ export default function GoalsView({
                                                     setDepositMode("sub");
                                                     setDepositStr("");
                                                 }}
-                                                className="w-8 h-8 rounded-xl bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                                                className="w-8 h-8 rounded-xl bg-raised flex items-center justify-center text-muted hover:text-white transition-colors"
                                             >
                                                 <Minus size={13} />
                                             </button>
@@ -721,10 +721,10 @@ export default function GoalsView({
                                         est.setDate(est.getDate() + daysLeft);
                                         return (
                                             <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                                                <span className="text-[10px] text-[#4E5968]">
+                                                <span className="text-[10px] text-muted">
                                                     완료 예상
                                                 </span>
-                                                <span className="text-[10px] font-semibold text-[#8B95A1]">
+                                                <span className="text-[10px] font-semibold text-muted">
                                                     {est.getFullYear()}년{" "}
                                                     {est.getMonth() + 1}월 (
                                                     {daysLeft}일 후)
@@ -735,7 +735,7 @@ export default function GoalsView({
                                 {expandedGoalId === g.id &&
                                     (linkedTxByGoal[g.id]?.length ?? 0) > 0 && (
                                         <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-                                            <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide">
+                                            <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">
                                                 연결 내역 (최근{" "}
                                                 {linkedTxByGoal[g.id].length}건)
                                             </p>
@@ -749,17 +749,17 @@ export default function GoalsView({
                                                             t.category
                                                         ] ?? "📦"}
                                                     </span>
-                                                    <span className="text-[11px] text-[#8B95A1] flex-1 truncate">
+                                                    <span className="text-[11px] text-muted flex-1 truncate">
                                                         {t.description ||
                                                             t.category}
                                                     </span>
-                                                    <span className="text-[10px] text-[#4E5968] shrink-0">
+                                                    <span className="text-[10px] text-muted shrink-0">
                                                         {t.date
                                                             .slice(5)
                                                             .replace("-", "/")}
                                                     </span>
                                                     <span
-                                                        className={`text-[11px] font-bold num shrink-0 ${t.type === "income" ? "text-[#2ACF6A]" : "text-[#F25260]"}`}
+                                                        className={`text-[11px] font-bold num shrink-0 ${t.type === "income" ? "text-income" : "text-expense"}`}
                                                     >
                                                         {t.type === "income"
                                                             ? "+"
@@ -782,7 +782,7 @@ export default function GoalsView({
                     onClose={() => setDepositGoal(null)}
                     label={`${depositGoal.name} 저금·인출`}
                     containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    panelClassName="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg modal-panel"
+                    panelClassName="relative bg-surface rounded-t-[28px] p-5 space-y-4 w-full max-w-lg modal-panel"
                 >
                         <div className="flex items-center justify-between">
                             <p className="text-base font-bold text-white">
@@ -790,24 +790,24 @@ export default function GoalsView({
                             </p>
                             <button
                                 onClick={() => setDepositGoal(null)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-raised text-muted"
                             >
                                 <X size={16} />
                             </button>
                         </div>
-                        <div className="flex bg-[#2C2C2E] rounded-xl overflow-hidden">
+                        <div className="flex bg-raised rounded-xl overflow-hidden">
                             {(["add", "sub"] as const).map((m) => (
                                 <button
                                     key={m}
                                     onClick={() => setDepositMode(m)}
-                                    className={`flex-1 py-2.5 text-sm font-bold transition-colors ${depositMode === m ? "bg-[#3D8EF8] text-white" : "text-[#4E5968]"}`}
+                                    className={`flex-1 py-2.5 text-sm font-bold transition-colors ${depositMode === m ? "bg-[#3D8EF8] text-white" : "text-muted"}`}
                                 >
                                     {m === "add" ? "💰 저금" : "💸 인출"}
                                 </button>
                             ))}
                         </div>
                         <div>
-                            <p className="text-[11px] text-[#8B95A1] mb-1.5">
+                            <p className="text-[11px] text-muted mb-1.5">
                                 현재{" "}
                                 <span className="text-white font-bold">
                                     {fmt(depositGoal.currentAmount)}원
@@ -823,7 +823,7 @@ export default function GoalsView({
                                 value={depositStr}
                                 onChange={(e) => setDepositStr(e.target.value)}
                                 placeholder="금액 입력"
-                                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-3 text-lg font-bold text-white placeholder-[#4E5968] focus:outline-none num"
+                                className="w-full bg-raised rounded-xl px-3 py-3 text-lg font-bold text-white placeholder-tone-slate focus:outline-none num"
                                 autoFocus
                             />
                         </div>
@@ -843,7 +843,7 @@ export default function GoalsView({
                     onClose={() => setShowSheet(false)}
                     label={editing ? "목표 수정" : "목표 추가"}
                     containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    panelClassName="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg modal-panel"
+                    panelClassName="relative bg-surface rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg modal-panel"
                 >
                         <div className="flex items-center justify-between">
                             <p className="text-base font-bold text-white">
@@ -851,7 +851,7 @@ export default function GoalsView({
                             </p>
                             <button
                                 onClick={() => setShowSheet(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E] text-[#8B95A1]"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-raised text-muted"
                             >
                                 <X size={16} />
                             </button>
@@ -859,7 +859,7 @@ export default function GoalsView({
 
                         {/* 이모지 선택 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 아이콘
                             </label>
                             <div className="flex flex-wrap gap-2">
@@ -869,7 +869,7 @@ export default function GoalsView({
                                         onClick={() =>
                                             setForm((f) => ({...f, emoji: e}))
                                         }
-                                        className={`w-10 h-10 rounded-xl text-xl transition-all ${form.emoji === e ? "bg-[#3D8EF8]/20 ring-2 ring-[#3D8EF8]" : "bg-[#2C2C2E]"}`}
+                                        className={`w-10 h-10 rounded-xl text-xl transition-all ${form.emoji === e ? "bg-tone-blue/20 ring-2 ring-tone-blue" : "bg-raised"}`}
                                     >
                                         {e}
                                     </button>
@@ -879,7 +879,7 @@ export default function GoalsView({
 
                         {/* 색상 선택 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 색상
                             </label>
                             <div className="flex gap-2">
@@ -909,7 +909,7 @@ export default function GoalsView({
 
                         {/* 목표명 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 목표명
                             </label>
                             <input
@@ -922,10 +922,10 @@ export default function GoalsView({
                                     }))
                                 }
                                 placeholder="예: 제주도 여행, 비상금 500만원"
-                                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                                className="w-full bg-raised rounded-xl px-3 py-2.5 text-sm text-white placeholder-tone-slate focus:outline-none"
                             />
                             {errors.name && (
-                                <p className="text-[10px] text-[#F25260] mt-1">
+                                <p className="text-[10px] text-expense mt-1">
                                     {errors.name}
                                 </p>
                             )}
@@ -933,7 +933,7 @@ export default function GoalsView({
 
                         {/* 목표 금액 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 목표 금액
                             </label>
                             <div className="relative">
@@ -945,14 +945,14 @@ export default function GoalsView({
                                         setTargetStr(e.target.value)
                                     }
                                     placeholder="0"
-                                    className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
+                                    className="w-full bg-raised rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-tone-slate focus:outline-none num"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5968] text-sm">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-sm">
                                     원
                                 </span>
                             </div>
                             {errors.target && (
-                                <p className="text-[10px] text-[#F25260] mt-1">
+                                <p className="text-[10px] text-expense mt-1">
                                     {errors.target}
                                 </p>
                             )}
@@ -960,9 +960,9 @@ export default function GoalsView({
 
                         {/* 현재 저축액 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 현재 저축액{" "}
-                                <span className="text-[#4E5968]">(선택)</span>
+                                <span className="text-muted">(선택)</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -973,9 +973,9 @@ export default function GoalsView({
                                         setCurrentStr(e.target.value)
                                     }
                                     placeholder="0"
-                                    className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-[#4E5968] focus:outline-none num"
+                                    className="w-full bg-raised rounded-xl px-3 py-2.5 pr-8 text-sm text-white placeholder-tone-slate focus:outline-none num"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4E5968] text-sm">
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-sm">
                                     원
                                 </span>
                             </div>
@@ -983,9 +983,9 @@ export default function GoalsView({
 
                         {/* 목표 기한 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 목표 기한{" "}
-                                <span className="text-[#4E5968]">(선택)</span>
+                                <span className="text-muted">(선택)</span>
                             </label>
                             <input
                                 type="date"
@@ -996,16 +996,16 @@ export default function GoalsView({
                                         deadline: e.target.value,
                                     }))
                                 }
-                                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                                className="w-full bg-raised rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
                                 style={{colorScheme: "dark"}}
                             />
                         </div>
 
                         {/* 메모 */}
                         <div>
-                            <label className="text-[11px] text-[#8B95A1] font-semibold mb-1.5 block">
+                            <label className="text-[11px] text-muted font-semibold mb-1.5 block">
                                 메모{" "}
-                                <span className="text-[#4E5968]">(선택)</span>
+                                <span className="text-muted">(선택)</span>
                             </label>
                             <input
                                 type="text"
@@ -1017,27 +1017,27 @@ export default function GoalsView({
                                     }))
                                 }
                                 placeholder="예: 내년 여름 목표"
-                                className="w-full bg-[#2C2C2E] rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#4E5968] focus:outline-none"
+                                className="w-full bg-raised rounded-xl px-3 py-2.5 text-sm text-white placeholder-tone-slate focus:outline-none"
                             />
                         </div>
 
                         {/* 자동 연계 */}
-                        <div className="bg-[#2C2C2E] rounded-xl p-4 space-y-3">
+                        <div className="bg-raised rounded-xl p-4 space-y-3">
                             <div className="flex items-center gap-2 mb-0.5">
-                                <Link size={13} className="text-[#3D8EF8]" />
+                                <Link size={13} className="text-accent" />
                                 <p className="text-[13px] font-bold text-white">
                                     자동 연계{" "}
-                                    <span className="text-[10px] font-normal text-[#4E5968]">
+                                    <span className="text-[10px] font-normal text-muted">
                                         (선택)
                                     </span>
                                 </p>
                             </div>
-                            <p className="text-[11px] text-[#4E5968] -mt-1">
+                            <p className="text-[11px] text-muted -mt-1">
                                 거래 내역에서 카테고리/태그로 금액을 자동
                                 집계합니다
                             </p>
                             <div>
-                                <label className="text-[11px] text-[#8B95A1] mb-1.5 block">
+                                <label className="text-[11px] text-muted mb-1.5 block">
                                     카테고리 연계
                                 </label>
                                 <select
@@ -1048,7 +1048,7 @@ export default function GoalsView({
                                             linkedCategory: e.target.value,
                                         }))
                                     }
-                                    className="w-full bg-[#1C1C1E] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
+                                    className="w-full bg-surface rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none"
                                 >
                                     <option value="">연계 안함</option>
                                     <optgroup label="지출">
@@ -1069,7 +1069,7 @@ export default function GoalsView({
                             </div>
                             {allTags.length > 0 && (
                                 <div>
-                                    <label className="text-[11px] text-[#8B95A1] mb-1.5 block">
+                                    <label className="text-[11px] text-muted mb-1.5 block">
                                         태그 연계
                                     </label>
                                     <div className="flex flex-wrap gap-1.5">
@@ -1095,7 +1095,7 @@ export default function GoalsView({
                                                                   ],
                                                         }))
                                                     }
-                                                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${selected ? "bg-[#3D8EF8]/20 text-[#3D8EF8]" : "bg-[#1C1C1E] text-[#4E5968]"}`}
+                                                    className={`text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors ${selected ? "bg-tone-blue/20 text-accent" : "bg-surface text-muted"}`}
                                                 >
                                                     #{tag}
                                                 </button>
