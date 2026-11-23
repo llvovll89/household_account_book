@@ -6,6 +6,7 @@ import {fmt, generateId, parseYmdLocal} from "../lib/format";
 import {showToast} from "../lib/toast";
 import EmptyState from "./ui/EmptyState";
 import { InlineDialog } from './ui/InlineDialog'
+import { getGoalAutoAmounts, getRecentLinkedTransactions } from "../lib/goals";
 
 interface Props {
     goals: SavingsGoal[];
@@ -277,71 +278,16 @@ export default function GoalsView({
         : goals;
 
     // 목표별 자동 집계 금액 (카테고리 또는 태그 기준)
-    const autoAmounts = useMemo(() => {
-        const map: Record<string, number> = {};
-        for (const g of goals) {
-            if (
-                !g.linkedCategory &&
-                (!g.linkedTags || g.linkedTags.length === 0)
-            )
-                continue;
-            const total = transactions
-                .filter((t) => {
-                    if (g.linkedCategory && t.category !== g.linkedCategory)
-                        return false;
-                    if (
-                        g.linkedTags &&
-                        g.linkedTags.length > 0 &&
-                        !g.linkedTags.some((tag) => t.tags?.includes(tag))
-                    )
-                        return false;
-                    return true;
-                })
-                // 카테고리에 연결하면 그 카테고리 금액을 그대로 모은다 (지출 카테고리 '저축'도 +로 쌓임).
-                // 태그만 연결하면 수입은 +, 지출은 −인 순액으로 본다
-                .reduce(
-                    (s, t) =>
-                        s +
-                        (g.linkedCategory || t.type === "income"
-                            ? t.amount
-                            : -t.amount),
-                    0,
-                );
-            map[g.id] = total;
-        }
-        return map;
-    }, [goals, transactions]);
+    const autoAmounts = useMemo(
+        () => getGoalAutoAmounts(goals, transactions),
+        [goals, transactions],
+    );
 
     // 목표별 연결 내역 최신 5건
-    const linkedTxByGoal = useMemo(() => {
-        const map: Record<string, typeof transactions> = {};
-        for (const g of goals) {
-            if (
-                !g.linkedCategory &&
-                (!g.linkedTags || g.linkedTags.length === 0)
-            )
-                continue;
-            map[g.id] = transactions
-                .filter((t) => {
-                    if (g.linkedCategory && t.category !== g.linkedCategory)
-                        return false;
-                    if (
-                        g.linkedTags &&
-                        g.linkedTags.length > 0 &&
-                        !g.linkedTags.some((tag) => t.tags?.includes(tag))
-                    )
-                        return false;
-                    return true;
-                })
-                .sort(
-                    (a, b) =>
-                        b.date.localeCompare(a.date) ||
-                        b.createdAt - a.createdAt,
-                )
-                .slice(0, 5);
-        }
-        return map;
-    }, [goals, transactions]);
+    const linkedTxByGoal = useMemo(
+        () => getRecentLinkedTransactions(goals, transactions),
+        [goals, transactions],
+    );
 
     // 현재 목표의 모든 태그 목록 (중복 제거)
     const allTags = useMemo(() => {
