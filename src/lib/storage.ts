@@ -3,7 +3,7 @@ import { getDb } from '../firebase/firebase'
 
 // Firestore SDK는 Firebase 모드에서만 불러온다
 const loadFirestore = () => import('firebase/firestore')
-import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
+import type { AutoCategoryRule, Budget, DashboardWidgetId, Loan, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
 import { showToast } from './toast'
 import { validateBackupData } from './backup'
 
@@ -109,6 +109,7 @@ export interface AppSettings {
   swipeSensitivity?: SwipeSensitivity
   autoCategoryRules: AutoCategoryRule[]
   hiddenWidgets: DashboardWidgetId[]
+  loans?: Loan[]
 }
 
 interface RemoteState {
@@ -645,6 +646,7 @@ export function mergeSettings(remote: AppSettings, local: AppSettings): AppSetti
     // 로컬은 migrateSettings가 항상 'medium'·[]로 채우므로 원격에 값이 있으면 원격을 유지한다
     swipeSensitivity: remote.swipeSensitivity ?? local.swipeSensitivity,
     hiddenWidgets: (local.hiddenWidgets?.length ?? 0) > 0 ? local.hiddenWidgets : (remote.hiddenWidgets ?? []),
+    loans: mergeUniqueByKey(remote.loans ?? [], local.loans ?? [], (l) => l.id),
   }
 }
 

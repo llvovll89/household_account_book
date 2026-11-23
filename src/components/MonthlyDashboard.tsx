@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react'
-import type { DashboardWidgetId, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
+import type { DashboardWidgetId, Loan, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -11,6 +11,8 @@ import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
 import { forecastMonthEndExpense } from '../lib/monthEndForecast'
 import { getAccountBalances } from '../lib/accountBalances'
+import { getLoanStatuses } from '../lib/loans'
+import { LoansModal } from './LoansModal'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -122,6 +124,23 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
   const [progressMounted, setProgressMounted] = useState(false)
   const spendingTopRef = useRef<HTMLDivElement | null>(null)
   const lastNotifiedMonthRef = useRef<string>('')
+  const [loans, setLoans] = useState<Loan[]>([])
+  const [showLoansModal, setShowLoansModal] = useState(false)
+  const loanStatuses = useMemo(() => getLoanStatuses(loans, transactions), [loans, transactions])
+  const hasLoanExpenses = useMemo(() => transactions.some((t) => t.type === 'expense' && t.category === '대출'), [transactions])
+
+  async function handleSaveLoans(next: Loan[]) {
+    const previous = loans
+    setLoans(next)
+    try {
+      const current = await loadSettings()
+      await saveSettings({ ...current, loans: next })
+      showToast('대출 정보를 저장했어요')
+    } catch {
+      setLoans(previous)
+      showToast('대출 정보 저장에 실패했어요. 다시 시도해주세요.', 3000, 'error')
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -130,6 +149,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       if (!cancelled) {
         setPayday(settings.payday)
         setCardBillingDay(settings.cardBillingDay)
+        setLoans(settings.loans ?? [])
       }
     })
 
@@ -2068,6 +2088,39 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             </div>
           )}
         </div>
+      )}
+
+      {/* 대출 잔액 */}
+      {!hide('loans') && (loans.length > 0 || hasLoanExpenses) && (
+        <div className="bg-surface rounded-3xl px-5 py-3.5">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[13px] font-bold text-muted">대출 잔액</span>
+            <button type="button" onClick={() => setShowLoansModal(true)} className="text-[11px] font-semibold text-accent hover:text-fg transition-colors">
+              {loans.length > 0 ? '관리' : '대출 추가'}
+            </button>
+          </div>
+          {loans.length === 0 ? (
+            <p className="text-[11px] text-muted">대출을 추가하고 상환 기록에서 대출을 고르면 남은 원금을 계산해 드려요.</p>
+          ) : (
+            <ul className="space-y-1.5" aria-label="대출별 남은 원금">
+              {loanStatuses.map(({ loan, remaining, repaid }) => (
+                <li key={loan.id} className="bg-raised rounded-xl px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[12px] font-semibold text-fg truncate">{loan.name}</span>
+                    <span className="text-[13px] font-extrabold num text-fg">{fmt(remaining)}원</span>
+                  </div>
+                  {repaid > 0 && <p className="text-[10px] text-muted num mt-0.5">{loan.balanceAsOf} 이후 원금 {fmt(repaid)}원 상환</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {loans.length > 0 && (
+            <p className="text-[11px] text-muted mt-2 num">합계 {fmt(loanStatuses.reduce((s, l) => s + l.remaining, 0))}원</p>
+          )}
+        </div>
+      )}
+      {showLoansModal && (
+        <LoansModal statuses={loanStatuses} onSave={(next) => { void handleSaveLoans(next) }} onClose={() => setShowLoansModal(false)} />
       )}
 
       {/* 목표 일일 저금 필요액 */}
