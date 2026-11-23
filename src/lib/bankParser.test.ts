@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { applyMapping, detectColumns, guessCategory, parsePDFText, parseTabularFile } from './bankParser'
+import { applyMapping, detectColumns, guessCategory, joinPDFTextItems, parsePDFText, parseTabularFile } from './bankParser'
 
 it('excludes impossible dates while preserving valid leap days in imported rows', () => {
   const rows = ['2026-02-30', '2026-13-01', '2026-00-10', '2026-02-29', '2024-02-29', '20261022'].map(date => ({ date, description: 'test', amount: '1000' }))
@@ -112,4 +112,17 @@ it('parses xlsx exports by detecting the header row below a bank title row', asy
   expect(rows).toHaveLength(2)
   expect(rows[0]).toMatchObject({ 거래일자: '2026-10-01', 적요: '스타벅스', 출금액: '5500' })
   expect(rows[1]).toMatchObject({ 적요: '10월 급여', 입금액: '3000000' })
+})
+
+it('parses one PDF row per text line, taking the amount instead of the year', () => {
+  const at = (str: string, x: number, y: number) => ({ str, transform: [1, 0, 0, 1, x, y] })
+  const text = joinPDFTextItems([
+    at('8,000', 300, 700), at('2026.11.01', 10, 700), at('카페', 120, 700),
+    at('2026.11.02', 10, 680), at('점심', 120, 680), at('12,500', 300, 680),
+  ])
+  expect(text).toBe('2026.11.01 카페 8,000\n2026.11.02 점심 12,500')
+  expect(parsePDFText(text)).toEqual([
+    { date: '2026-11-01', description: '카페', amount: 8000, type: 'expense' },
+    { date: '2026-11-02', description: '점심', amount: 12500, type: 'expense' },
+  ])
 })
