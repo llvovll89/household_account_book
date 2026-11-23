@@ -30,6 +30,8 @@ import {
     WifiOff,
     CloudOff,
     Trash2,
+    Menu,
+    DatabaseBackup,
 } from "lucide-react";
 import type {
     AutoCategoryRule,
@@ -1572,7 +1574,7 @@ export default function App() {
                                     </span>
                                 </div>
                             )}
-                            {user ? (
+                            <div className="flex items-center gap-2">
                                 <div className="relative" ref={userMenuRef}>
                                     <button
                                         onClick={() =>
@@ -1584,7 +1586,12 @@ export default function App() {
                                         aria-label="메뉴"
                                         className="w-8 h-8 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors border border-[rgba(255,255,255,0.06)] flex items-center justify-center overflow-hidden"
                                     >
-                                        {user.photoURL ? (
+                                        {!user ? (
+                                            <Menu
+                                                size={14}
+                                                className="text-[#8B95A1]"
+                                            />
+                                        ) : user.photoURL ? (
                                             <img
                                                 src={user.photoURL}
                                                 alt="profile"
@@ -1601,15 +1608,17 @@ export default function App() {
                                     </button>
                                     {showUserMenu && (
                                         <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-48 rounded-2xl bg-[#1C1C1E] border border-[rgba(255,255,255,0.08)] shadow-2xl shadow-black/40 overflow-hidden">
-                                            <div className="px-3.5 py-3 border-b border-[rgba(255,255,255,0.06)]">
-                                                <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide mb-0.5">
-                                                    로그인 계정
-                                                </p>
-                                                <p className="text-[12px] font-semibold text-[#C8D1DC] truncate">
-                                                    {user.email ??
-                                                        "로그인 사용자"}
-                                                </p>
-                                            </div>
+                                            {user && (
+                                                <div className="px-3.5 py-3 border-b border-[rgba(255,255,255,0.06)]">
+                                                    <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide mb-0.5">
+                                                        로그인 계정
+                                                    </p>
+                                                    <p className="text-[12px] font-semibold text-[#C8D1DC] truncate">
+                                                        {user.email ??
+                                                            "로그인 사용자"}
+                                                    </p>
+                                                </div>
+                                            )}
                                             <div className="p-1">
                                                 <button
                                                     onClick={() => {
@@ -1664,6 +1673,21 @@ export default function App() {
                                                     />
                                                     자동 분류 규칙
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setShowBackup(true);
+                                                        setShowUserMenu(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#C8D1DC] hover:bg-[#2C2C2E] transition-colors text-left"
+                                                >
+                                                    <DatabaseBackup
+                                                        size={14}
+                                                        className="text-[#8B95A1]"
+                                                    />
+                                                    백업·복원
+                                                </button>
                                                 <div className="my-1 h-px bg-[rgba(255,255,255,0.06)]" />
                                                 <button
                                                     onClick={() => {
@@ -1681,6 +1705,7 @@ export default function App() {
                                                     />
                                                     전부 초기화
                                                 </button>
+                                                {user && (
                                                 <button
                                                     onClick={() => {
                                                         setShowUserMenu(false);
@@ -1701,43 +1726,12 @@ export default function App() {
                                                     <LogOut size={14} />
                                                     로그아웃
                                                 </button>
+                                                )}
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() =>
-                                            dispatchUI({
-                                                type: "SET_IMPORT",
-                                                value: true,
-                                            })
-                                        }
-                                        onMouseEnter={
-                                            prefetchImportUtilities
-                                        }
-                                        onFocus={prefetchImportUtilities}
-                                        onTouchStart={
-                                            prefetchImportUtilities
-                                        }
-                                        aria-label="거래내역 가져오기"
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors border border-[rgba(255,255,255,0.06)]"
-                                    >
-                                        <FileDown size={12} />
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            dispatchUI({
-                                                type: "SET_RESET",
-                                                value: true,
-                                            })
-                                        }
-                                        aria-label="전부 초기화"
-                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#F25260] bg-[#1C1C1E] hover:bg-[#F25260]/10 transition-colors border border-[rgba(255,255,255,0.06)]"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
+                                {!user && (
                                     <button
                                         aria-label="로그인 모달 열기"
                                         onClick={() => setShowAuthModal(true)}
@@ -1745,8 +1739,8 @@ export default function App() {
                                     >
                                         로그인
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
 

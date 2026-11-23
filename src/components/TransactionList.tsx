@@ -190,6 +190,7 @@ export default function TransactionList({
         if (typeof window === "undefined") return "";
         return sessionStorage.getItem(SEARCH_SESSION_KEY) ?? "";
     });
+    const [searchAllPeriods, setSearchAllPeriods] = useState(false);
     const [delayedSearch, setDebouncedSearch] = useState(search);
     const debouncedSearch = search.trim() ? delayedSearch : "";
 
@@ -495,19 +496,23 @@ export default function TransactionList({
         const result: Transaction[] = [];
 
         // 청구 필터는 거래일이 아니라 청구월 기준이라, 전월 결제분이 이번 청구에 들어갈 수 있다
+        // 전체 기간 검색은 보고 있는 달·일·주와 관계없이 모든 내역에서 찾는다
+        const searchEverywhere = hasSearch && searchAllPeriods;
         const source =
-            statementMonthFilter || billingFilter !== "all"
+            statementMonthFilter || billingFilter !== "all" || searchEverywhere
                 ? transactions
                 : monthTx;
         for (const t of source) {
             if (pendingDeleteIds.has(t.id)) continue;
 
-            if (periodMode === "day" && t.date !== normalizedBaseDate) continue;
-            if (
-                periodMode === "week" &&
-                (t.date < weekRange.start || t.date > weekRange.end)
-            )
-                continue;
+            if (!searchEverywhere) {
+                if (periodMode === "day" && t.date !== normalizedBaseDate) continue;
+                if (
+                    periodMode === "week" &&
+                    (t.date < weekRange.start || t.date > weekRange.end)
+                )
+                    continue;
+            }
 
             if (filter !== "all" && t.type !== filter) continue;
 
@@ -602,6 +607,7 @@ export default function TransactionList({
         return result;
     }, [
         transactions,
+        searchAllPeriods,
         monthTx,
         periodMode,
         normalizedBaseDate,
@@ -1140,6 +1146,19 @@ export default function TransactionList({
                                                     />
                                                 </button>
                                             )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-1 mt-1.5 mb-1" role="group" aria-label="검색 범위">
+                                            {([false, true] as const).map((all) => (
+                                                <button
+                                                    key={String(all)}
+                                                    type="button"
+                                                    aria-pressed={searchAllPeriods === all}
+                                                    onClick={() => setSearchAllPeriods(all)}
+                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${searchAllPeriods === all ? "bg-tone-blue/20 text-accent" : "bg-raised text-muted hover:text-fg"}`}
+                                                >
+                                                    {all ? "전체 기간" : "이번 달"}
+                                                </button>
+                                            ))}
                                         </div>
                                         <p className="px-1 text-[11px] font-medium">
                                             {debouncedSearch ? (
