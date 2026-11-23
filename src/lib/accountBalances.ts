@@ -1,4 +1,4 @@
-import type { Transaction, UserPaymentMethod } from '../types'
+import type { AccountTransfer, Transaction, UserPaymentMethod } from '../types'
 
 export interface AccountBalance {
   method: UserPaymentMethod
@@ -28,7 +28,7 @@ function findAccount(t: Transaction, accounts: UserPaymentMethod[]): UserPayment
  * 잔액 = 시작 잔액 + 기준일 다음 날부터의 (수입 − 지출). 오늘 이후 날짜로 미리 적은 거래도 반영한다.
  * atDate를 주면 그날 끝 시점의 잔액이다. 기준일보다 앞이면 그 사이 거래를 거꾸로 되돌린다.
  */
-export function getAccountBalances(methods: UserPaymentMethod[], transactions: Transaction[], atDate?: string): AccountBalance[] {
+export function getAccountBalances(methods: UserPaymentMethod[], transactions: Transaction[], atDate?: string, transfers: AccountTransfer[] = []): AccountBalance[] {
   const accounts = methods.filter((m) => isBalanceAccount(m) && typeof m.openingBalance === 'number')
   if (accounts.length === 0) return []
   const balances = new Map(accounts.map((m) => [m.id, m.openingBalance ?? 0]))
@@ -42,6 +42,21 @@ export function getAccountBalances(methods: UserPaymentMethod[], transactions: T
     if (t.date > asOf && (atDate === undefined || t.date <= atDate)) sign = 1
     else if (atDate !== undefined && t.date > atDate && t.date <= asOf) sign = -1
     if (sign) balances.set(account.id, (balances.get(account.id) ?? 0) + sign * delta)
+  }
+  // 계좌 간 이체: 나간 계좌는 빼고 들어간 계좌는 더한다 (기준일·atDate 규칙은 거래와 같다)
+  const byId = new Map(accounts.map((m) => [m.id, m]))
+  const applyTransfer = (accountId: string, date: string, delta: number) => {
+    const account = byId.get(accountId)
+    if (!account) return
+    const asOf = account.balanceAsOf ?? ''
+    let sign = 0
+    if (date > asOf && (atDate === undefined || date <= atDate)) sign = 1
+    else if (atDate !== undefined && date > atDate && date <= asOf) sign = -1
+    if (sign) balances.set(account.id, (balances.get(account.id) ?? 0) + sign * delta)
+  }
+  for (const t of transfers) {
+    applyTransfer(t.fromId, t.date, -t.amount)
+    applyTransfer(t.toId, t.date, t.amount)
   }
   return accounts.map((method) => ({ method, balance: balances.get(method.id) ?? 0 }))
 }

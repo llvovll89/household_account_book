@@ -3,7 +3,7 @@ import { getDb } from '../firebase/firebase'
 
 // Firestore SDK는 Firebase 모드에서만 불러온다
 const loadFirestore = () => import('firebase/firestore')
-import type { AutoCategoryRule, Budget, DashboardWidgetId, Loan, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
+import type { AccountTransfer, AutoCategoryRule, Budget, DashboardWidgetId, Loan, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
 import { showToast } from './toast'
 import { validateBackupData } from './backup'
 
@@ -112,6 +112,7 @@ export interface AppSettings {
   loans?: Loan[]
   /** 구독 합계용 USD→원 환율 */
   usdKrwRate?: number
+  transfers?: AccountTransfer[]
 }
 
 interface RemoteState {
@@ -650,6 +651,7 @@ export function mergeSettings(remote: AppSettings, local: AppSettings): AppSetti
     hiddenWidgets: (local.hiddenWidgets?.length ?? 0) > 0 ? local.hiddenWidgets : (remote.hiddenWidgets ?? []),
     loans: mergeUniqueByKey(remote.loans ?? [], local.loans ?? [], (l) => l.id),
     usdKrwRate: local.usdKrwRate ?? remote.usdKrwRate,
+    transfers: mergeUniqueByKey(remote.transfers ?? [], local.transfers ?? [], (t) => t.id),
   }
 }
 

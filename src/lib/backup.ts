@@ -65,6 +65,7 @@ const settings = object({
   autoCategoryRules: list(object({ id: nonempty, keyword: nonempty, category: nonempty, type, enabled: bool }), byId),
   hiddenWidgets: list(choice('month-close-helper', 'subscription-alert', 'recurring-pending', 'sparkline-summary', 'today-spending', 'health-score', 'spending-pace', 'weekly-comparison', 'timeofday-spending', 'top3-expenses', 'payday-countdown', 'net-worth', 'goal-daily-needed', 'spending-spike', 'spending-savings', 'loans')),
   usdKrwRate: optional(decimal),
+  transfers: optional(list(object({ id: nonempty, date, amount: money, fromId: nonempty, toId: nonempty, memo: optional(text), createdAt: money }), byId)),
   loans: optional(list(object({ id: nonempty, name: nonempty, balance: money, balanceAsOf: date, createdAt: money, annualRate: optional(decimal), monthlyPayment: optional(money) }), byId)),
 })
 const snapshot = object({ transactions: list(transaction, byId), memos: list(memo, byId), budgets: list(budget, v => { const b = v as { category: string; yearMonth?: string }; return JSON.stringify([b.category, b.yearMonth ?? '']) }), recurring: list(recurring, byId), subscriptions: list(subscription, byId), goals: list(goal, byId), settings })
