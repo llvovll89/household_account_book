@@ -19,6 +19,7 @@ import {
     List,
     BarChart2,
     StickyNote,
+    LayoutGrid,
     FileDown,
     RefreshCw,
     CheckCircle2,
@@ -279,10 +280,15 @@ const LEDGER_TABS = [
     {id: "home" as Tab, label: "홈", Icon: LayoutDashboard},
     {id: "transactions" as Tab, label: "내역", Icon: List},
     {id: "analytics" as Tab, label: "분석", Icon: BarChart2},
-    {id: "subscriptions" as Tab, label: "구독", Icon: CreditCard},
+];
+
+// 하단 메뉴에서는 '더보기' 하나로 묶고, 화면 위 전환 버튼으로 오간다
+const MORE_TABS = [
     {id: "goals" as Tab, label: "목표", Icon: Target},
+    {id: "subscriptions" as Tab, label: "구독", Icon: CreditCard},
     {id: "memos" as Tab, label: "메모", Icon: StickyNote},
 ];
+const MORE_TAB_IDS = MORE_TABS.map((t) => t.id);
 
 // ── UI 전용 상태 (모달 열림/닫힘, 트리거 카운터) ──────────────────────────────
 interface UIState {
@@ -764,8 +770,14 @@ export default function App() {
         }
     }, [hydrateData]);
 
-    const visibleTabs = LEDGER_TABS;
     const activeTab: Tab = tab;
+    // 더보기는 마지막으로 연 목표·구독·메모 화면으로 돌아간다
+    const [lastMoreTab, setLastMoreTab] = useState<Tab>(MORE_TAB_IDS.includes(tab) ? tab : "goals");
+    if (MORE_TAB_IDS.includes(tab) && tab !== lastMoreTab) setLastMoreTab(tab);
+    const visibleTabs = useMemo(
+        () => [...LEDGER_TABS, {id: lastMoreTab, label: "더보기", Icon: LayoutGrid, matches: MORE_TAB_IDS}],
+        [lastMoreTab],
+    );
 
     const prefetchLedgerTab = useCallback((target: Tab) => {
         if (target === "home") {
@@ -2070,6 +2082,23 @@ export default function App() {
                         <p>{({home: '수입과 지출을 살펴보고 오늘의 기록을 남겨보세요.', transactions: '필요한 내역을 찾고 수입과 지출을 관리하세요.', analytics: '기록 속에서 나의 소비 습관을 발견해보세요.', subscriptions: '정기 결제와 다음 청구일을 함께 확인하세요.', goals: '이루고 싶은 목표를 향해 조금씩 모아보세요.', memos: '기억할 내용과 돈 관리 계획을 남겨보세요.'})[activeTab]}</p>
                     </div>
                 </div>
+                {MORE_TAB_IDS.includes(activeTab) && (
+                    <div className="flex gap-1.5 mb-4" role="group" aria-label="더보기 화면">
+                        {MORE_TABS.map(({id, label, Icon}) => (
+                            <button
+                                key={id}
+                                type="button"
+                                aria-pressed={activeTab === id}
+                                onClick={() => handleLedgerTabChange(id)}
+                                onMouseEnter={() => prefetchLedgerTab(id)}
+                                className={`flex-1 flex items-center justify-center gap-1.5 min-h-11 rounded-2xl text-sm font-semibold transition-colors ${activeTab === id ? "bg-tone-blue/20 text-accent" : "bg-surface text-muted hover:text-fg"}`}
+                            >
+                                <Icon size={15} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 {canShowInstallOffer && installOfferMode === "automatic" && activeTab === "home" && (
                     <div className="mb-4">
                         <InstallOffer
