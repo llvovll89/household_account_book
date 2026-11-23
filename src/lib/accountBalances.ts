@@ -40,3 +40,17 @@ export function getAccountBalances(methods: UserPaymentMethod[], transactions: T
   }
   return accounts.map((method) => ({ method, balance: balances.get(method.id) ?? 0 }))
 }
+
+export interface NetWorthSummary {
+  accountTotal: number
+  loanTotal: number
+  /** 계좌 잔액 합계 − 대출 남은 원금 합계 */
+  netWorth: number
+}
+
+/** 잔액을 입력한 계좌가 있을 때만 의미가 있다 (수입−지출 누적에서 대출을 빼면 이중 차감이 된다) */
+export function summarizeNetWorth(accounts: AccountBalance[], loanRemainings: number[]): NetWorthSummary {
+  const accountTotal = accounts.reduce((s, a) => s + a.balance, 0)
+  const loanTotal = loanRemainings.reduce((s, v) => s + v, 0)
+  return { accountTotal, loanTotal, netWorth: accountTotal - loanTotal }
+}
