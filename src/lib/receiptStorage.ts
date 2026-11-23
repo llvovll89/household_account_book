@@ -1,15 +1,13 @@
 import { ref, uploadBytes, deleteObject, getDownloadURL } from 'firebase/storage'
 import { storage } from '../firebase/firebase'
+import { generateId } from './format'
 
 /**
  * 영수증 이미지를 Firebase Storage에 업로드
- * 경로: users/{uid}/receipts/{transactionId}
+ * 경로: users/{uid}/receipts/{업로드마다 새 ID}
+ * 같은 경로에 덮어쓰면 교체 후 이전 URL을 지울 때 새 파일까지 지워지므로 매번 새 경로를 쓴다
  */
-export async function uploadReceiptImage(
-    uid: string,
-    transactionId: string,
-    file: File
-): Promise<string> {
+export async function uploadReceiptImage(uid: string, file: File): Promise<string> {
     // 파일 크기 확인 (최대 5MB)
     if (file.size > 5 * 1024 * 1024) {
         throw new Error('파일이 너무 큽니다 (최대 5MB)')
@@ -28,7 +26,7 @@ export async function uploadReceiptImage(
         const compressedFile = await compressImage(file)
 
         // Storage 경로
-        const storageRef = ref(storage, `users/${uid}/receipts/${transactionId}`)
+        const storageRef = ref(storage, `users/${uid}/receipts/${generateId()}`)
 
         // 업로드
         await uploadBytes(storageRef, compressedFile, {
@@ -44,11 +42,12 @@ export async function uploadReceiptImage(
 }
 
 /**
- * 영수증 이미지 삭제
+ * 영수증 이미지 삭제 (거래에 저장된 다운로드 URL 기준)
+ * 업로드 경로가 거래 ID와 다를 수 있으므로 URL에서 객체를 찾는다
  */
-export async function deleteReceiptImage(uid: string, transactionId: string): Promise<void> {
+export async function deleteReceiptImage(downloadUrl: string): Promise<void> {
     try {
-        const storageRef = ref(storage, `users/${uid}/receipts/${transactionId}`)
+        const storageRef = ref(storage, downloadUrl)
         await deleteObject(storageRef)
     } catch (error) {
         console.error('영수증 삭제 실패:', error)

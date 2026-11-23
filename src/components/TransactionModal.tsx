@@ -340,14 +340,14 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       setUploading(true)
       let finalReceiptUrl = receiptImageUrl
 
-      // 파일이 선택됨 → 업로드
+      // 파일이 선택됨 → 업로드. 실패해도 거래는 저장하고 기존 영수증을 유지한다
       if (receiptFile && auth.currentUser) {
-        finalReceiptUrl = await uploadReceiptImage(
-          auth.currentUser.uid,
-          transaction?.id || `receipt-${Date.now()}`,
-          receiptFile
-        )
-        showToast('영수증이 업로드되었습니다')
+        try {
+          finalReceiptUrl = await uploadReceiptImage(auth.currentUser.uid, receiptFile)
+        } catch (error) {
+          finalReceiptUrl = transaction?.receiptImageUrl ?? ''
+          showToast(`${error instanceof Error ? error.message : '영수증 업로드 실패'} · 내역은 영수증 없이 저장했어요`, 5000, 'warning')
+        }
       }
 
       const current = buildItem()
@@ -454,6 +454,9 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       setDateEnd(date)
     }
   }
+
+  // 영수증은 Firebase Storage에만 저장하므로 로그인 상태에서만 고를 수 있다
+  const canUploadReceipt = !!auth.currentUser
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -988,7 +991,10 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
 
               {showReceipt && (
                 <div className="px-4 pb-4 space-y-3">
-                  <button
+                  {!canUploadReceipt && (
+                    <p className="text-xs text-[#8B95A1]">로그인하면 영수증 사진을 첨부할 수 있어요.</p>
+                  )}
+                  {canUploadReceipt && <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
@@ -998,7 +1004,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                       }`}
                   >
                     {uploading ? <>⏳ 업로드 중...</> : receiptPreview ? <>✓ 다시 선택</> : <>📷 사진 선택</>}
-                  </button>
+                  </button>}
 
                   <input
                     ref={fileInputRef}

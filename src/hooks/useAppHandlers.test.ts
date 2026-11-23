@@ -15,6 +15,8 @@ vi.mock('../lib/storage', () => ({
 import { saveSettings, saveRecurring, saveTransactions } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { beginUsageFlow, getUsageSummary } from '../lib/usageFlow'
+import { deleteReceiptImage } from '../lib/receiptStorage'
+import { auth } from '../firebase/firebase'
 
 it('announces feedback once after persistence succeeds, and never on a failed write', async () => {
   const tasks: (() => Promise<void>)[] = []
@@ -143,4 +145,40 @@ it('applying a weekly item records every missed occurrence on its real date', as
   expect(state.transactions.map(t => t.date)).toEqual(['2026-08-08', '2026-08-15'])
   expect(state.recurring[0].lastAppliedDate).toBe('2026-08-15')
   vi.useRealTimers()
+})
+
+it('deletes the replaced receipt by its stored URL, and the receipt of a deleted transaction', () => {
+  const mutableAuth = auth as unknown as { currentUser: { uid: string } | null }
+  mutableAuth.currentUser = { uid: 'u' }
+  try {
+    const old: Transaction = { id: 'tx', type: 'expense', category: '식비', amount: 100, description: '', date: '2026-10-01', createdAt: 1, receiptImageUrl: 'https://old' }
+    let transactions = [old]
+    const dispatchUI = vi.fn()
+    const setTransactions = (value: SetStateAction<Transaction[]>) => { transactions = typeof value === 'function' ? value(transactions) : value }
+    const render = (editingTransaction: Transaction | null) => renderHook(() => useAppHandlers({
+      transactions, editingTransaction, yearMonth: '2026-10',
+      customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
+      persist: vi.fn(), dispatchUI,
+      setTransactions, setRecurring: vi.fn(), setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
+      setCustomExpenseCategories: vi.fn(), setCustomIncomeCategories: vi.fn(), setUserPaymentMethods: vi.fn(),
+      setTransactionTemplates: vi.fn(), setAutoCategoryRules: vi.fn(), setHiddenWidgets: vi.fn(),
+    }))
+    vi.mocked(deleteReceiptImage).mockClear()
+
+    const { result: unchanged } = render(old)
+    act(() => unchanged.current.handleSaveTransaction([{ ...old, amount: 200 }]))
+    expect(deleteReceiptImage).not.toHaveBeenCalled()
+
+    const { result: editing } = render(old)
+    act(() => editing.current.handleSaveTransaction([{ ...old, receiptImageUrl: 'https://new' }]))
+    expect(deleteReceiptImage).toHaveBeenCalledExactlyOnceWith('https://old')
+
+    const { result: deleting } = render(null)
+    act(() => deleting.current.handleDeleteTransaction('tx'))
+    act(() => dispatchUI.mock.lastCall![0].onConfirm())
+    expect(deleteReceiptImage).toHaveBeenLastCalledWith('https://new')
+    expect(transactions).toEqual([])
+  } finally {
+    mutableAuth.currentUser = null
+  }
 })

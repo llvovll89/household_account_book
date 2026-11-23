@@ -94,6 +94,11 @@ export function useAppHandlers({
         return next
       })()
       setTransactions(next)
+      // 수정으로 영수증을 바꾸거나 지웠으면 이전 파일을 지운다
+      const previousReceipt = editingTransaction?.receiptImageUrl
+      if (previousReceipt && items.length > 0 && items[0].receiptImageUrl !== previousReceipt && auth.currentUser) {
+        void deleteReceiptImage(previousReceipt)
+      }
       const feedback = getTransactionFeedback(items, next, budgets, !!editingTransaction)
       persist(async () => {
         try { await saveTransactions(next) }
@@ -114,11 +119,7 @@ export function useAppHandlers({
       onConfirm: () => {
         setTransactions((prev) => {
           const transaction = prev.find((t) => t.id === id)
-          if (transaction?.receiptImageUrl && auth.currentUser) {
-            void deleteReceiptImage(auth.currentUser.uid, id).catch((e) => {
-              console.error('Failed to delete receipt image:', e)
-            })
-          }
+          if (transaction?.receiptImageUrl && auth.currentUser) void deleteReceiptImage(transaction.receiptImageUrl)
           const next = prev.filter((t) => t.id !== id)
           persist(() => saveTransactions(next), '거래 삭제 저장에 실패했습니다.', 'transactions')
           return next
@@ -153,9 +154,9 @@ export function useAppHandlers({
       onConfirm: () => {
         const idSet = new Set(ids)
         setTransactions((prev) => {
-          prev.filter((t) => idSet.has(t.id) && t.receiptImageUrl && auth.currentUser).forEach((t) => {
-            void deleteReceiptImage(auth.currentUser!.uid, t.id).catch((e) => console.error('Failed to delete receipt image:', e))
-          })
+          if (auth.currentUser) {
+            prev.forEach((t) => { if (idSet.has(t.id) && t.receiptImageUrl) void deleteReceiptImage(t.receiptImageUrl) })
+          }
           const next = prev.filter((t) => !idSet.has(t.id))
           persist(() => saveTransactions(next), '일괄 삭제 저장에 실패했습니다.', 'transactions')
           return next

@@ -15,5 +15,5 @@ it('rejects instead of hanging when the image file cannot be read', async () => 
   }
   vi.stubGlobal('FileReader', FailingReader)
   const file = new File(['x'], 'receipt.jpg', { type: 'image/jpeg' })
-  await expect(uploadReceiptImage('uid', 'tx', file)).rejects.toThrow('영수증 업로드 실패')
+  await expect(uploadReceiptImage('uid', file)).rejects.toThrow('영수증 업로드 실패')
 })
