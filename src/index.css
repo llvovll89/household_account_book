@@ -3,7 +3,7 @@
 
 /* 테마 토큰 → Tailwind 색상 유틸리티 (bg-surface, text-muted, bg-tone-blue/15 …).
    값은 interface.css의 :root / :root[data-theme="light"] 변수에서 오므로 두 테마에 자동 대응한다.
-   새 코드에서는 bg-[#1C1C1E] 같은 hex 클래스 대신 이 토큰을 쓴다. */
+   hex 색상 클래스(bg-[#…])는 쓰지 않는다 (ESLint가 막음). */
 @theme inline {
   --color-page: var(--page);
   --color-surface: var(--surface);
