@@ -11,14 +11,14 @@ import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
 import { forecastMonthEndExpense } from '../lib/monthEndForecast'
 import { getAccountBalances, summarizeNetWorth } from '../lib/accountBalances'
-import { getLoanStatuses } from '../lib/loans'
+import { estimateMonthlyPayment, getLoanStatuses, projectPayoff } from '../lib/loans'
 import { getDaysUntilNextBilling } from '../lib/subscriptions'
 import { LoansModal } from './LoansModal'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
 import BudgetGauge from './charts/BudgetGauge'
-import { fmt, fmtPrice, fmtShort, parseYmdLocal, shiftYM, toLocalDateStr } from '../lib/format'
+import { fmt, fmtPrice, fmtShort, parseYmdLocal, shiftYM, toLocalDateStr, toYearMonth } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { calculateCardDueAmount, formatBillingRange, getCardBillingRange, isCreditPaymentMethod } from '../lib/cardBilling'
 
@@ -2123,6 +2123,21 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
                     <span className="text-[13px] font-extrabold num text-fg">{fmt(remaining)}원</span>
                   </div>
                   {repaid > 0 && <p className="text-[10px] text-muted num mt-0.5">{loan.balanceAsOf} 이후 원금 {fmt(repaid)}원 상환</p>}
+                  {(() => {
+                    // 월 상환액을 안 적었으면 최근 3개월 상환 평균으로 예측한다
+                    const ym = toYearMonth(new Date())
+                    const payment = loan.monthlyPayment ?? estimateMonthlyPayment(loan.id, transactions, ym)
+                    if (!payment || remaining <= 0) return null
+                    const plan = projectPayoff(remaining, loan.annualRate ?? 0, payment, ym)
+                    if (!plan) return <p className="text-[10px] text-warning mt-0.5">월 {fmt(payment)}원으로는 이자를 다 못 갚아요</p>
+                    const [py, pm] = plan.payoffYM.split('-')
+                    return (
+                      <p className="text-[10px] text-muted num mt-0.5">
+                        월 {fmt(payment)}원{loan.monthlyPayment ? '' : '(최근 평균)'}이면 {py}년 {Number(pm)}월 완납
+                        {plan.totalInterest > 0 ? ` · 남은 이자 약 ${fmt(plan.totalInterest)}원` : ''}
+                      </p>
+                    )
+                  })()}
                 </li>
               ))}
             </ul>

@@ -194,6 +194,10 @@ export interface Loan {
   balance: number
   balanceAsOf: string
   createdAt: number
+  /** 연이율 (%, 예: 4.5). 상환 예측에만 쓴다 */
+  annualRate?: number
+  /** 매달 갚는 원리금. 없으면 최근 상환 기록의 월평균으로 추정 */
+  monthlyPayment?: number
 }
 
 export type DashboardWidgetId =
