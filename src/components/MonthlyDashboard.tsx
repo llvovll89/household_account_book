@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect, useRef } from 'react'
 import { useCountUp } from '../hooks/useCountUp'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { Settings2, TrendingUp, TrendingDown, AlertTriangle, RefreshCw, PlusCircle, Pencil, LayoutList, Gauge, Tag, PieChart, ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react'
-import type { DashboardWidgetId, Loan, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
+import type { AccountTransfer, DashboardWidgetId, Loan, Transaction, Budget, RecurringTransaction, SavingsGoal, UserPaymentMethod, Subscription } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR, EXPENSE_CATEGORIES } from '../types'
 import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
@@ -14,6 +14,7 @@ import { getAccountBalances, summarizeNetWorth } from '../lib/accountBalances'
 import { estimateMonthlyPayment, getLoanStatuses, projectPayoff } from '../lib/loans'
 import { getDaysUntilNextBilling } from '../lib/subscriptions'
 import { LoansModal } from './LoansModal'
+import { TransfersModal } from './TransfersModal'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -127,6 +128,21 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
   const lastNotifiedMonthRef = useRef<string>('')
   const [loans, setLoans] = useState<Loan[]>([])
   const [showLoansModal, setShowLoansModal] = useState(false)
+  const [transfers, setTransfers] = useState<AccountTransfer[]>([])
+  const [showTransfersModal, setShowTransfersModal] = useState(false)
+
+  async function handleSaveTransfers(next: AccountTransfer[]) {
+    const previous = transfers
+    setTransfers(next)
+    try {
+      const current = await loadSettings()
+      await saveSettings({ ...current, transfers: next })
+      showToast('이체 기록을 저장했어요')
+    } catch {
+      setTransfers(previous)
+      showToast('이체 기록 저장에 실패했어요. 다시 시도해주세요.', 3000, 'error')
+    }
+  }
   const loanStatuses = useMemo(() => getLoanStatuses(loans, transactions), [loans, transactions])
   const hasLoanExpenses = useMemo(() => transactions.some((t) => t.type === 'expense' && t.category === '대출'), [transactions])
 
@@ -151,6 +167,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
         setPayday(settings.payday)
         setCardBillingDay(settings.cardBillingDay)
         setLoans(settings.loans ?? [])
+        setTransfers(settings.transfers ?? [])
       }
     })
 
@@ -433,7 +450,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
     const goalsSaved = goals.reduce((s, g) => s + (g.currentAmount ?? 0), 0)
 
     // 3) 시작 잔액을 입력한 계좌가 있으면 실제 잔액 합계를 대표값으로 쓴다
-    const accounts = getAccountBalances(userPaymentMethods, transactions)
+    const accounts = getAccountBalances(userPaymentMethods, transactions, undefined, transfers)
     // 4) 계좌 잔액이 있으면 대출 남은 원금을 빼서 순자산으로 본다
     const summary = summarizeNetWorth(accounts, loanStatuses.map((l) => l.remaining))
     const subtractsLoans = accounts.length > 0 && summary.loanTotal > 0
@@ -447,7 +464,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       total: accounts.length > 0 ? summary.netWorth : totalBalance,
       goalCount: goals.length,
     }
-  }, [transactions, goals, userPaymentMethods, loanStatuses])
+  }, [transactions, goals, userPaymentMethods, loanStatuses, transfers])
 
   // 월별 순자산 추이 (전체 거래 기준 누적) — 단일 패스로 6개 월말 잔액 계산
   const netWorthTrend = useMemo(() => {
@@ -462,7 +479,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       return months.map(({ label, endDate }) => ({
         label,
         value: summarizeNetWorth(
-          getAccountBalances(userPaymentMethods, transactions, endDate),
+          getAccountBalances(userPaymentMethods, transactions, endDate, transfers),
           getLoanStatuses(loans, transactions, endDate).map((l) => l.remaining),
         ).netWorth,
       }))
@@ -478,7 +495,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       }
       return { label, value: cumulative }
     })
-  }, [transactions, netWorth.accounts.length, userPaymentMethods, loans])
+  }, [transactions, netWorth.accounts.length, userPaymentMethods, loans, transfers])
 
   // 구독 다음 청구 예고 (7일 이내)
   const upcomingSubscriptions = useMemo(() => {
@@ -2053,6 +2070,10 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             </p>
           )}
           {netWorth.accounts.length > 0 ? (
+            <>
+            <button type="button" onClick={() => setShowTransfersModal(true)} className="text-[11px] font-semibold text-accent hover:text-fg transition-colors mb-2">
+              계좌 이체 · 카드대금 기록 →
+            </button>
             <ul className="space-y-1.5 mb-2.5" aria-label="계좌별 잔액">
               {netWorth.accounts.map(({ method, balance }) => (
                 <li key={method.id} className="flex items-center justify-between bg-raised rounded-xl px-3 py-2">
@@ -2061,6 +2082,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
                 </li>
               ))}
             </ul>
+            </>
           ) : (
             <button type="button" onClick={onOpenPaymentMethodsModal} className="w-full text-left text-[11px] text-muted mb-2.5 hover:text-fg transition-colors">
               결제수단 관리에서 계좌의 현재 잔액을 입력하면 실제 잔액을 보여드려요 →
@@ -2146,6 +2168,9 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             <p className="text-[11px] text-muted mt-2 num">합계 {fmt(loanStatuses.reduce((s, l) => s + l.remaining, 0))}원</p>
           )}
         </div>
+      )}
+      {showTransfersModal && (
+        <TransfersModal methods={userPaymentMethods} transfers={transfers} onSave={(next) => { void handleSaveTransfers(next) }} onClose={() => setShowTransfersModal(false)} />
       )}
       {showLoansModal && (
         <LoansModal statuses={loanStatuses} onSave={(next) => { void handleSaveLoans(next) }} onClose={() => setShowLoansModal(false)} />

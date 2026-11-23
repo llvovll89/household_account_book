@@ -189,6 +189,22 @@ export interface AutoCategoryRule {
   enabled: boolean
 }
 
+/**
+ * 내 계좌 간 이동 (계좌→계좌, 계좌→카드대금 납부).
+ * 수입·지출이 아니므로 거래 목록·분석에는 넣지 않고 계좌 잔액에만 반영한다.
+ */
+export interface AccountTransfer {
+  id: string
+  date: string
+  amount: number
+  /** 나간 결제수단 (UserPaymentMethod.id) */
+  fromId: string
+  /** 들어간 결제수단. 신용카드면 카드대금 납부 */
+  toId: string
+  memo?: string
+  createdAt: number
+}
+
 /** 대출. balance는 balanceAsOf 시점의 남은 원금 */
 export interface Loan {
   id: string

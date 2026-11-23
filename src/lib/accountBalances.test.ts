@@ -53,3 +53,20 @@ it('computes balances at a past or future date around the as-of date', () => {
   expect(at('2026-11-30')).toBe(1_000_000)
   expect(at('2026-12-31')).toBe(950_000)
 })
+
+it('moves money between accounts with transfers and treats card payments as leaving the account', () => {
+  const methods: UserPaymentMethod[] = [
+    { id: 'salary', type: 'transfer', label: '급여통장', openingBalance: 1_000_000, balanceAsOf: '2026-11-10' },
+    { id: 'living', type: 'transfer', label: '생활비', openingBalance: 0, balanceAsOf: '2026-11-10' },
+    { id: 'card', type: 'credit', label: '카드', billingDay: 14 },
+  ]
+  const transfers = [
+    { id: 't1', date: '2026-11-15', amount: 300_000, fromId: 'salary', toId: 'living', createdAt: 1 },
+    { id: 't2', date: '2026-12-14', amount: 200_000, fromId: 'salary', toId: 'card', createdAt: 1 },
+    { id: 'old', date: '2026-11-01', amount: 999, fromId: 'salary', toId: 'living', createdAt: 1 },
+  ]
+  const now = getAccountBalances(methods, [], undefined, transfers)
+  expect(now.map((b) => [b.method.id, b.balance])).toEqual([['salary', 500_000], ['living', 300_000]])
+  const nov = getAccountBalances(methods, [], '2026-11-30', transfers)
+  expect(nov.map((b) => b.balance)).toEqual([700_000, 300_000])
+})
