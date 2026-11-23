@@ -12,6 +12,7 @@ import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMon
 import { forecastMonthEndExpense } from '../lib/monthEndForecast'
 import { getAccountBalances } from '../lib/accountBalances'
 import { getLoanStatuses } from '../lib/loans'
+import { getDaysUntilNextBilling } from '../lib/subscriptions'
 import { LoansModal } from './LoansModal'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
@@ -469,16 +470,9 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
   const upcomingSubscriptions = useMemo(() => {
     if (!subscriptions.length) return []
     const today = new Date()
-    const todayDay = today.getDate()
+    // 연간 구독은 결제 월에만 예고한다
     return subscriptions
-      .map((s) => {
-        let daysLeft = s.billingDay - todayDay
-        if (daysLeft < 0) {
-          const lastDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate()
-          daysLeft = Math.min(s.billingDay, lastDayOfNextMonth) + (new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - todayDay)
-        }
-        return { ...s, daysLeft }
-      })
+      .map((s) => ({ ...s, daysLeft: getDaysUntilNextBilling(s, today) }))
       .filter((s) => s.daysLeft <= 7 && s.daysLeft >= 0)
       .sort((a, b) => a.daysLeft - b.daysLeft)
   }, [subscriptions])

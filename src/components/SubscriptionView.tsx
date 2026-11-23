@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
 import type { Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
 import { fmt, fmtPrice } from '../lib/format'
 import { generateId } from '../lib/format'
 import EmptyState from './ui/EmptyState'
-import { getDaysUntilMonthDay } from '../lib/recurringSchedule'
+import { getDaysUntilNextBilling, getMonthlyKrw, getSubscriptionTotals, isYearly } from '../lib/subscriptions'
+import { loadSettings, saveSettings } from '../lib/storage'
+import { showToast } from '../lib/toast'
 import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
@@ -23,8 +25,8 @@ function getInitial(name: string) {
   return name.trim().charAt(0).toUpperCase() || '?'
 }
 
-function daysUntilBilling(billingDay: number): number {
-  return getDaysUntilMonthDay(billingDay, new Date())
+function daysUntilBilling(sub: Subscription): number {
+  return getDaysUntilNextBilling(sub, new Date())
 }
 
 const EMPTY: Omit<Subscription, 'id' | 'createdAt'> = {
@@ -32,6 +34,7 @@ const EMPTY: Omit<Subscription, 'id' | 'createdAt'> = {
   amount: 0,
   currency: 'KRW',
   billingDay: 1,
+  cycle: 'monthly',
   category: '통신비',
   memo: '',
 }
@@ -67,6 +70,8 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       amount: sub.amount,
       currency: sub.currency,
       billingDay: sub.billingDay,
+      cycle: sub.cycle ?? 'monthly',
+      billingMonth: sub.billingMonth,
       category: sub.category,
       memo: sub.memo,
     })
@@ -89,15 +94,20 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
     if (!validate()) return
     const amount = Number(amountStr)
     const color = SERVICE_COLORS[colorIdx]
+    // 매월 구독에는 결제 월을 남기지 않는다
+    const cycleFields = form.cycle === 'yearly'
+      ? { cycle: 'yearly' as const, billingMonth: form.billingMonth ?? new Date().getMonth() + 1 }
+      : { cycle: 'monthly' as const, billingMonth: undefined }
 
     if (editing) {
       onChange(subscriptions.map(s =>
-        s.id === editing.id ? { ...s, ...form, amount, color } : s
+        s.id === editing.id ? { ...s, ...form, ...cycleFields, amount, color } : s
       ))
     } else {
       const next: Subscription = {
         id: generateId(),
         ...form,
+        ...cycleFields,
         amount,
         color,
         createdAt: Date.now(),
@@ -118,13 +128,35 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const sorted = [...subscriptions].sort((a, b) => a.billingDay - b.billingDay)
-  const totalKrw = subscriptions
-    .filter(s => s.currency === 'KRW')
-    .reduce((sum, s) => sum + s.amount, 0)
-  const totalUsd = subscriptions
-    .filter(s => s.currency === 'USD')
-    .reduce((sum, s) => sum + s.amount, 0)
-  const annualKrw = totalKrw * 12
+  // USD 구독을 원화 합계에 넣기 위한 환율 (설정에 저장)
+  const [usdKrwRate, setUsdKrwRate] = useState<number | undefined>(undefined)
+  const [rateInput, setRateInput] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    void loadSettings().then((settings) => {
+      if (cancelled) return
+      setUsdKrwRate(settings.usdKrwRate)
+      setRateInput(settings.usdKrwRate ? String(settings.usdKrwRate) : '')
+    })
+    return () => { cancelled = true }
+  }, [])
+  async function saveRate() {
+    const value = Number(rateInput.replace(/[^\d.]/g, ''))
+    const next = rateInput.trim() && Number.isFinite(value) && value > 0 ? value : undefined
+    if (next === usdKrwRate) return
+    setUsdKrwRate(next)
+    try {
+      const current = await loadSettings()
+      await saveSettings({ ...current, usdKrwRate: next })
+    } catch {
+      showToast('환율 저장에 실패했어요. 다시 시도해주세요.', 3000, 'error')
+    }
+  }
+
+  const hasUsd = subscriptions.some(s => s.currency === 'USD')
+  const totals = getSubscriptionTotals(subscriptions, usdKrwRate)
+  const totalKrw = totals.monthlyKrw
+  const annualKrw = totals.annualKrw
 
   return (
     <div className="space-y-3 tab-content">
@@ -145,21 +177,37 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
               {totalKrw > 0 && (
                 <p className="text-2xl font-bold text-white num">{fmt(totalKrw)}<span className="text-sm ml-1 text-muted">원</span></p>
               )}
-              {totalUsd > 0 && (
-                <p className="text-2xl font-bold text-white num">${totalUsd.toFixed(2)}</p>
+              {totals.unconvertedUsd > 0 && (
+                <p className="text-2xl font-bold text-white num">${totals.unconvertedUsd.toFixed(2)}</p>
               )}
-              <p className="text-[11px] text-muted mb-1">{subscriptions.length}개 서비스</p>
+              <p className="text-[11px] text-muted mb-1">{subscriptions.length}개 서비스 · 연간 결제는 12개월로 나눔</p>
             </div>
+            {hasUsd && (
+              <label className="flex items-center gap-2 mb-3 text-[11px] text-muted">
+                <span className="shrink-0">환율 1달러 =</span>
+                <input
+                  inputMode="decimal"
+                  value={rateInput}
+                  onChange={e => setRateInput(e.target.value)}
+                  onBlur={() => { void saveRate() }}
+                  placeholder="입력하면 USD도 원화 합계에 포함"
+                  aria-label="USD 환율 (원)"
+                  className="flex-1 min-w-0 bg-raised rounded-lg px-2.5 py-1.5 text-fg num focus:outline-none"
+                />
+                <span className="shrink-0">원</span>
+              </label>
+            )}
             {annualKrw > 0 && (
               <div className="flex items-center justify-between pt-3 border-t border-[rgba(255,255,255,0.06)]">
                 <span className="text-[11px] text-muted">연간 합계</span>
                 <span className="text-sm font-bold text-warning num">{fmt(annualKrw)}원</span>
               </div>
             )}
-            {subscriptions.filter(s => s.currency === 'KRW').length > 1 && (() => {
+            {subscriptions.length > 1 && (() => {
               const catMap: Record<string, number> = {}
-              subscriptions.filter(s => s.currency === 'KRW').forEach(s => {
-                catMap[s.category] = (catMap[s.category] || 0) + s.amount
+              subscriptions.forEach(s => {
+                const monthly = getMonthlyKrw(s, usdKrwRate)
+                if (monthly !== null) catMap[s.category] = (catMap[s.category] || 0) + monthly
               })
               const total = Object.values(catMap).reduce((a, b) => a + b, 0)
               if (!total) return null
@@ -194,7 +242,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
         <div className="space-y-2">
           {sorted.map((sub, subIdx) => {
             const color = sub.color ?? SERVICE_COLORS[0]
-            const days = daysUntilBilling(sub.billingDay)
+            const days = daysUntilBilling(sub)
             const catColor = CATEGORY_COLOR[sub.category]
             return (
               <div key={sub.id} className="bg-surface rounded-2xl px-4 py-3 list-item-enter" style={{ animationDelay: `${subIdx * 40}ms` }}>
@@ -220,7 +268,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                       )}
                     </div>
                     <p className="text-[11px] text-muted mt-0.5">
-                      매월 {sub.billingDay}일
+                      {isYearly(sub) ? `매년 ${sub.billingMonth ?? 1}월 ${sub.billingDay}일` : `매월 ${sub.billingDay}일`}
                       {days === 0
                         ? <span className="text-expense ml-1 font-bold">· 오늘 결제</span>
                         : days <= 3
@@ -272,18 +320,19 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       )}
 
       {/* 절감 시뮬레이터 */}
-      {subscriptions.filter(s => s.currency === 'KRW').length > 0 && (
+      {subscriptions.some(s => getMonthlyKrw(s, usdKrwRate) !== null) && (
         <div className="bg-surface rounded-2xl p-5">
           <p className="text-[15px] font-bold text-white mb-1">절감 시뮬레이터</p>
           <p className="text-[11px] text-muted mb-3">구독 취소 시 연간 절약액</p>
           <div className="space-y-2">
-            {[...subscriptions]
-              .filter(s => s.currency === 'KRW')
-              .sort((a, b) => b.amount - a.amount)
+            {subscriptions
+              .map(sub => ({ sub, monthly: getMonthlyKrw(sub, usdKrwRate) }))
+              .filter((x): x is { sub: Subscription; monthly: number } => x.monthly !== null)
+              .sort((a, b) => b.monthly - a.monthly)
               .slice(0, 3)
-              .map(sub => {
+              .map(({ sub, monthly }) => {
                 const color = sub.color ?? SERVICE_COLORS[0]
-                const annual = sub.amount * 12
+                const annual = monthly * 12
                 return (
                   <div key={sub.id} className="flex items-center gap-3 py-1.5 border-b border-white/5 last:border-0">
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: `${color}26` }}>
@@ -291,7 +340,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] font-semibold text-white truncate">{sub.name}</p>
-                      <p className="text-[10px] text-muted">월 {fmt(sub.amount)}원</p>
+                      <p className="text-[10px] text-muted">월 {fmt(monthly)}원</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-[12px] font-bold text-income num">+{fmt(annual)}원</p>
@@ -374,7 +423,25 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
             {/* 결제일 */}
             <div>
-              <label className="text-[11px] text-muted font-semibold mb-1.5 block">매월 결제일</label>
+              <div className="flex items-center gap-1.5 mb-2" role="group" aria-label="결제 주기">
+                {(['monthly', 'yearly'] as const).map(c => (
+                  <button key={c} type="button" aria-pressed={(form.cycle ?? 'monthly') === c}
+                    onClick={() => setForm(f => ({ ...f, cycle: c, billingMonth: c === 'yearly' ? (f.billingMonth ?? new Date().getMonth() + 1) : undefined }))}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${(form.cycle ?? 'monthly') === c ? 'bg-action text-on-action' : 'bg-raised text-muted'}`}>
+                    {c === 'monthly' ? '매월' : '매년'}
+                  </button>
+                ))}
+              </div>
+              {form.cycle === 'yearly' && (
+                <label className="flex items-center gap-2 mb-2 text-[11px] text-muted font-semibold">
+                  결제 월
+                  <select value={form.billingMonth ?? 1} onChange={e => setForm(f => ({ ...f, billingMonth: Number(e.target.value) }))}
+                    className="bg-raised rounded-xl px-3 py-2 text-sm text-fg focus:outline-none">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}월</option>)}
+                  </select>
+                </label>
+              )}
+              <label className="text-[11px] text-muted font-semibold mb-1.5 block">결제일</label>
               <div className="flex flex-wrap gap-1.5">
                 {[1,5,10,14,15,20,25,28,31].map(d => (
                   <button

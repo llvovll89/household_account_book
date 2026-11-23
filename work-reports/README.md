@@ -50,3 +50,4 @@
 | 2026-11-23 | [interface.css hex 브리지 규칙 정리](2026-11-23-13-remove-hex-bridge.md) | #51 |
 | 2026-11-23 | [계좌별 실제 잔액](2026-11-23-14-account-balances.md) | #52 |
 | 2026-11-23 | [대출 잔액 추적](2026-11-23-15-loan-tracking.md) | #53 |
+| 2026-11-23 | [구독 연간 결제와 USD 환율](2026-11-23-16-subscription-cycles.md) | #54 |

@@ -153,7 +153,11 @@ export interface Subscription {
   name: string          // 서비스명 (예: 넷플릭스)
   amount: number
   currency: 'KRW' | 'USD'
-  billingDay: number    // 매월 결제일 (1-31)
+  billingDay: number    // 결제일 (1-31)
+  /** 결제 주기. 없으면 매월 */
+  cycle?: 'monthly' | 'yearly'
+  /** 연간 결제 월 (1-12), cycle이 yearly일 때만 */
+  billingMonth?: number
   category: string      // EXPENSE_CATEGORIES 중 하나
   memo: string          // 선택 메모
   color?: string        // 카드 아이콘/포인트 색상

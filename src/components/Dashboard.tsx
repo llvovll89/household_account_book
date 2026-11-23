@@ -4,6 +4,7 @@ import type { DashboardProps } from './MonthlyDashboard'
 import type { TransactionReviewScope } from './TransactionReviewModal'
 import { getBudgetCarryoverAmounts, getBudgetProgress, getEffectiveBudgets } from '../lib/budgets'
 import { isRecurringPendingForMonth } from '../lib/recurringSchedule'
+import { getDaysUntilNextBilling } from '../lib/subscriptions'
 
 const MonthlyDashboard = lazy(() => import('./MonthlyDashboard'))
 const BudgetModal = lazy(() => import('./BudgetModal'))
@@ -26,13 +27,7 @@ export default function Dashboard(props: DashboardProps) {
     const pending = recurring.filter(r => isRecurringPendingForMonth(r, yearMonth))
     if (!hiddenWidgets.includes('recurring-pending') && pending.length) return { kind: 'recurring' as const, text: `아직 반영하지 않은 정기 내역이 ${pending.length}건 있어요.`, label: '정기 내역 관리' }
     const today = new Date()
-    const day = today.getDate()
-    const upcoming = subscriptions.map(s => {
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-      const nextLastDay = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate()
-      const thisDay = Math.min(s.billingDay, lastDay)
-      return { ...s, days: thisDay >= day ? thisDay - day : lastDay - day + Math.min(s.billingDay, nextLastDay) }
-    }).filter(s => s.days <= 7).sort((a, b) => a.days - b.days)[0]
+    const upcoming = subscriptions.map(s => ({ ...s, days: getDaysUntilNextBilling(s, today) })).filter(s => s.days <= 7).sort((a, b) => a.days - b.days)[0]
     if (!hiddenWidgets.includes('subscription-alert') && upcoming) return { kind: 'subscription' as const, text: `${upcoming.name} 구독 결제가 ${upcoming.days === 0 ? '오늘' : `${upcoming.days}일 후`} 예정되어 있어요.`, label: '구독 확인하기' }
   }, [budgets, transactions, yearMonth, recurring, subscriptions, hiddenWidgets])
 
