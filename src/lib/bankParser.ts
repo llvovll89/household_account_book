@@ -379,9 +379,12 @@ export function applyMapping(
 //  PDF 텍스트 추출 (best-effort)
 // ────────────────────────────────────────────
 export async function extractPDFText(file: File): Promise<string> {
-  const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
-  // CDN worker (Vite 빌드 없이 사용 가능)
-  GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs`
+  // 워커는 설치된 pdfjs-dist와 같은 버전이어야 한다 (버전이 다르면 getDocument가 바로 실패)
+  const [{ getDocument, GlobalWorkerOptions }, { default: workerSrc }] = await Promise.all([
+    import('pdfjs-dist'),
+    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+  ])
+  GlobalWorkerOptions.workerSrc = workerSrc
 
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await getDocument({ data: arrayBuffer }).promise
@@ -390,17 +393,27 @@ export async function extractPDFText(file: File): Promise<string> {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
     type TextItem = { str: string; transform: number[] }
-    const pageText = (content.items as unknown[])
+    const items = (content.items as unknown[])
       .filter((item): item is TextItem => typeof item === 'object' && item !== null && 'str' in item)
-      .sort((a, b) => {
-        const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5])
-        return yDiff !== 0 ? yDiff : a.transform[4] - b.transform[4]
-      })
-      .map((item) => item.str)
-      .join(' ')
-    fullText += pageText + '\n'
+    fullText += joinPDFTextItems(items) + '\n'
   }
   return fullText
+}
+
+/** 같은 y좌표 조각끼리 한 줄로 묶는다. 페이지 전체를 한 줄로 이으면 줄 단위 파싱이 페이지당 1건만 찾는다 */
+export function joinPDFTextItems(items: { str: string; transform: number[] }[]): string {
+  const rows = new Map<number, { x: number; str: string }[]>()
+  for (const item of items) {
+    const y = Math.round(item.transform[5])
+    const row = rows.get(y) ?? []
+    row.push({ x: item.transform[4], str: item.str })
+    rows.set(y, row)
+  }
+  return [...rows.entries()]
+    .sort(([a], [b]) => b - a)
+    .map(([, row]) => row.sort((a, b) => a.x - b.x).map((cell) => cell.str).join(' ').trim())
+    .filter(Boolean)
+    .join('\n')
 }
 
 // PDF 텍스트에서 거래 행 파싱 (best-effort 정규식)
@@ -417,7 +430,8 @@ export function parsePDFText(text: string): ParsedRow[] {
     const date = parseDate(dateMatch[1])
     if (!date) continue
 
-    const amounts = [...line.matchAll(amountRe)]
+    // 날짜의 연도(예: 2026)가 금액으로 잡히지 않도록 날짜를 지운 뒤 찾는다
+    const amounts = [...line.replace(dateRe, ' ').matchAll(amountRe)]
       .map((m) => parseAmount(m[1]))
       .filter((n) => n > 0)
 
