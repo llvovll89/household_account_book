@@ -10,7 +10,7 @@ import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
 import { forecastMonthEndExpense } from '../lib/monthEndForecast'
-import { getAccountBalances } from '../lib/accountBalances'
+import { getAccountBalances, summarizeNetWorth } from '../lib/accountBalances'
 import { getLoanStatuses } from '../lib/loans'
 import { getDaysUntilNextBilling } from '../lib/subscriptions'
 import { LoansModal } from './LoansModal'
@@ -434,16 +434,20 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
 
     // 3) 시작 잔액을 입력한 계좌가 있으면 실제 잔액 합계를 대표값으로 쓴다
     const accounts = getAccountBalances(userPaymentMethods, transactions)
-    const accountTotal = accounts.reduce((s, a) => s + a.balance, 0)
+    // 4) 계좌 잔액이 있으면 대출 남은 원금을 빼서 순자산으로 본다
+    const summary = summarizeNetWorth(accounts, loanStatuses.map((l) => l.remaining))
+    const subtractsLoans = accounts.length > 0 && summary.loanTotal > 0
 
     return {
       totalBalance,
       goalsSaved,
       accounts,
-      total: accounts.length > 0 ? accountTotal : totalBalance,
+      summary,
+      subtractsLoans,
+      total: accounts.length > 0 ? summary.netWorth : totalBalance,
       goalCount: goals.length,
     }
-  }, [transactions, goals, userPaymentMethods])
+  }, [transactions, goals, userPaymentMethods, loanStatuses])
 
   // 월별 순자산 추이 (전체 거래 기준 누적) — 단일 패스로 6개 월말 잔액 계산
   const netWorthTrend = useMemo(() => {
@@ -2016,7 +2020,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
         <div className="bg-surface rounded-3xl px-5 py-3.5">
           <div className="flex items-center gap-2 mb-2.5">
             <PieChart size={14} className="text-accent" />
-            <span className="text-[13px] font-bold text-muted">{netWorth.accounts.length > 0 ? '계좌 잔액 합계' : '순자산 현황'}</span>
+            <span className="text-[13px] font-bold text-muted">{netWorth.subtractsLoans ? '순자산 (계좌 − 대출)' : netWorth.accounts.length > 0 ? '계좌 잔액 합계' : '순자산 현황'}</span>
           </div>
           <div className="flex items-end gap-2 mb-2.5">
             <p className={`text-[22px] font-extrabold num tracking-tight ${netWorth.total >= 0 ? 'text-white' : 'text-expense'}`}>
@@ -2033,6 +2037,11 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
               )
             })()}
           </div>
+          {netWorth.subtractsLoans && (
+            <p className="text-[11px] text-muted num mb-2">
+              계좌 {fmt(netWorth.summary.accountTotal)}원 − 대출 {fmt(netWorth.summary.loanTotal)}원
+            </p>
+          )}
           {netWorth.accounts.length > 0 ? (
             <ul className="space-y-1.5 mb-2.5" aria-label="계좌별 잔액">
               {netWorth.accounts.map(({ method, balance }) => (

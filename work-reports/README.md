@@ -56,3 +56,4 @@
 | 2026-11-23 | [App.tsx 분리 1단계: useSyncPersistence](2026-11-23-19-use-sync-persistence.md) | #57 |
 | 2026-11-23 | [CLAUDE.md·교수님 확인 목록 갱신](2026-11-23-20-docs-refresh.md) | #58 |
 | 2026-11-23 | [App.tsx 분리 2단계](2026-11-23-21-app-split-2.md) | #59 |
+| 2026-11-23 | [순자산에서 대출 차감](2026-11-23-22-net-worth-minus-loans.md) | #60 |

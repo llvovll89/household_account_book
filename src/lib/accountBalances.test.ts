@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction, UserPaymentMethod } from '../types'
-import { getAccountBalances } from './accountBalances'
+import { getAccountBalances, summarizeNetWorth } from './accountBalances'
 
 const tx = (id: string, type: 'income' | 'expense', amount: number, date: string, extra: Partial<Transaction> = {}): Transaction =>
   ({ id, type, amount, category: '식비', description: '', date, createdAt: 1, ...extra })
@@ -32,4 +32,10 @@ describe('getAccountBalances', () => {
     const balances = getAccountBalances(methods, [tx('t', 'expense', 1000, '2026-11-20', { paymentMethod: 'transfer' })])
     expect(balances.find((b) => b.method.id === 'salary')?.balance).toBe(999_000)
   })
+})
+
+it('summarizeNetWorth subtracts remaining loan principal from account balances', () => {
+  const method = { id: 'a', type: 'transfer' as const, label: '통장' }
+  expect(summarizeNetWorth([{ method, balance: 3_000_000 }, { method, balance: -200_000 }], [1_000_000, 500_000]))
+    .toEqual({ accountTotal: 2_800_000, loanTotal: 1_500_000, netWorth: 1_300_000 })
 })
