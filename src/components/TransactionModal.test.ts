@@ -247,3 +247,12 @@ it('still saves the transaction with its previous receipt when the upload fails'
     mutableAuth.currentUser = null
   }
 })
+
+it('asks for a new category when an edited expense is switched to income', async () => {
+  const onSave = vi.fn()
+  render(createElement(TransactionModal, { onSave, onClose: vi.fn(), transaction: { id: 'meal', type: 'expense', amount: 12000, description: '점심', category: '식비', date: toLocalDateStr(), createdAt: 1 } }))
+  fireEvent.click(screen.getByRole('button', { name: /수입/ }))
+  fireEvent.click(screen.getByRole('button', { name: '저장' }))
+  expect(await screen.findByText('카테고리를 선택해주세요.')).toBeTruthy()
+  expect(onSave).not.toHaveBeenCalled()
+})

@@ -296,8 +296,14 @@ export default function GoalsView({
                         return false;
                     return true;
                 })
+                // 카테고리에 연결하면 그 카테고리 금액을 그대로 모은다 (지출 카테고리 '저축'도 +로 쌓임).
+                // 태그만 연결하면 수입은 +, 지출은 −인 순액으로 본다
                 .reduce(
-                    (s, t) => s + (t.type === "income" ? t.amount : -t.amount),
+                    (s, t) =>
+                        s +
+                        (g.linkedCategory || t.type === "income"
+                            ? t.amount
+                            : -t.amount),
                     0,
                 );
             map[g.id] = total;

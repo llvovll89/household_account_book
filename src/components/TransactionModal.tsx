@@ -455,6 +455,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
     }
   }
 
+  function changeType(next: TransactionType) {
+    // 수정 중 유형을 바꾸면 이전 유형의 카테고리가 남지 않게 비우고 다시 고르게 한다 (신규 입력은 렌더 중 첫 항목으로 맞춤)
+    if (transaction && next !== type) setCategory('')
+    setType(next)
+    setCategoryQuery('')
+  }
+
   // 영수증은 Firebase Storage에만 저장하므로 로그인 상태에서만 고를 수 있다
   const canUploadReceipt = !!auth.currentUser
 
@@ -583,13 +590,13 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
           <form id="transaction-entry-form" noValidate onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
             {/* 수입 / 지출 */}
             <div role="group" aria-label="거래 유형" className="transaction-type-switch flex gap-2 bg-[#2C2C2E] p-1 rounded-xl">
-              <button type="button" onClick={() => { setType('income'); setCategoryQuery('') }} data-kind="income"
+              <button type="button" onClick={() => changeType('income')} data-kind="income"
                 aria-pressed={type === 'income'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'income' ? 'bg-[#2ACF6A]/15 border-[#2ACF6A]/50 text-[#2ACF6A]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
                 <ArrowDownLeft size={17} aria-hidden="true" /> 수입
               </button>
-              <button type="button" onClick={() => { setType('expense'); setCategoryQuery('') }} data-kind="expense"
+              <button type="button" onClick={() => changeType('expense')} data-kind="expense"
                 aria-pressed={type === 'expense'}
                 className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all border ${type === 'expense' ? 'bg-[#F25260]/15 border-[#F25260]/50 text-[#F25260]' : 'border-transparent text-[#9CA6B3]'
                   }`}>
