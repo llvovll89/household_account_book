@@ -55,3 +55,4 @@
 | 2026-11-23 | [하단 탭 6개 → 4개 (더보기)](2026-11-23-18-more-tab.md) | #56 |
 | 2026-11-23 | [App.tsx 분리 1단계: useSyncPersistence](2026-11-23-19-use-sync-persistence.md) | #57 |
 | 2026-11-23 | [CLAUDE.md·교수님 확인 목록 갱신](2026-11-23-20-docs-refresh.md) | #58 |
+| 2026-11-23 | [App.tsx 분리 2단계](2026-11-23-21-app-split-2.md) | #59 |
