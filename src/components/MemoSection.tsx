@@ -349,7 +349,7 @@ export default function MemoSection({
                             setSelectedDate(null);
                         }}
                         aria-pressed={viewMode === "cards"}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "cards" ? "bg-[#3D8EF8] text-white" : "bg-[#2C2C2E] text-[#8B95A1]"}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "cards" ? "bg-[#3D8EF8] text-white" : "bg-raised text-muted"}`}
                     >
                         <LayoutGrid size={12} />
                         카드
@@ -357,24 +357,24 @@ export default function MemoSection({
                     <button
                         onClick={() => setViewMode("calendar")}
                         aria-pressed={viewMode === "calendar"}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "calendar" ? "bg-[#3D8EF8] text-white" : "bg-[#2C2C2E] text-[#8B95A1]"}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "calendar" ? "bg-[#3D8EF8] text-white" : "bg-raised text-muted"}`}
                     >
                         <CalendarDays size={12} />
                         캘린더
                     </button>
                 </div>
                 {viewMode === "cards" && memos.length > 0 && (
-                    <div className="ml-auto flex items-center gap-1.5 bg-[#1C1C1E] rounded-xl px-2.5 py-1.5 min-w-0 max-w-35">
-                        <Search size={11} className="text-[#4E5968] shrink-0" />
+                    <div className="ml-auto flex items-center gap-1.5 bg-surface rounded-xl px-2.5 py-1.5 min-w-0 max-w-35">
+                        <Search size={11} className="text-muted shrink-0" />
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="검색..."
-                            className="bg-transparent text-white text-xs placeholder:text-[#4E5968] outline-none w-full min-w-0"
+                            className="bg-transparent text-white text-xs placeholder:text-tone-slate outline-none w-full min-w-0"
                         />
                         {search && (
                             <button onClick={() => setSearch("")}>
-                                <X size={10} className="text-[#4E5968]" />
+                                <X size={10} className="text-muted" />
                             </button>
                         )}
                     </div>
@@ -382,7 +382,7 @@ export default function MemoSection({
             </div>
 
             {viewMode === "cards" && sorted.length === 0 && !showForm && (
-                <div className="bg-[#1C1C1E] rounded-2xl tab-content">
+                <div className="bg-surface rounded-2xl tab-content">
                     {search ? (
                         <EmptyState
                             emoji="🔍"
@@ -428,7 +428,7 @@ export default function MemoSection({
                                     <div className="absolute top-3.5 right-3.5">
                                         <Pin
                                             size={11}
-                                            className="text-[#F5BE3A]"
+                                            className="text-warning"
                                             fill="#F5BE3A"
                                         />
                                     </div>
@@ -458,13 +458,13 @@ export default function MemoSection({
                                 )}
 
                                 {memo.content && (
-                                    <p className="text-[12px] text-[#8B95A1] whitespace-pre-wrap line-clamp-4 leading-relaxed flex-1">
+                                    <p className="text-[12px] text-muted whitespace-pre-wrap line-clamp-4 leading-relaxed flex-1">
                                         {memo.content}
                                     </p>
                                 )}
 
                                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
-                                    <span className="text-[10px] text-[#4E5968]">
+                                    <span className="text-[10px] text-muted">
                                         {memo.date
                                             ? formatMemoDate(
                                                   memo.date,
@@ -486,8 +486,8 @@ export default function MemoSection({
                                                 size={10}
                                                 className={
                                                     memo.pinned
-                                                        ? "text-[#F5BE3A]"
-                                                        : "text-[#4E5968]"
+                                                        ? "text-warning"
+                                                        : "text-muted"
                                                 }
                                             />
                                         </button>
@@ -498,7 +498,7 @@ export default function MemoSection({
                                         >
                                             <Pencil
                                                 size={10}
-                                                className="text-[#4E5968]"
+                                                className="text-muted"
                                             />
                                         </button>
                                         <button
@@ -506,11 +506,11 @@ export default function MemoSection({
                                                 handleDeleteWithUndo(memo.id)
                                             }
                                             aria-label="메모 삭제"
-                                            className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors"
+                                            className="p-1.5 rounded-lg hover:bg-tone-red/15 transition-colors"
                                         >
                                             <Trash2
                                                 size={10}
-                                                className="text-[#F25260]"
+                                                className="text-expense"
                                             />
                                         </button>
                                     </div>
@@ -523,11 +523,11 @@ export default function MemoSection({
 
             {viewMode === "calendar" && (
                 <div className="space-y-3 tab-content">
-                    <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                    <div className="bg-surface rounded-2xl overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-white/6">
                             <button
                                 onClick={prevCalendarMonth}
-                                className="px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold"
+                                className="px-2.5 py-1 rounded-lg bg-raised text-muted text-xs font-bold"
                             >
                                 이전
                             </button>
@@ -537,7 +537,7 @@ export default function MemoSection({
                             </span>
                             <button
                                 onClick={nextCalendarMonth}
-                                className="px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] text-xs font-bold"
+                                className="px-2.5 py-1 rounded-lg bg-raised text-muted text-xs font-bold"
                             >
                                 다음
                             </button>
@@ -547,7 +547,7 @@ export default function MemoSection({
                             {WEEKDAYS.map((day, idx) => (
                                 <div
                                     key={day}
-                                    className={`text-center py-2 text-[11px] font-bold ${idx === 0 ? "text-[#F25260]" : idx === 6 ? "text-[#3D8EF8]" : "text-[#8B95A1]"}`}
+                                    className={`text-center py-2 text-[11px] font-bold ${idx === 0 ? "text-expense" : idx === 6 ? "text-accent" : "text-muted"}`}
                                 >
                                     {day}
                                 </div>
@@ -567,12 +567,12 @@ export default function MemoSection({
                                             setSelectedDate(cell.date);
                                         }}
                                         disabled={!cell.date}
-                                        className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 min-h-14.5 border-r border-b border-white/4 transition-colors ${(idx + 1) % 7 === 0 ? "border-r-0" : ""} ${isSelected ? "bg-[#3D8EF8]/15" : cell.date ? "hover:bg-white/4" : ""}`}
+                                        className={`relative flex flex-col items-center justify-start pt-1.5 pb-1 min-h-14.5 border-r border-b border-white/4 transition-colors ${(idx + 1) % 7 === 0 ? "border-r-0" : ""} ${isSelected ? "bg-tone-blue/15" : cell.date ? "hover:bg-white/4" : ""}`}
                                     >
                                         {cell.date && (
                                             <>
                                                 <span
-                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${cell.isToday ? "bg-[#3D8EF8] text-white" : colIdx === 0 ? "text-[#F25260]/80" : colIdx === 6 ? "text-[#3D8EF8]/80" : "text-white/70"}`}
+                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${cell.isToday ? "bg-[#3D8EF8] text-white" : colIdx === 0 ? "text-tone-red/80" : colIdx === 6 ? "text-tone-blue/80" : "text-white/70"}`}
                                                 >
                                                     {parseInt(
                                                         cell.date.split("-")[2],
@@ -581,7 +581,7 @@ export default function MemoSection({
                                                 </span>
                                                 {cell.count > 0 && (
                                                     <>
-                                                        <span className="mt-0.5 text-[10px] font-semibold text-[#8B95A1]">
+                                                        <span className="mt-0.5 text-[10px] font-semibold text-muted">
                                                             {cell.count}개
                                                         </span>
                                                         <div className="w-1 h-1 rounded-full mt-0.5 bg-[#3D8EF8]" />
@@ -602,22 +602,22 @@ export default function MemoSection({
                     onClose={() => setSelectedDate(null)}
                     label={`${formatSelectedDateLabel(selectedDate)} 일정`}
                     containerClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-                    panelClassName="modal-panel w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col"
+                    panelClassName="modal-panel w-full max-w-md bg-surface rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col"
                 >
                         <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between shrink-0">
                             <p className="text-sm font-bold text-white">
                                 {formatSelectedDateLabel(selectedDate)} 일정
                             </p>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-[#8B95A1]">
+                                <span className="text-xs font-semibold text-muted">
                                     {selectedDateMemos.length}개
                                 </span>
                                 <button
                                     onClick={() => setSelectedDate(null)}
-                                    className="w-9 h-9 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+                                    className="w-9 h-9 rounded-full bg-raised flex items-center justify-center"
                                     aria-label="상세 닫기"
                                 >
-                                    <X size={12} className="text-[#8B95A1]" />
+                                    <X size={12} className="text-muted" />
                                 </button>
                             </div>
                         </div>
@@ -625,7 +625,7 @@ export default function MemoSection({
                         {selectedDateMemos.length === 0 ? (
                             <div className="py-10 text-center flex flex-col items-center gap-2">
                                 <span className="text-3xl">📅</span>
-                                <p className="text-sm text-[#4E5968]">
+                                <p className="text-sm text-muted">
                                     이 날짜에는 메모가 없어요
                                 </p>
                                 <button
@@ -633,7 +633,7 @@ export default function MemoSection({
                                         setSelectedDate(null);
                                         openNew();
                                     }}
-                                    className="mt-2 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                                    className="mt-2 text-xs font-bold px-4 py-2 rounded-xl bg-raised text-muted hover:text-white hover:bg-tone-hover transition-colors"
                                 >
                                     메모 작성
                                 </button>
@@ -659,7 +659,7 @@ export default function MemoSection({
                                                             "(제목 없음)"}
                                                     </p>
                                                     {memo.content && (
-                                                        <p className="text-xs text-[#8B95A1] mt-1 whitespace-pre-wrap line-clamp-3">
+                                                        <p className="text-xs text-muted mt-1 whitespace-pre-wrap line-clamp-3">
                                                             {memo.content}
                                                         </p>
                                                     )}
@@ -691,7 +691,7 @@ export default function MemoSection({
                                                             </div>
                                                         )}
                                                     {memo.dateEnd && (
-                                                        <p className="text-[10px] text-[#3D8EF8] mt-1 font-semibold">
+                                                        <p className="text-[10px] text-accent mt-1 font-semibold">
                                                             {formatMemoDate(
                                                                 memo.date ??
                                                                     selectedDate,
@@ -717,8 +717,8 @@ export default function MemoSection({
                                                             size={11}
                                                             className={
                                                                 memo.pinned
-                                                                    ? "text-[#F5BE3A]"
-                                                                    : "text-[#4E5968]"
+                                                                    ? "text-warning"
+                                                                    : "text-muted"
                                                             }
                                                         />
                                                     </button>
@@ -734,7 +734,7 @@ export default function MemoSection({
                                                     >
                                                         <Pencil
                                                             size={11}
-                                                            className="text-[#4E5968]"
+                                                            className="text-muted"
                                                         />
                                                     </button>
                                                     <button
@@ -744,11 +744,11 @@ export default function MemoSection({
                                                             )
                                                         }
                                                         aria-label="메모 삭제"
-                                                        className="p-1.5 rounded-lg hover:bg-[#F25260]/15 transition-colors"
+                                                        className="p-1.5 rounded-lg hover:bg-tone-red/15 transition-colors"
                                                     >
                                                         <Trash2
                                                             size={11}
-                                                            className="text-[#F25260]"
+                                                            className="text-expense"
                                                         />
                                                     </button>
                                                 </div>
@@ -766,7 +766,7 @@ export default function MemoSection({
                     onClose={handleCancel}
                     label="메모 입력"
                     containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    panelClassName="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel"
+                    panelClassName="bg-surface w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel"
                 >
                         <div className="flex justify-center pt-3 pb-1 shrink-0">
                             <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -779,22 +779,22 @@ export default function MemoSection({
                                         {editingId ? "메모 수정" : "새 메모"}
                                     </h3>
                                     {queue.length > 0 && (
-                                        <p className="text-xs text-[#3D8EF8] font-semibold mt-0.5">
+                                        <p className="text-xs text-accent font-semibold mt-0.5">
                                             대기 중 {queue.length}건
                                         </p>
                                     )}
                                 </div>
                                 <button
                                     onClick={handleCancel}
-                                    className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+                                    className="w-8 h-8 rounded-full bg-raised flex items-center justify-center"
                                 >
-                                    <X size={14} className="text-[#8B95A1]" />
+                                    <X size={14} className="text-muted" />
                                 </button>
                             </div>
 
                             {/* 대기열 */}
                             {queue.length > 0 && (
-                                <div className="bg-[#2C2C2E] rounded-2xl overflow-hidden">
+                                <div className="bg-raised rounded-2xl overflow-hidden">
                                     {queue.map((item, idx) => (
                                         <div
                                             key={idx}
@@ -805,7 +805,7 @@ export default function MemoSection({
                                                     {item.title ||
                                                         "(제목 없음)"}
                                                 </p>
-                                                <p className="text-[10px] text-[#4E5968]">
+                                                <p className="text-[10px] text-muted">
                                                     {item.dateEnd
                                                         ? `${item.date}~${item.dateEnd}`
                                                         : item.date}
@@ -819,12 +819,12 @@ export default function MemoSection({
                                                         ),
                                                     )
                                                 }
-                                                className="w-5 h-5 rounded-full bg-[#F25260]/15 flex items-center justify-center shrink-0"
+                                                className="w-5 h-5 rounded-full bg-tone-red/15 flex items-center justify-center shrink-0"
                                                 aria-label="대기열에서 제거"
                                             >
                                                 <X
                                                     size={10}
-                                                    className="text-[#F25260]"
+                                                    className="text-expense"
                                                 />
                                             </button>
                                         </div>
@@ -838,7 +838,7 @@ export default function MemoSection({
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder="제목"
                                 autoFocus
-                                className="w-full text-[17px] font-bold text-white placeholder-[#2D3352] focus:outline-none bg-transparent"
+                                className="w-full text-[17px] font-bold text-white placeholder-tone-slate focus:outline-none bg-transparent"
                             />
                             <textarea
                                 value={content}
@@ -849,7 +849,7 @@ export default function MemoSection({
                                 }}
                                 placeholder="내용을 입력하세요..."
                                 rows={4}
-                                className="w-full text-[14px] text-[#8B95A1] placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed bg-transparent"
+                                className="w-full text-[14px] text-muted placeholder-tone-slate focus:outline-none resize-none leading-relaxed bg-transparent"
                                 style={{minHeight: "96px"}}
                             />
 
@@ -858,7 +858,7 @@ export default function MemoSection({
                             {/* 날짜 섹션 */}
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-[10px] font-semibold text-[#4E5968] uppercase tracking-wide">
+                                    <p className="text-[10px] font-semibold text-muted uppercase tracking-wide">
                                         날짜
                                     </p>
                                     <button
@@ -866,8 +866,8 @@ export default function MemoSection({
                                         onClick={toggleDateEnd}
                                         className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${
                                             showDateEnd
-                                                ? "bg-[#3D8EF8]/20 text-[#3D8EF8]"
-                                                : "bg-[#2C2C2E] text-[#4E5968] hover:text-[#8B95A1]"
+                                                ? "bg-tone-blue/20 text-accent"
+                                                : "bg-raised text-muted hover:text-tone-gray"
                                         }`}
                                     >
                                         <CalendarRange size={10} />
@@ -877,8 +877,8 @@ export default function MemoSection({
 
                                 {!showDateEnd ? (
                                     <div className="grid grid-cols-2 gap-2">
-                                        <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
-                                            <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">
+                                        <div className="bg-raised rounded-xl px-3 py-2.5">
+                                            <p className="text-[10px] font-semibold text-muted mb-1 uppercase tracking-wide">
                                                 날짜
                                             </p>
                                             <FancyDatePicker
@@ -887,8 +887,8 @@ export default function MemoSection({
                                                 size="sm"
                                             />
                                         </div>
-                                        <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
-                                            <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">
+                                        <div className="bg-raised rounded-xl px-3 py-2.5">
+                                            <p className="text-[10px] font-semibold text-muted mb-1 uppercase tracking-wide">
                                                 카테고리
                                             </p>
                                             <div className="flex items-center gap-1.5">
@@ -919,7 +919,7 @@ export default function MemoSection({
                                                             <option
                                                                 key={c}
                                                                 value={c}
-                                                                className="bg-[#2C2C2E] text-white"
+                                                                className="bg-raised text-white"
                                                             >
                                                                 {c}
                                                             </option>
@@ -927,7 +927,7 @@ export default function MemoSection({
                                                     </select>
                                                     <ChevronDown
                                                         size={11}
-                                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none"
+                                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
                                                     />
                                                 </div>
                                             </div>
@@ -936,8 +936,8 @@ export default function MemoSection({
                                 ) : (
                                     <div className="space-y-2">
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
-                                                <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">
+                                            <div className="bg-raised rounded-xl px-3 py-2.5">
+                                                <p className="text-[10px] font-semibold text-muted mb-1 uppercase tracking-wide">
                                                     시작일
                                                 </p>
                                                 <FancyDatePicker
@@ -946,8 +946,8 @@ export default function MemoSection({
                                                     size="sm"
                                                 />
                                             </div>
-                                            <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
-                                                <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">
+                                            <div className="bg-raised rounded-xl px-3 py-2.5">
+                                                <p className="text-[10px] font-semibold text-muted mb-1 uppercase tracking-wide">
                                                     종료일
                                                 </p>
                                                 <FancyDatePicker
@@ -958,8 +958,8 @@ export default function MemoSection({
                                                 />
                                             </div>
                                         </div>
-                                        <div className="bg-[#2C2C2E] rounded-xl px-3 py-2.5">
-                                            <p className="text-[10px] font-semibold text-[#4E5968] mb-1 uppercase tracking-wide">
+                                        <div className="bg-raised rounded-xl px-3 py-2.5">
+                                            <p className="text-[10px] font-semibold text-muted mb-1 uppercase tracking-wide">
                                                 카테고리
                                             </p>
                                             <div className="flex items-center gap-1.5">
@@ -990,7 +990,7 @@ export default function MemoSection({
                                                             <option
                                                                 key={c}
                                                                 value={c}
-                                                                className="bg-[#2C2C2E] text-white"
+                                                                className="bg-raised text-white"
                                                             >
                                                                 {c}
                                                             </option>
@@ -998,7 +998,7 @@ export default function MemoSection({
                                                     </select>
                                                     <ChevronDown
                                                         size={11}
-                                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none"
+                                                        className="absolute right-0 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
                                                     />
                                                 </div>
                                             </div>
@@ -1010,7 +1010,7 @@ export default function MemoSection({
                             <div className="flex justify-end gap-2 pt-1 border-t border-white/6">
                                 <button
                                     onClick={handleCancel}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#4E5968] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-muted bg-raised hover:bg-tone-hover transition-colors"
                                 >
                                     <X size={13} /> 취소
                                 </button>
@@ -1018,7 +1018,7 @@ export default function MemoSection({
                                     <button
                                         type="button"
                                         onClick={handleAddToQueue}
-                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-[#8B95A1] bg-[#2C2C2E] hover:bg-[#3A3A3C] transition-colors"
+                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-muted bg-raised hover:bg-tone-hover transition-colors"
                                     >
                                         <Plus size={13} /> 항목 추가
                                     </button>
