@@ -3,10 +3,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, expect, it, vi } from 'vitest'
 import TransactionModal from './TransactionModal'
 import { toLocalDateStr } from '../lib/format'
+import { uploadReceiptImage } from '../lib/receiptStorage'
+import { auth } from '../firebase/firebase'
+import { showToast } from '../lib/toast'
 
 vi.mock('../lib/storage', () => ({ loadSettings: async () => ({ userPaymentMethods: [], cardBillingDay: 25 }) }))
 vi.mock('../firebase/firebase', () => ({ auth: { currentUser: null } }))
 vi.mock('../lib/receiptStorage', () => ({ uploadReceiptImage: vi.fn() }))
+vi.mock('../lib/toast', () => ({ showToast: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({ default: () => null }))
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
@@ -216,4 +220,30 @@ it('switching to income selects a valid income category', async () => {
   fireEvent.click(screen.getByRole('button', { name: '저장' }))
   await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
   expect(onSave.mock.calls[0][0][0]).toMatchObject({ type: 'income', category: '급여', amount: 10000 })
+})
+
+const withReceipt = { id: 'r', type: 'expense' as const, amount: 5000, description: '영수증', category: '식비', date: toLocalDateStr(), createdAt: 1, receiptImageUrl: 'https://old' }
+
+it('asks to sign in instead of silently dropping a receipt photo when logged out', () => {
+  render(createElement(TransactionModal, { onSave: vi.fn(), onClose: vi.fn(), transaction: withReceipt }))
+  expect(screen.getByText('로그인하면 영수증 사진을 첨부할 수 있어요.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: /다시 선택|사진 선택/ })).toBeNull()
+})
+
+it('still saves the transaction with its previous receipt when the upload fails', async () => {
+  const mutableAuth = auth as unknown as { currentUser: { uid: string } | null }
+  mutableAuth.currentUser = { uid: 'u' }
+  try {
+    vi.mocked(uploadReceiptImage).mockRejectedValueOnce(new Error('영수증 업로드 실패: 403'))
+    const onSave = vi.fn()
+    const { container } = render(createElement(TransactionModal, { onSave, onClose: vi.fn(), transaction: withReceipt }))
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [new File(['x'], 'new.jpg', { type: 'image/jpeg' })] } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledOnce())
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({ receiptImageUrl: 'https://old' })
+    expect(showToast).toHaveBeenCalledWith(expect.stringContaining('영수증 없이 저장'), 5000, 'warning')
+  } finally {
+    mutableAuth.currentUser = null
+  }
 })
