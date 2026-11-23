@@ -12,8 +12,6 @@ import {useRegisterSW} from "virtual:pwa-register/react";
 import {
     ArrowDownLeft,
     ArrowUpRight,
-    ChevronLeft,
-    ChevronRight,
     Plus,
     LayoutDashboard,
     List,
@@ -55,6 +53,7 @@ import {showToast} from "./lib/toast";
 import {ToastHost} from "./components/layout/ToastHost";
 import {HeaderMenu} from "./components/layout/HeaderMenu";
 import {SyncStatusBar} from "./components/layout/SyncStatusBar";
+import {MonthHeader} from "./components/layout/MonthHeader";
 import BrandMark from "./components/ui/BrandMark";
 import ThemeToggle from "./components/layout/ThemeToggle";
 import BottomNavigation from "./components/layout/BottomNavigation";
@@ -636,14 +635,6 @@ export default function App() {
     } = useRecurringAutoApply({authReady, isSyncing, recurring, handleApplyRecurring});
 
 
-    const prevMonth = useCallback(() => {
-        setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-        window.scrollTo({top: 0, behavior: "smooth"});
-    }, []);
-    const nextMonth = useCallback(() => {
-        setCurrentDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
-        window.scrollTo({top: 0, behavior: "smooth"});
-    }, []);
     const openTransactionsWithBilling = useCallback(
         (billing: "current" | "next") => {
             localStorage.setItem(FILTER_TYPE_KEY, "expense");
@@ -659,13 +650,6 @@ export default function App() {
         },
         [],
     );
-    const isCurrentMonth = () => {
-        const now = new Date();
-        return (
-            currentDate.getFullYear() === now.getFullYear() &&
-            currentDate.getMonth() === now.getMonth()
-        );
-    };
 
     const {monthIncome, monthExpense, monthBalance} = useMemo(() => {
         const cutoff = `${yearMonth}-01`;
@@ -846,98 +830,16 @@ export default function App() {
                         </div>
                     </div>
 
-                    <div className="ledger-month-picker flex items-center justify-center gap-2 mt-3">
-                                <button
-                                    aria-label="이전 달 보기"
-                                    onClick={prevMonth}
-                                    className="w-11 h-11 rounded-full bg-surface border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
-                                >
-                                    <ChevronLeft
-                                        size={16}
-                                        className="text-muted"
-                                    />
-                                </button>
-                                <button
-                                    aria-label={`${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월, 누르면 이번 달로 이동`}
-                                    title="누르면 이번 달로 돌아가요"
-                                    data-current-month={isCurrentMonth()}
-                                    onClick={() => setCurrentDate(new Date())}
-                                    className={`px-5 min-h-11 rounded-2xl text-base font-bold transition-all ${isCurrentMonth() ? "bg-white text-fg" : "bg-surface text-muted border border-[rgba(255,255,255,0.06)]"}`}
-                                >
-                                    {currentDate.getFullYear()}년{" "}
-                                    {currentDate.getMonth() + 1}월
-                                </button>
-                                <button
-                                    aria-label="다음 달 보기"
-                                    onClick={nextMonth}
-                                    className="w-11 h-11 rounded-full bg-surface border border-[rgba(255,255,255,0.06)] flex items-center justify-center active:scale-95 transition-transform"
-                                >
-                                    <ChevronRight
-                                        size={16}
-                                        className="text-muted"
-                                    />
-                                </button>
-                                {!isCurrentMonth() && (
-                                    <button type="button" onClick={() => setCurrentDate(new Date())}
-                                        className="min-h-11 px-3 rounded-xl bg-tone-blue/10 text-accent text-xs font-semibold shrink-0">
-                                        이번 달
-                                    </button>
-                                )}
-                            </div>
-
-                            {(monthIncome > 0 || monthExpense > 0) && (
-                                <div className="mt-3 pb-1 space-y-1.5">
-                                    <dl className="ledger-month-totals">
-                                      <div><dt>수입</dt>
-                                        <dd className="text-xs font-semibold text-income num">
-                                            {monthIncome.toLocaleString()}원
-                                        </dd></div>
-                                      <div><dt>지출</dt>
-                                        <dd className="text-xs font-semibold text-expense num">
-                                            {monthExpense.toLocaleString()}원
-                                        </dd></div>
-                                      <div><dt>차액</dt><dd
-                                            className={`text-xs font-bold num ${monthBalance >= 0 ? "text-white" : "text-expense"}`}
-                                        >
-                                            {monthBalance.toLocaleString()}원
-                                        </dd></div>
-                                    </dl>
-
-                                    {(monthCardDue > 0 ||
-                                        nextMonthCardDue > 0) && (
-                                        <div className="flex items-center justify-center gap-2 flex-wrap">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    openTransactionsWithBilling(
-                                                        "current",
-                                                    )
-                                                }
-                                                aria-label="카드 이번 청구 내역 필터 보기"
-                                                className="text-[10px] font-bold text-warning num hover:text-warning transition-colors px-2 py-0.5 rounded-full bg-tone-amber/12"
-                                                title="카드 이번 청구 내역 보기"
-                                            >
-                                                이번청구{" "}
-                                                {monthCardDue.toLocaleString()}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    openTransactionsWithBilling(
-                                                        "next",
-                                                    )
-                                                }
-                                                aria-label="카드 다음 청구 내역 필터 보기"
-                                                className="text-[10px] font-bold text-accent num hover:text-tone-blue-pale transition-colors px-2 py-0.5 rounded-full bg-tone-blue/12"
-                                                title="카드 다음 청구 내역 보기"
-                                            >
-                                                다음청구{" "}
-                                                {nextMonthCardDue.toLocaleString()}
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                    <MonthHeader
+                        currentDate={currentDate}
+                        setCurrentDate={setCurrentDate}
+                        monthIncome={monthIncome}
+                        monthExpense={monthExpense}
+                        monthBalance={monthBalance}
+                        monthCardDue={monthCardDue}
+                        nextMonthCardDue={nextMonthCardDue}
+                        onOpenBilling={openTransactionsWithBilling}
+                    />
 
                     <SyncStatusBar sync={sync} />
                 </div>
