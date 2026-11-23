@@ -47,6 +47,9 @@ vi.mock('firebase/auth', () => ({
 }))
 
 import { useAuthSync } from './useAuthSync'
+import { auth } from '../firebase/firebase'
+
+const mutableAuth = auth as unknown as { currentUser: { uid: string } | null }
 
 describe('useAuthSync', () => {
   beforeEach(() => {
@@ -139,13 +142,39 @@ describe('useAuthSync', () => {
       expect(result.current.showMergeModal).toBe(true)
     })
 
-    await act(async () => {
-      await result.current.handleMergeCancel()
-    })
+    mutableAuth.currentUser = { uid: 'user-1' }
+    try {
+      await act(async () => {
+        await result.current.handleMergeCancel()
+      })
+    } finally {
+      mutableAuth.currentUser = null
+    }
 
     expect(mocks.clearLocalDataMock).toHaveBeenCalledTimes(1)
     expect(hydrateData).toHaveBeenCalledTimes(1)
     expect(result.current.showMergeModal).toBe(false)
+  })
+
+  it('회원가입 직후 자동 로그인→로그아웃되면 병합 모달을 닫고, 남은 모달에서 취소해도 로컬 데이터를 지우지 않는다', async () => {
+    const hydrateData = vi.fn().mockResolvedValue(undefined)
+    mocks.hasLocalMigratableDataMock.mockReturnValue(true)
+    let emit: (u: unknown) => void = () => {}
+    mocks.onAuthStateChangedMock.mockImplementation((_auth: unknown, callback: (u: unknown) => void) => {
+      emit = callback
+      return () => {}
+    })
+
+    const { result } = renderHook(() => useAuthSync({ hydrateData }))
+    await act(async () => { emit({ uid: 'new-user' }) })
+    await waitFor(() => expect(result.current.showMergeModal).toBe(true))
+    await act(async () => { emit(null) })
+    expect(result.current.showMergeModal).toBe(false)
+
+    await act(async () => {
+      await result.current.handleMergeCancel()
+    })
+    expect(mocks.clearLocalDataMock).not.toHaveBeenCalled()
   })
 
   it('handleEmailAuth는 이메일/비밀번호 누락 시 토스트를 노출한다', async () => {

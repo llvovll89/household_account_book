@@ -110,12 +110,16 @@ it('removes only exported IDs from the latest application state and persistence 
   expect(saveTransactions).toHaveBeenLastCalledWith(expected)
 })
 
-function renderRecurringHandlers(recurring: RecurringTransaction[], yearMonth: string) {
-  const state = { transactions: [] as Transaction[], recurring }
+function renderRecurringHandlers(
+  recurring: RecurringTransaction[], yearMonth: string,
+  persist: (task: () => Promise<void>) => void = task => { void task() },
+  transactions: Transaction[] = [],
+) {
+  const state = { transactions, recurring }
   const { result } = renderHook(() => useAppHandlers({
     transactions: state.transactions, editingTransaction: null, yearMonth,
     customExpenseCategories: [], customIncomeCategories: [], transactionTemplates: [], autoCategoryRules: [],
-    persist: task => { void task() }, dispatchUI: vi.fn(),
+    persist, dispatchUI: vi.fn(),
     setTransactions: value => { state.transactions = typeof value === 'function' ? value(state.transactions) : value },
     setRecurring: value => { state.recurring = typeof value === 'function' ? value(state.recurring) : value },
     setBudgets: vi.fn(), setSubscriptions: vi.fn(), setGoals: vi.fn(), setMemos: vi.fn(),
@@ -181,4 +185,27 @@ it('deletes the replaced receipt by its stored URL, and the receipt of a deleted
   } finally {
     mutableAuth.currentUser = null
   }
+})
+
+it('keeps applied recurring transactions and their month together when the remote save fails', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 10, 9))
+  const rent: RecurringTransaction = { id: 'rent', type: 'expense', category: '주거비', amount: 500000, description: '월세', dayOfMonth: 1, lastAppliedMonth: '2026-10', createdAt: 1 }
+  vi.mocked(saveTransactions).mockRejectedValueOnce(new Error('offline'))
+  const { result, state } = renderRecurringHandlers([rent], '2026-11', task => { void task().catch(() => {}) })
+  let saved: boolean | undefined
+  await act(async () => { saved = await result.current.handleApplyRecurring([rent], '2026-11') })
+  expect(saved).toBe(false)
+  expect(state.transactions).toHaveLength(1)
+  expect(state.recurring[0].lastAppliedMonth).toBe('2026-11')
+  vi.useRealTimers()
+})
+
+it('renames tags from the current state, keeping transactions not yet uploaded', () => {
+  const local: Transaction = { id: 'offline', type: 'expense', category: '식비', amount: 1, description: '#여행 점심', tags: ['여행'], date: '2026-10-01', createdAt: 1 }
+  vi.mocked(saveTransactions).mockClear()
+  const { result, state } = renderRecurringHandlers([], '2026-10', task => { void task() }, [local])
+  act(() => result.current.handleRenameTag('여행', '휴가'))
+  expect(state.transactions[0].tags).toEqual(['휴가'])
+  expect(saveTransactions).toHaveBeenCalledWith([expect.objectContaining({ id: 'offline', tags: ['휴가'] })])
 })

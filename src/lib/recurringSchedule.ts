@@ -54,7 +54,8 @@ export function getDueRecurringDates(r: DueCheckFields, today: Date): string[] {
 /** 오늘 기준으로 이 정기 항목을 자동 적용해야 하는지 판정한다 */
 export function isRecurringDueToday(r: DueCheckFields, today: Date, todayYM: string): boolean {
   if (isWeeklyFrequency(r)) return getDueRecurringDates(r, today).length > 0
-  return r.lastAppliedMonth !== todayYM && clampDayToMonth(today, r.dayOfMonth) <= today.getDate()
+  // 시간대가 다른 기기가 다음 달분을 먼저 적용했으면 이미 처리된 것으로 본다
+  return (r.lastAppliedMonth ?? '') < todayYM && clampDayToMonth(today, r.dayOfMonth) <= today.getDate()
 }
 
 /** 보고 있는 달에 월간 항목이 아직 적용되지 않았는지 판정한다 (이후 달에 적용됐으면 이미 처리된 것으로 본다) */

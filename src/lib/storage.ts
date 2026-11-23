@@ -288,6 +288,31 @@ const DEFAULT_SETTINGS: AppSettings = {
   hiddenWidgets: [],
 }
 
+function defaultPaymentMethods(billingDay: number): UserPaymentMethod[] {
+  return [
+    { id: 'cash', type: 'cash', label: '현금' },
+    { id: 'check_1', type: 'check', label: '체크카드' },
+    { id: 'credit_1', type: 'credit', label: '신용카드', billingDay },
+  ]
+}
+
+// migrateSettings가 채운 기본 3종 그대로인지 (결제일은 설정값을 따라가므로 비교하지 않음)
+function isUntouchedDefaultPaymentMethods(methods: UserPaymentMethod[]): boolean {
+  const defaults = defaultPaymentMethods(0)
+  return methods.length === defaults.length && methods.every((m, i) => (
+    m.id === defaults[i].id && m.type === defaults[i].type && m.label === defaults[i].label
+  ))
+}
+
+function mergePaymentMethods(remote: UserPaymentMethod[], local: UserPaymentMethod[]): UserPaymentMethod[] {
+  if (remote.length === 0) return local
+  if (isUntouchedDefaultPaymentMethods(local)) return remote
+  // 같은 id는 로컬 값, 원격에만 있는 카드도 보존한다 (거래의 paymentMethodId가 가리킬 수 있음)
+  const byId = new Map(remote.map((m) => [m.id, m]))
+  for (const m of local) byId.set(m.id, m)
+  return Array.from(byId.values())
+}
+
 function migrateSettings(settings: AppSettings): AppSettings {
   const normalizedSensitivity: SwipeSensitivity =
     settings.swipeSensitivity === 'low' || settings.swipeSensitivity === 'medium' || settings.swipeSensitivity === 'high'
@@ -295,15 +320,10 @@ function migrateSettings(settings: AppSettings): AppSettings {
       : 'medium'
 
   if (!Array.isArray(settings.userPaymentMethods) || settings.userPaymentMethods.length === 0) {
-    const billingDay = settings.cardBillingDay ?? 25
     return {
       ...settings,
       swipeSensitivity: normalizedSensitivity,
-      userPaymentMethods: [
-        { id: 'cash', type: 'cash', label: '현금' },
-        { id: 'check_1', type: 'check', label: '체크카드' },
-        { id: 'credit_1', type: 'credit', label: '신용카드', billingDay },
-      ],
+      userPaymentMethods: defaultPaymentMethods(settings.cardBillingDay ?? 25),
     }
   }
   return {
@@ -607,16 +627,18 @@ function mergeBudgets(remote: Budget[], local: Budget[]): Budget[] {
   return Array.from(map.values())
 }
 
-function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
+export function mergeSettings(remote: AppSettings, local: AppSettings): AppSettings {
   return {
     payday: hasValidPayday(local.payday) ? local.payday : remote.payday,
     cardBillingDay: hasValidBillingDay(local.cardBillingDay) ? local.cardBillingDay : remote.cardBillingDay,
-    userPaymentMethods: local.userPaymentMethods.length > 0 ? local.userPaymentMethods : remote.userPaymentMethods,
+    userPaymentMethods: mergePaymentMethods(remote.userPaymentMethods ?? [], local.userPaymentMethods),
     customExpenseCategories: local.customExpenseCategories.length > 0 ? local.customExpenseCategories : remote.customExpenseCategories,
     customIncomeCategories: local.customIncomeCategories.length > 0 ? local.customIncomeCategories : remote.customIncomeCategories,
     transactionTemplates: (local.transactionTemplates?.length ?? 0) > 0 ? local.transactionTemplates : (remote.transactionTemplates ?? []),
     autoCategoryRules: (local.autoCategoryRules?.length ?? 0) > 0 ? local.autoCategoryRules : (remote.autoCategoryRules ?? []),
-    hiddenWidgets: local.hiddenWidgets ?? remote.hiddenWidgets ?? [],
+    // 로컬은 migrateSettings가 항상 'medium'·[]로 채우므로 원격에 값이 있으면 원격을 유지한다
+    swipeSensitivity: remote.swipeSensitivity ?? local.swipeSensitivity,
+    hiddenWidgets: (local.hiddenWidgets?.length ?? 0) > 0 ? local.hiddenWidgets : (remote.hiddenWidgets ?? []),
   }
 }
 
