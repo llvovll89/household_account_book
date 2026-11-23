@@ -841,7 +841,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             {monthlyMethodBalance.hasTransfer && <div className="rounded-2xl px-3 py-2.5 bg-raised"><p className="text-[10px] text-muted mb-1">계좌이체 순유입</p><p className="text-[13px] font-bold num">{fmt(monthlyMethodBalance.transfer)}원</p></div>}
             {monthlyMethodBalance.hasCash && (
               <div className="rounded-2xl px-3 py-2.5 border border-tone-green/25 bg-linear-to-br from-tone-green/14 to-tone-chip">
-                <p className="text-[10px] text-tone-green-pale font-semibold mb-1">💵 현금 잔액</p>
+                <p className="text-[10px] text-accent font-semibold mb-1">💵 현금 잔액</p>
                 <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.cash >= 0 ? 'text-tone-green-pale' : 'text-expense'}`}>
                   {monthlyMethodBalance.cash >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.cash)}
                 </p>
@@ -849,7 +849,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             )}
             {monthlyMethodBalance.hasCheck && (
               <div className="rounded-2xl px-3 py-2.5 border border-tone-teal/25 bg-linear-to-br from-tone-teal/14 to-tone-chip">
-                <p className="text-[10px] text-tone-teal-pale font-semibold mb-1">💳 체크 잔액</p>
+                <p className="text-[10px] text-accent font-semibold mb-1">💳 체크 잔액</p>
                 <p className={`text-[13px] font-extrabold num ${monthlyMethodBalance.check >= 0 ? 'text-tone-teal-pale' : 'text-expense'}`}>
                   {monthlyMethodBalance.check >= 0 ? '+' : ''}{fmt(monthlyMethodBalance.check)}
                 </p>
