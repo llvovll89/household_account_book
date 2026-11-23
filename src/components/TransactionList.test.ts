@@ -66,3 +66,17 @@ it('searches and clears transactions while advanced filters remain collapsed', a
   fireEvent.click(screen.getByRole('button', { name: '검색어 지우기' }))
   await waitFor(() => expect(screen.getByText('점심 식사')).toBeTruthy())
 })
+
+it('lists every card expense in the current statement, including last month purchases after the billing day', async () => {
+  localStorage.setItem('hb_tx_billing_filter', 'current')
+  const card = { type: 'expense' as const, category: '쇼핑', paymentMethod: 'credit' as const, creditBillingDay: 15, createdAt: 1 }
+  render(createElement(TransactionList, {
+    transactions: [
+      { ...card, id: 'oct', amount: 50000, description: '10월 결제분', date: '2026-10-20' },
+      { ...card, id: 'nov', amount: 30000, description: '11월 결제분', date: '2026-11-03' },
+    ],
+    yearMonth: '2026-11', onEdit: vi.fn(), onDelete: vi.fn(),
+  }))
+  await waitFor(() => expect(screen.getByText('10월 결제분')).toBeTruthy())
+  expect(screen.getByText('11월 결제분')).toBeTruthy()
+})

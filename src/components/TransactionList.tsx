@@ -493,7 +493,12 @@ export default function TransactionList({
         const maxAmount = maxAmountStr ? Number(maxAmountStr) : null;
         const result: Transaction[] = [];
 
-        for (const t of monthTx) {
+        // 청구 필터는 거래일이 아니라 청구월 기준이라, 전월 결제분이 이번 청구에 들어갈 수 있다
+        const source =
+            statementMonthFilter || billingFilter !== "all"
+                ? transactions
+                : monthTx;
+        for (const t of source) {
             if (pendingDeleteIds.has(t.id)) continue;
 
             if (periodMode === "day" && t.date !== normalizedBaseDate) continue;
@@ -595,6 +600,7 @@ export default function TransactionList({
 
         return result;
     }, [
+        transactions,
         monthTx,
         periodMode,
         normalizedBaseDate,

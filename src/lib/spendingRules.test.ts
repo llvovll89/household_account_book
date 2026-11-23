@@ -51,3 +51,13 @@ describe('generateSuggestions over-budget rule', () => {
     expect(overBudget(generateSuggestions([expense(200000)], [], [], budgets, '2026-11-01', '2026-11-30'))).toBeUndefined()
   })
 })
+
+describe('generateSuggestions weekend rule', () => {
+  it('skips the weekday ratio when the period has no weekday spending', () => {
+    // 2026-11-01·07·08·14·15는 모두 주말
+    const weekend = ['2026-11-01', '2026-11-07', '2026-11-08', '2026-11-14', '2026-11-15']
+      .map((date) => ({ id: date, type: 'expense' as const, amount: 20000, category: '식비', description: '', date, createdAt: 1 }))
+    const s = generateSuggestions(weekend, [], [], [], '2026-11-01', '2026-11-15')
+    expect(s.find((x) => x.id === 'weekend')).toBeUndefined()
+  })
+})

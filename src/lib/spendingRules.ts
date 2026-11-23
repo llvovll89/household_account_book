@@ -222,7 +222,8 @@ export function generateSuggestions(
     const weekendAvg    = weekendTotal / (weekendDates.length || 1)
     const weekdayAvg    = weekdayTotal / (weekdayDates.length || 1)
 
-    if (weekendAvg > weekdayAvg * 2 && weekendTotal > 50_000) {
+    // 평일 지출이 없으면 배수를 계산할 수 없으므로(Infinity배) 비교하지 않는다
+    if (weekdayDates.length > 0 && weekendAvg > weekdayAvg * 2 && weekendTotal > 50_000) {
       const ratio = (weekendAvg / weekdayAvg).toFixed(1)
       suggestions.push({
         id: 'weekend',
