@@ -54,7 +54,7 @@ const transaction = object({ ...baseEntry, date, dateEnd: optional(emptyOr(date)
 const memo = object({ id: nonempty, title: text, content: text, pinned: bool, createdAt: money, updatedAt: money, date: optional(emptyOr(date)), dateEnd: optional(emptyOr(date)), category: optional(text) })
 const budget = object({ category: nonempty, limit: money, carryover: optional(bool), yearMonth: optional(month) })
 const recurring = object({ ...baseEntry, frequency: optional(choice('monthly', 'weekly', 'biweekly')), dayOfMonth: day, weekday: optional(range(0, 6)), lastAppliedMonth: emptyOr(month), lastAppliedDate: optional(emptyOr(date)), creditBillingDay: optional(day) })
-const subscription = object({ id: nonempty, name: nonempty, amount: decimal, currency: choice('KRW', 'USD'), billingDay: day, category: nonempty, memo: text, color: optional(text), createdAt: money })
+const subscription = object({ id: nonempty, name: nonempty, amount: decimal, currency: choice('KRW', 'USD'), billingDay: day, cycle: optional(choice('monthly', 'yearly')), billingMonth: optional(range(1, 12)), category: nonempty, memo: text, color: optional(text), createdAt: money })
 const goal = object({ id: nonempty, name: nonempty, targetAmount: money, currentAmount: money, emoji: text, color: text, deadline: optional(emptyOr(date)), memo: text, createdAt: money, linkedCategory: optional(text), linkedTags: optional(list(text)) })
 const settings = object({
   payday: nullable((v, p) => v === 'last' ? v : day(v, p)), cardBillingDay: nullable(day),
@@ -64,6 +64,7 @@ const settings = object({
   swipeSensitivity: optional(choice('low', 'medium', 'high')),
   autoCategoryRules: list(object({ id: nonempty, keyword: nonempty, category: nonempty, type, enabled: bool }), byId),
   hiddenWidgets: list(choice('month-close-helper', 'subscription-alert', 'recurring-pending', 'sparkline-summary', 'today-spending', 'health-score', 'spending-pace', 'weekly-comparison', 'timeofday-spending', 'top3-expenses', 'payday-countdown', 'net-worth', 'goal-daily-needed', 'spending-spike', 'spending-savings', 'loans')),
+  usdKrwRate: optional(decimal),
   loans: optional(list(object({ id: nonempty, name: nonempty, balance: money, balanceAsOf: date, createdAt: money }), byId)),
 })
 const snapshot = object({ transactions: list(transaction, byId), memos: list(memo, byId), budgets: list(budget, v => { const b = v as { category: string; yearMonth?: string }; return JSON.stringify([b.category, b.yearMonth ?? '']) }), recurring: list(recurring, byId), subscriptions: list(subscription, byId), goals: list(goal, byId), settings })

@@ -110,6 +110,8 @@ export interface AppSettings {
   autoCategoryRules: AutoCategoryRule[]
   hiddenWidgets: DashboardWidgetId[]
   loans?: Loan[]
+  /** 구독 합계용 USD→원 환율 */
+  usdKrwRate?: number
 }
 
 interface RemoteState {
@@ -647,6 +649,7 @@ export function mergeSettings(remote: AppSettings, local: AppSettings): AppSetti
     swipeSensitivity: remote.swipeSensitivity ?? local.swipeSensitivity,
     hiddenWidgets: (local.hiddenWidgets?.length ?? 0) > 0 ? local.hiddenWidgets : (remote.hiddenWidgets ?? []),
     loans: mergeUniqueByKey(remote.loans ?? [], local.loans ?? [], (l) => l.id),
+    usdKrwRate: local.usdKrwRate ?? remote.usdKrwRate,
   }
 }
 
