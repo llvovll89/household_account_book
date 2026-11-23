@@ -9,6 +9,7 @@ import BudgetModal from './BudgetModal'
 import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
+import { forecastMonthEndExpense } from '../lib/monthEndForecast'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -469,14 +470,15 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
     const daysInMonth = new Date(y, m, 0).getDate()
     const daysElapsed = Math.max(1, today.getDate())
     const timePct = Math.round((daysElapsed / daysInMonth) * 100)
-    const projected = Math.round((expense / daysElapsed) * daysInMonth)
+    // 남은 정기 지출과 일상 지출 추세로 예측한다 (월초 고정비를 한 달 내내 늘리지 않도록)
+    const { projected, scheduledRemaining } = forecastMonthEndExpense(transactions, recurring, yearMonth, today)
     const progress = getBudgetProgress(budgets, transactions, yearMonth)
     const budgetTotal = progress.reduce((s, b) => s + b.effectiveLimit, 0)
     const budgetedSpent = progress.reduce((s, b) => s + b.spent, 0)
     const spendPct = budgetTotal > 0 ? Math.round((budgetedSpent / budgetTotal) * 100) : null
     const onTrack = spendPct === null || spendPct <= timePct + 10
-    return { timePct, daysElapsed, daysInMonth, projected, budgetTotal, spendPct, onTrack }
-  }, [yearMonth, expense, budgets, transactions])
+    return { timePct, daysElapsed, daysInMonth, projected, scheduledRemaining, budgetTotal, spendPct, onTrack }
+  }, [yearMonth, expense, budgets, transactions, recurring])
 
   // 목표 달성을 위한 총 일일 저금 필요액
   const goalsDailyNeeded = useMemo(() => {
@@ -1444,6 +1446,9 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             <div>
               <p className="text-[10px] text-muted">월말 예상 지출</p>
               <p className={`text-sm font-bold num ${spendingPace.onTrack ? 'text-fg' : 'text-expense'}`}>{fmt(spendingPace.projected)}원</p>
+              {spendingPace.scheduledRemaining > 0 && (
+                <p className="text-[10px] text-muted num">남은 정기 지출 {fmt(spendingPace.scheduledRemaining)}원 포함</p>
+              )}
             </div>
             {income > 0 && (() => {
               const projBalance = income - spendingPace.projected
