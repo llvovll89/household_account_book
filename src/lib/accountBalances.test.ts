@@ -39,3 +39,17 @@ it('summarizeNetWorth subtracts remaining loan principal from account balances',
   expect(summarizeNetWorth([{ method, balance: 3_000_000 }, { method, balance: -200_000 }], [1_000_000, 500_000]))
     .toEqual({ accountTotal: 2_800_000, loanTotal: 1_500_000, netWorth: 1_300_000 })
 })
+
+it('computes balances at a past or future date around the as-of date', () => {
+  const methods: UserPaymentMethod[] = [{ id: 'bank', type: 'transfer', label: '통장', openingBalance: 1_000_000, balanceAsOf: '2026-11-10' }]
+  const txs = [
+    tx('oct', 'income', 300_000, '2026-10-25', { paymentMethod: 'transfer', paymentMethodId: 'bank' }),
+    tx('nov', 'expense', 100_000, '2026-11-05', { paymentMethod: 'transfer', paymentMethodId: 'bank' }),
+    tx('dec', 'expense', 50_000, '2026-12-03', { paymentMethod: 'transfer', paymentMethodId: 'bank' }),
+  ]
+  const at = (d: string) => getAccountBalances(methods, txs, d)[0].balance
+  expect(at('2026-10-31')).toBe(1_100_000)
+  expect(at('2026-10-20')).toBe(800_000)
+  expect(at('2026-11-30')).toBe(1_000_000)
+  expect(at('2026-12-31')).toBe(950_000)
+})

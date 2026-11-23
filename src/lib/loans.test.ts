@@ -22,3 +22,8 @@ it('never reports a negative remaining principal', () => {
   const [status] = getLoanStatuses([loan], [pay('big', '2026-11-25', { amount: 2_000_000 })])
   expect(status.remaining).toBe(0)
 })
+
+it('restores repayments made after a past date', () => {
+  const [status] = getLoanStatuses([loan], [pay('oct', '2026-10-25', {}), pay('nov', '2026-11-25', {})], '2026-10-20')
+  expect(status.remaining).toBe(1_300_000)
+})

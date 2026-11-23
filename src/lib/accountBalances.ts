@@ -24,10 +24,11 @@ function findAccount(t: Transaction, accounts: UserPaymentMethod[]): UserPayment
 }
 
 /**
- * 시작 잔액을 입력한 계좌의 현재 잔액.
+ * 시작 잔액을 입력한 계좌의 잔액.
  * 잔액 = 시작 잔액 + 기준일 다음 날부터의 (수입 − 지출). 오늘 이후 날짜로 미리 적은 거래도 반영한다.
+ * atDate를 주면 그날 끝 시점의 잔액이다. 기준일보다 앞이면 그 사이 거래를 거꾸로 되돌린다.
  */
-export function getAccountBalances(methods: UserPaymentMethod[], transactions: Transaction[]): AccountBalance[] {
+export function getAccountBalances(methods: UserPaymentMethod[], transactions: Transaction[], atDate?: string): AccountBalance[] {
   const accounts = methods.filter((m) => isBalanceAccount(m) && typeof m.openingBalance === 'number')
   if (accounts.length === 0) return []
   const balances = new Map(accounts.map((m) => [m.id, m.openingBalance ?? 0]))
@@ -35,8 +36,12 @@ export function getAccountBalances(methods: UserPaymentMethod[], transactions: T
   for (const t of transactions) {
     const account = findAccount(t, all)
     if (!account || !balances.has(account.id)) continue
-    if (account.balanceAsOf && t.date <= account.balanceAsOf) continue
-    balances.set(account.id, (balances.get(account.id) ?? 0) + (t.type === 'income' ? t.amount : -t.amount))
+    const asOf = account.balanceAsOf ?? ''
+    const delta = t.type === 'income' ? t.amount : -t.amount
+    let sign = 0
+    if (t.date > asOf && (atDate === undefined || t.date <= atDate)) sign = 1
+    else if (atDate !== undefined && t.date > atDate && t.date <= asOf) sign = -1
+    if (sign) balances.set(account.id, (balances.get(account.id) ?? 0) + sign * delta)
   }
   return accounts.map((method) => ({ method, balance: balances.get(method.id) ?? 0 }))
 }
