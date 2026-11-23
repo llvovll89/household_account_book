@@ -764,7 +764,7 @@ export default function Analytics({
         <div className="space-y-3 tab-content">
             {/* 탭 토글 */}
             <div
-                className="bg-[#1C1C1E] rounded-2xl p-1 grid grid-cols-3 gap-1"
+                className="bg-surface rounded-2xl p-1 grid grid-cols-3 gap-1"
                 role="tablist"
                 aria-label="분석 모드 선택"
             >
@@ -788,7 +788,7 @@ export default function Analytics({
                         className={`py-2 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
                             viewMode === m
                                 ? "bg-[#3D8EF8] text-white"
-                                : "text-[#4E5968] hover:text-[#8B95A1]"
+                                : "text-muted hover:text-tone-gray"
                         }`}
                     >
                         <span className="text-base leading-none">
@@ -801,7 +801,7 @@ export default function Analytics({
                 ))}
             </div>
             <p
-                className="text-[11px] text-[#8B95A1] px-1"
+                className="text-[11px] text-muted px-1"
                 role="status"
                 aria-live="polite"
             >
@@ -818,15 +818,15 @@ export default function Analytics({
             {viewMode === "monthly" && (
                 <>
                     {/* 인사이트 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <div className="flex items-center gap-2 mb-4">
-                            <Sparkles size={16} className="text-[#F5BE3A]" />
+                            <Sparkles size={16} className="text-warning" />
                             <p className="text-[15px] font-bold text-white">
                                 이번 달 인사이트
                             </p>
                         </div>
                         {insights.length === 0 ? (
-                            <p className="text-sm text-[#4E5968] text-center py-4">
+                            <p className="text-sm text-muted text-center py-4">
                                 내역을 더 추가하면 분석을 보여드려요
                             </p>
                         ) : (
@@ -834,7 +834,7 @@ export default function Analytics({
                                 {insights.map((ins, i) => (
                                     <div
                                         key={ins.text}
-                                        className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3 list-item-enter border-l-[3px] overflow-hidden"
+                                        className="flex items-center gap-3 bg-raised rounded-2xl px-4 py-3 list-item-enter border-l-[3px] overflow-hidden"
                                         style={{
                                             borderColor: ins.color,
                                             animationDelay: `${i * 55}ms`,
@@ -905,9 +905,9 @@ export default function Analytics({
                                     ].map((s) => (
                                         <div
                                             key={s.label}
-                                            className="bg-[#1C1C1E] rounded-2xl px-2.5 py-3 text-center"
+                                            className="bg-surface rounded-2xl px-2.5 py-3 text-center"
                                         >
-                                            <p className="text-[9px] text-[#4E5968] mb-1 leading-tight">
+                                            <p className="text-[9px] text-muted mb-1 leading-tight">
                                                 {s.label}
                                             </p>
                                             <p
@@ -925,42 +925,42 @@ export default function Analytics({
                     {/* 전월 동기간 비교 */}
                     {(mtdComparison.thisMTD > 0 ||
                         mtdComparison.prevMTD > 0) && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <div className="flex items-center justify-between mb-4">
                                 <p className="text-[15px] font-bold text-white">
                                     전월 동기간 비교
                                 </p>
-                                <span className="text-[10px] text-[#4E5968]">
+                                <span className="text-[10px] text-muted">
                                     {mtdComparison.dayOfMonth}일까지 기준
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-3 mb-4">
-                                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                                    <p className="text-[10px] text-[#8B95A1] mb-1.5">
+                                <div className="bg-raised rounded-2xl px-4 py-3">
+                                    <p className="text-[10px] text-muted mb-1.5">
                                         이달 지출
                                     </p>
-                                    <p className="text-[18px] font-black text-[#F25260] num leading-none">
+                                    <p className="text-[18px] font-black text-expense num leading-none">
                                         {fmt(mtdComparison.thisMTD)}
                                     </p>
-                                    <p className="text-[10px] text-[#4E5968] mt-1">
+                                    <p className="text-[10px] text-muted mt-1">
                                         원
                                     </p>
                                 </div>
-                                <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                                    <p className="text-[10px] text-[#8B95A1] mb-1.5">
+                                <div className="bg-raised rounded-2xl px-4 py-3">
+                                    <p className="text-[10px] text-muted mb-1.5">
                                         전달 동기간
                                     </p>
-                                    <p className="text-[18px] font-black text-[#4E5968] num leading-none">
+                                    <p className="text-[18px] font-black text-muted num leading-none">
                                         {fmt(mtdComparison.prevMTD)}
                                     </p>
-                                    <p className="text-[10px] text-[#4E5968] mt-1">
+                                    <p className="text-[10px] text-muted mt-1">
                                         원
                                     </p>
                                 </div>
                             </div>
                             {mtdComparison.diff !== null && (
                                 <div
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl ${mtdComparison.diff > 0 ? "bg-[#F25260]/10 border border-[#F25260]/20" : mtdComparison.diff < 0 ? "bg-[#2ACF6A]/10 border border-[#2ACF6A]/20" : "bg-[#2C2C2E]"}`}
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl ${mtdComparison.diff > 0 ? "bg-tone-red/10 border border-tone-red/20" : mtdComparison.diff < 0 ? "bg-tone-green/10 border border-tone-green/20" : "bg-raised"}`}
                                 >
                                     <span className="text-lg">
                                         {mtdComparison.diff > 0
@@ -1010,7 +1010,7 @@ export default function Analytics({
                     )}
 
                     {/* 전월 대비 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-4">
                             전월 대비
                         </p>
@@ -1034,7 +1034,7 @@ export default function Analytics({
 
                     {/* 수입 소스 분석 */}
                     {incomeByCategory.length > 0 && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-3">
                                 수입 소스
                             </p>
@@ -1052,18 +1052,18 @@ export default function Analytics({
                                                 <span className="text-[12px] font-semibold text-white">
                                                     {cat}
                                                 </span>
-                                                <span className="text-[12px] font-bold num text-[#2ACF6A]">
+                                                <span className="text-[12px] font-bold num text-income">
                                                     {fmt(amt)}원
                                                 </span>
                                             </div>
-                                            <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                            <div className="h-1 bg-raised rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full rounded-full bg-[#2ACF6A] transition-all duration-500"
+                                                    className="h-full rounded-full bg-tone-green transition-all duration-500"
                                                     style={{width: `${pct}%`}}
                                                 />
                                             </div>
                                         </div>
-                                        <span className="text-[10px] font-bold text-[#4E5968] w-7 text-right shrink-0">
+                                        <span className="text-[10px] font-bold text-muted w-7 text-right shrink-0">
                                             {pct}%
                                         </span>
                                     </div>
@@ -1074,7 +1074,7 @@ export default function Analytics({
 
                     {/* 6개월 저축률 트렌드 */}
                     {monthlyData.some((m) => m.income > 0) && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-4">
                                 저축률 추이
                             </p>
@@ -1126,16 +1126,16 @@ export default function Analytics({
                                                     style={{height: 64}}
                                                     className="w-full flex items-end"
                                                 >
-                                                    <div className="w-full h-1 rounded-t-md bg-[#2C2C2E]" />
+                                                    <div className="w-full h-1 rounded-t-md bg-raised" />
                                                 </div>
                                             )}
                                             <span
-                                                className={`text-[9px] font-bold ${isCurrent ? "text-[#3D8EF8]" : "text-[#4E5968]"}`}
+                                                className={`text-[9px] font-bold ${isCurrent ? "text-accent" : "text-muted"}`}
                                             >
                                                 {m.label}
                                             </span>
                                             <span
-                                                className={`text-[9px] num ${rate !== null ? (isCurrent ? "text-white" : "text-[#8B95A1]") : "text-[#2C2C2E]"}`}
+                                                className={`text-[9px] num ${rate !== null ? (isCurrent ? "text-white" : "text-muted") : "text-tone-faint"}`}
                                             >
                                                 {rate !== null
                                                     ? `${rate}%`
@@ -1147,20 +1147,20 @@ export default function Analytics({
                             </div>
                             <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
                                 <div className="flex items-center gap-1">
-                                    <div className="w-2 h-2 rounded-sm bg-[#2ACF6A]" />
-                                    <span className="text-[10px] text-[#4E5968]">
+                                    <div className="w-2 h-2 rounded-sm bg-tone-green" />
+                                    <span className="text-[10px] text-muted">
                                         20%+
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <div className="w-2 h-2 rounded-sm bg-[#F5BE3A]" />
-                                    <span className="text-[10px] text-[#4E5968]">
+                                    <div className="w-2 h-2 rounded-sm bg-tone-amber" />
+                                    <span className="text-[10px] text-muted">
                                         10-20%
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <div className="w-2 h-2 rounded-sm bg-[#F25260]" />
-                                    <span className="text-[10px] text-[#4E5968]">
+                                    <div className="w-2 h-2 rounded-sm bg-tone-red" />
+                                    <span className="text-[10px] text-muted">
                                         10% 미만
                                     </span>
                                 </div>
@@ -1169,20 +1169,20 @@ export default function Analytics({
                     )}
 
                     {/* 6개월 트렌드 차트 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-1">
                             최근 6개월 트렌드
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <span className="text-xs text-muted">
                                     수입
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#F25260]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <div className="w-2.5 h-2.5 rounded-full bg-tone-red" />
+                                <span className="text-xs text-muted">
                                     지출
                                 </span>
                             </div>
@@ -1198,19 +1198,19 @@ export default function Analytics({
                                     className="flex items-center justify-between"
                                 >
                                     <span
-                                        className={`text-xs font-semibold ${m.ym === yearMonth ? "text-white" : "text-[#4E5968]"}`}
+                                        className={`text-xs font-semibold ${m.ym === yearMonth ? "text-white" : "text-muted"}`}
                                     >
                                         {m.label}
                                     </span>
                                     <div className="flex gap-4">
-                                        <span className="text-xs text-[#3D8EF8] num">
+                                        <span className="text-xs text-accent num">
                                             +{fmt(m.income)}
                                         </span>
-                                        <span className="text-xs text-[#F25260] num">
+                                        <span className="text-xs text-expense num">
                                             -{fmt(m.expense)}
                                         </span>
                                         <span
-                                            className={`text-xs font-bold num ${m.balance >= 0 ? "text-white" : "text-[#F25260]"}`}
+                                            className={`text-xs font-bold num ${m.balance >= 0 ? "text-white" : "text-expense"}`}
                                         >
                                             {m.balance >= 0 ? "+" : ""}
                                             {fmt(m.balance)}
@@ -1224,7 +1224,7 @@ export default function Analytics({
                     {/* 상세 분석 토글 */}
                     <button
                         onClick={() => setShowMonthlyDetail((v) => !v)}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-surface text-muted hover:text-white text-xs font-bold transition-colors"
                     >
                         {showMonthlyDetail ? "요약 보기 ↑" : "상세 분석 보기 ↓"}
                     </button>
@@ -1232,11 +1232,11 @@ export default function Analytics({
                     {showMonthlyDetail && (
                         <>
                             {/* 이번 달 누적 잔액 흐름 */}
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <p className="text-[15px] font-bold text-white mb-1">
                                     이번 달 잔액 흐름
                                 </p>
-                                <p className="text-xs text-[#4E5968] mb-4">
+                                <p className="text-xs text-muted mb-4">
                                     일별 누적 순잔액 변화
                                 </p>
                                 {currentMonthly.length === 0 ? (
@@ -1255,11 +1255,11 @@ export default function Analytics({
                             </div>
 
                             {/* 요일별 소비 패턴 */}
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <p className="text-[15px] font-bold text-white mb-1">
                                     요일별 소비 패턴
                                 </p>
-                                <p className="text-xs text-[#4E5968] mb-4">
+                                <p className="text-xs text-muted mb-4">
                                     이번 달 요일별 총 지출
                                 </p>
                                 {weekdayData.every((d) => d.total === 0) ? (
@@ -1282,9 +1282,9 @@ export default function Analytics({
                                                 .map((d) => (
                                                     <div
                                                         key={d.label}
-                                                        className="flex items-center justify-between bg-[#2C2C2E] rounded-xl px-3 py-2"
+                                                        className="flex items-center justify-between bg-raised rounded-xl px-3 py-2"
                                                     >
-                                                        <span className="text-xs font-bold text-[#8B95A1]">
+                                                        <span className="text-xs font-bold text-muted">
                                                             {d.label}요일
                                                         </span>
                                                         <span className="text-xs font-bold text-white num">
@@ -1299,11 +1299,11 @@ export default function Analytics({
 
                             {/* 일별 지출 히트맵 */}
                             {dayHeatmapData.some((c) => c.amt > 0) && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-1">
                                         일별 지출 히트맵
                                     </p>
-                                    <p className="text-xs text-[#4E5968] mb-3">
+                                    <p className="text-xs text-muted mb-3">
                                         색이 진할수록 지출 많음
                                     </p>
                                     <div className="grid grid-cols-7 gap-1 mb-1.5">
@@ -1318,7 +1318,7 @@ export default function Analytics({
                                         ].map((d) => (
                                             <div
                                                 key={d}
-                                                className="text-center text-[9px] text-[#4E5968] font-semibold"
+                                                className="text-center text-[9px] text-muted font-semibold"
                                             >
                                                 {d}
                                             </div>
@@ -1343,7 +1343,7 @@ export default function Analytics({
                                                     }}
                                                 >
                                                     <span
-                                                        className={`text-[9px] font-bold leading-none ${cell.isToday ? "text-[#3D8EF8]" : cell.amt > 0 ? "text-white" : "text-[#4E5968]"}`}
+                                                        className={`text-[9px] font-bold leading-none ${cell.isToday ? "text-accent" : cell.amt > 0 ? "text-white" : "text-muted"}`}
                                                     >
                                                         {cell.day}
                                                     </span>
@@ -1378,14 +1378,14 @@ export default function Analytics({
                                         return (
                                             <div className="flex gap-2 mt-3">
                                                 {maxCell.amt > 0 && (
-                                                    <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
-                                                        <p className="text-[9px] text-[#4E5968] mb-0.5">
+                                                    <div className="flex-1 bg-raised rounded-xl px-3 py-2">
+                                                        <p className="text-[9px] text-muted mb-0.5">
                                                             최다 지출일
                                                         </p>
                                                         <p className="text-[12px] font-bold text-white num">
                                                             {maxCell.day}일
                                                         </p>
-                                                        <p className="text-[9px] text-[#F25260] num">
+                                                        <p className="text-[9px] text-expense num">
                                                             -
                                                             {fmtFull(
                                                                 maxCell.amt,
@@ -1394,8 +1394,8 @@ export default function Analytics({
                                                         </p>
                                                     </div>
                                                 )}
-                                                <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
-                                                    <p className="text-[9px] text-[#4E5968] mb-0.5">
+                                                <div className="flex-1 bg-raised rounded-xl px-3 py-2">
+                                                    <p className="text-[9px] text-muted mb-0.5">
                                                         일평균 지출
                                                     </p>
                                                     <p className="text-[12px] font-bold text-white num">
@@ -1408,11 +1408,11 @@ export default function Analytics({
                                                         원
                                                     </p>
                                                 </div>
-                                                <div className="flex-1 bg-[#2C2C2E] rounded-xl px-3 py-2">
-                                                    <p className="text-[9px] text-[#4E5968] mb-0.5">
+                                                <div className="flex-1 bg-raised rounded-xl px-3 py-2">
+                                                    <p className="text-[9px] text-muted mb-0.5">
                                                         무지출 일수
                                                     </p>
-                                                    <p className="text-[12px] font-bold text-[#2ACF6A] num">
+                                                    <p className="text-[12px] font-bold text-income num">
                                                         {noSpendCount}일
                                                     </p>
                                                 </div>
@@ -1429,13 +1429,13 @@ export default function Analytics({
                                 paymentMethodStats.check.expense > 0 ||
                                 paymentMethodStats.credit.income > 0 ||
                                 paymentMethodStats.credit.expense > 0 || paymentMethodStats.transfer.income > 0 || paymentMethodStats.transfer.expense > 0) && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-3">
                                         결제수단 분석
                                     </p>
 
                                     {/* 서브탭 */}
-                                    <div className="bg-[#2C2C2E] rounded-xl p-0.5 flex gap-0.5 mb-4">
+                                    <div className="bg-raised rounded-xl p-0.5 flex gap-0.5 mb-4">
                                         {(
                                             [
                                                 {key: "balance", label: "잔액"},
@@ -1460,7 +1460,7 @@ export default function Analytics({
                                                 key={t.key}
                                                 onClick={() => setPmTab(t.key)}
                                                 aria-pressed={pmTab === t.key}
-                                                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${pmTab === t.key ? "bg-[#1C1C1E] text-white" : "text-[#4E5968] hover:text-[#8B95A1]"}`}
+                                                className={`flex-1 py-1.5 rounded-lg text-[12px] font-bold transition-all ${pmTab === t.key ? "bg-surface text-white" : "text-muted hover:text-tone-gray"}`}
                                             >
                                                 {t.label}
                                             </button>
@@ -1469,13 +1469,13 @@ export default function Analytics({
 
                                     {pmTab === "balance" && (
                                         <div className="grid grid-cols-2 gap-2">
-                                            <div className="rounded-2xl px-3 py-2.5 bg-[#2C2C2E]"><p className="text-xs text-[#8B95A1]">계좌이체 순유입</p><p className="text-sm num font-bold mt-1">{fmtFull(paymentMethodStats.transfer.net)}원</p><p className="text-xs text-[#8B95A1] mt-1">지출 {fmtFull(paymentMethodStats.transfer.expense)}원</p></div>
-                                            <div className="rounded-2xl px-3 py-2.5 border border-[#2ACF6A]/25 bg-linear-to-br from-[#2ACF6A]/12 to-[#2C2C2E]">
-                                                <p className="text-[10px] text-[#A8EEC4] font-semibold mb-1">
+                                            <div className="rounded-2xl px-3 py-2.5 bg-raised"><p className="text-xs text-muted">계좌이체 순유입</p><p className="text-sm num font-bold mt-1">{fmtFull(paymentMethodStats.transfer.net)}원</p><p className="text-xs text-muted mt-1">지출 {fmtFull(paymentMethodStats.transfer.expense)}원</p></div>
+                                            <div className="rounded-2xl px-3 py-2.5 border border-tone-green/25 bg-linear-to-br from-tone-green/12 to-tone-chip">
+                                                <p className="text-[10px] text-accent font-semibold mb-1">
                                                     💵 현금 순잔액
                                                 </p>
                                                 <p
-                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? "text-[#D8FFE8]" : "text-[#F25260]"}`}
+                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.cash.net >= 0 ? "text-tone-green-pale" : "text-expense"}`}
                                                 >
                                                     {paymentMethodStats.cash
                                                         .net >= 0
@@ -1487,7 +1487,7 @@ export default function Analytics({
                                                     )}
                                                     원
                                                 </p>
-                                                <p className="text-[10px] text-[#8B95A1] mt-1">
+                                                <p className="text-[10px] text-muted mt-1">
                                                     지출 -
                                                     {fmt(
                                                         paymentMethodStats.cash
@@ -1495,12 +1495,12 @@ export default function Analytics({
                                                     )}
                                                 </p>
                                             </div>
-                                            <div className="rounded-2xl px-3 py-2.5 border border-[#6AD3C0]/25 bg-linear-to-br from-[#6AD3C0]/12 to-[#2C2C2E]">
-                                                <p className="text-[10px] text-[#92E6D9] font-semibold mb-1">
+                                            <div className="rounded-2xl px-3 py-2.5 border border-tone-teal/25 bg-linear-to-br from-tone-teal/12 to-tone-chip">
+                                                <p className="text-[10px] text-accent font-semibold mb-1">
                                                     💳 체크 순잔액
                                                 </p>
                                                 <p
-                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.check.net >= 0 ? "text-[#D7FFF7]" : "text-[#F25260]"}`}
+                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.check.net >= 0 ? "text-tone-teal-pale" : "text-expense"}`}
                                                 >
                                                     {paymentMethodStats.check
                                                         .net >= 0
@@ -1512,7 +1512,7 @@ export default function Analytics({
                                                     )}
                                                     원
                                                 </p>
-                                                <p className="text-[10px] text-[#8B95A1] mt-1">
+                                                <p className="text-[10px] text-muted mt-1">
                                                     지출 -
                                                     {fmt(
                                                         paymentMethodStats.check
@@ -1520,12 +1520,12 @@ export default function Analytics({
                                                     )}
                                                 </p>
                                             </div>
-                                            <div className="rounded-2xl px-3 py-2.5 border border-[#3D8EF8]/25 bg-linear-to-br from-[#3D8EF8]/12 to-[#2C2C2E]">
-                                                <p className="text-[10px] text-[#9CC7FF] font-semibold mb-1">
+                                            <div className="rounded-2xl px-3 py-2.5 border border-tone-blue/25 bg-linear-to-br from-tone-blue/12 to-tone-chip">
+                                                <p className="text-[10px] text-accent font-semibold mb-1">
                                                     💎 신용 순잔액
                                                 </p>
                                                 <p
-                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.credit.net >= 0 ? "text-[#DCEBFF]" : "text-[#F25260]"}`}
+                                                    className={`text-[13px] font-extrabold num ${paymentMethodStats.credit.net >= 0 ? "text-tone-blue-pale" : "text-expense"}`}
                                                 >
                                                     {paymentMethodStats.credit
                                                         .net >= 0
@@ -1537,14 +1537,14 @@ export default function Analytics({
                                                     )}
                                                     원
                                                 </p>
-                                                <p className="text-[10px] text-[#8B95A1] mt-1">
+                                                <p className="text-[10px] text-muted mt-1">
                                                     결제예정{" "}
                                                     {fmt(
                                                         paymentMethodStats.cardDue,
                                                     )}
                                                     원
                                                 </p>
-                                                <p className="text-[10px] text-[#6F7D90] mt-0.5">
+                                                <p className="text-[10px] text-muted mt-0.5">
                                                     {
                                                         paymentMethodStats.cardBillingRangeLabel
                                                     }
@@ -1692,16 +1692,16 @@ export default function Analytics({
                                                 </LineChart>
                                             </ResponsiveContainer>
                                             <div className="mt-2 flex flex-wrap items-center gap-4 text-[11px]">
-                                                <span className="text-[#8B95A1]">계좌이체</span>
-                                                <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                                                    <span className="w-2 h-2 rounded-full bg-[#2ACF6A]" />
+                                                <span className="text-muted">계좌이체</span>
+                                                <span className="inline-flex items-center gap-1.5 text-muted">
+                                                    <span className="w-2 h-2 rounded-full bg-tone-green" />
                                                     현금
                                                 </span>
-                                                <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
-                                                    <span className="w-2 h-2 rounded-full bg-[#6AD3C0]" />
+                                                <span className="inline-flex items-center gap-1.5 text-muted">
+                                                    <span className="w-2 h-2 rounded-full bg-tone-teal" />
                                                     체크
                                                 </span>
-                                                <span className="inline-flex items-center gap-1.5 text-[#8B95A1]">
+                                                <span className="inline-flex items-center gap-1.5 text-muted">
                                                     <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />
                                                     신용
                                                 </span>
@@ -1712,40 +1712,40 @@ export default function Analytics({
                                     {pmTab === "billing" && (
                                         <>
                                             <div className="grid grid-cols-2 gap-2 mb-4">
-                                                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#F5BE3A]/20">
-                                                    <p className="text-[10px] text-[#F5BE3A] font-semibold">
+                                                <div className="rounded-xl bg-raised px-3 py-2.5 border border-tone-amber/20">
+                                                    <p className="text-[10px] text-warning font-semibold">
                                                         이번 청구 예정
                                                     </p>
-                                                    <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">
+                                                    <p className="text-[13px] font-extrabold text-fg-strong num mt-0.5">
                                                         {fmt(
                                                             paymentMethodStats.cardDue,
                                                         )}
                                                         원
                                                     </p>
-                                                    <p className="text-[10px] text-[#8B95A1] mt-1">
+                                                    <p className="text-[10px] text-muted mt-1">
                                                         {
                                                             paymentMethodStats.cardBillingRangeLabel
                                                         }
                                                     </p>
                                                 </div>
-                                                <div className="rounded-xl bg-[#2C2C2E] px-3 py-2.5 border border-[#3D8EF8]/20">
-                                                    <p className="text-[10px] text-[#79B2FF] font-semibold">
+                                                <div className="rounded-xl bg-raised px-3 py-2.5 border border-tone-blue/20">
+                                                    <p className="text-[10px] text-accent font-semibold">
                                                         다음 청구 예정
                                                     </p>
-                                                    <p className="text-[13px] font-extrabold text-[#F5F7FA] num mt-0.5">
+                                                    <p className="text-[13px] font-extrabold text-fg-strong num mt-0.5">
                                                         {fmt(
                                                             paymentMethodStats.nextCardDue,
                                                         )}
                                                         원
                                                     </p>
-                                                    <p className="text-[10px] text-[#8B95A1] mt-1">
+                                                    <p className="text-[10px] text-muted mt-1">
                                                         {
                                                             paymentMethodStats.nextCardBillingRangeLabel
                                                         }
                                                     </p>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-[#8B95A1] mb-3">
+                                            <p className="text-xs text-muted mb-3">
                                                 청구월별 카드 결제예정 (최근
                                                 6개월)
                                             </p>
@@ -1806,7 +1806,7 @@ export default function Analytics({
                     )}
 
                     {expenseByCategory.length > 0 && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-4">
                                 카테고리 비율
                             </p>
@@ -1816,17 +1816,17 @@ export default function Analytics({
 
                     {/* 소비 이상 감지 */}
                     {anomalyCategories.length > 0 && (
-                        <div className="bg-[#F5BE3A]/8 border border-[#F5BE3A]/25 rounded-2xl p-5">
+                        <div className="bg-tone-amber/8 border border-tone-amber/25 rounded-2xl p-5">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-base">⚠️</span>
-                                <p className="text-[15px] font-bold text-[#F5BE3A]">
+                                <p className="text-[15px] font-bold text-warning">
                                     소비 이상 감지
                                 </p>
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-[#F5BE3A]/20 text-[#F5BE3A]">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-tone-amber/20 text-warning">
                                     {anomalyCategories.length}개
                                 </span>
                             </div>
-                            <p className="text-[11px] text-[#8B95A1] mb-3">
+                            <p className="text-[11px] text-muted mb-3">
                                 최근 3개월 평균 대비 1.5배 초과
                             </p>
                             <div className="space-y-2.5">
@@ -1844,11 +1844,11 @@ export default function Analytics({
                                                     <span className="text-[12px] font-semibold text-white">
                                                         {cat}
                                                     </span>
-                                                    <span className="text-[11px] font-bold text-[#F5BE3A] num">
+                                                    <span className="text-[11px] font-bold text-warning num">
                                                         {ratio}%
                                                     </span>
                                                 </div>
-                                                <p className="text-[9px] text-[#8B95A1]">
+                                                <p className="text-[9px] text-muted">
                                                     이번달 {fmtFull(amt)}원 vs
                                                     3개월 평균 {fmtFull(avg)}원
                                                 </p>
@@ -1896,7 +1896,7 @@ export default function Analytics({
                                     });
                             }}
                             disabled={summaryCopied}
-                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all ${summaryCopied ? "bg-[#2ACF6A]/15 border-[#2ACF6A]/30 text-[#2ACF6A]" : "border-white/10 text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20"}`}
+                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl border text-sm font-semibold transition-all ${summaryCopied ? "bg-tone-green/15 border-tone-green/30 text-income" : "border-white/10 text-muted hover:text-tone-gray hover:border-white/20"}`}
                         >
                             {summaryCopied
                                 ? "✓ 복사 완료!"
@@ -1906,7 +1906,7 @@ export default function Analytics({
 
                     {/* 전월 대비 카테고리 비교 */}
                     {categoryMomComparison.length > 0 && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-4">
                                 카테고리 전월 비교
                             </p>
@@ -1930,7 +1930,7 @@ export default function Analytics({
                                         return (
                                             <div key={cat}>
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[11px] text-[#8B95A1]">
+                                                    <span className="text-[11px] text-muted">
                                                         {CATEGORY_EMOJI[cat] ??
                                                             ""}{" "}
                                                         {cat}
@@ -1970,34 +1970,34 @@ export default function Analytics({
                                                 </div>
                                                 <div className="space-y-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] text-[#8B95A1] w-5 shrink-0">
+                                                        <span className="text-[9px] text-muted w-5 shrink-0">
                                                             이번
                                                         </span>
-                                                        <div className="flex-1 h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-1.5 bg-raised rounded-full overflow-hidden">
                                                             <div
-                                                                className="h-full rounded-full bg-[#F25260] transition-all duration-500"
+                                                                className="h-full rounded-full bg-tone-red transition-all duration-500"
                                                                 style={{
                                                                     width: `${(curr / max) * 100}%`,
                                                                 }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] text-[#F1F3F6] num w-14 text-right shrink-0">
+                                                        <span className="text-[10px] text-fg num w-14 text-right shrink-0">
                                                             {fmt(curr)}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] text-[#4E5968] w-5 shrink-0">
+                                                        <span className="text-[9px] text-muted w-5 shrink-0">
                                                             전월
                                                         </span>
-                                                        <div className="flex-1 h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-1.5 bg-raised rounded-full overflow-hidden">
                                                             <div
-                                                                className="h-full rounded-full bg-[#4E5968] transition-all duration-500"
+                                                                className="h-full rounded-full bg-tone-slate transition-all duration-500"
                                                                 style={{
                                                                     width: `${(prev / max) * 100}%`,
                                                                 }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] text-[#8B95A1] num w-14 text-right shrink-0">
+                                                        <span className="text-[10px] text-muted num w-14 text-right shrink-0">
                                                             {fmt(prev)}
                                                         </span>
                                                     </div>
@@ -2020,9 +2020,9 @@ export default function Analytics({
                         <button
                             onClick={() => setSelectedYear((y) => y - 1)}
                             aria-label="이전 연도"
-                            className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center"
+                            className="w-9 h-9 rounded-full bg-surface border border-white/6 flex items-center justify-center"
                         >
-                            <ChevronLeft size={16} className="text-[#8B95A1]" />
+                            <ChevronLeft size={16} className="text-muted" />
                         </button>
                         <span className="text-[17px] font-extrabold text-white">
                             {selectedYear}년
@@ -2031,49 +2031,49 @@ export default function Analytics({
                             onClick={() => setSelectedYear((y) => y + 1)}
                             disabled={selectedYear >= new Date().getFullYear()}
                             aria-label="다음 연도"
-                            className="w-9 h-9 rounded-full bg-[#1C1C1E] border border-white/6 flex items-center justify-center disabled:opacity-30"
+                            className="w-9 h-9 rounded-full bg-surface border border-white/6 flex items-center justify-center disabled:opacity-30"
                         >
                             <ChevronRight
                                 size={16}
-                                className="text-[#8B95A1]"
+                                className="text-muted"
                             />
                         </button>
                     </div>
 
                     {/* 연간 합계 카드 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-4">
                             {selectedYear}년 합계
                         </p>
                         <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
-                                <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">
+                            <div className="bg-raised rounded-2xl p-3.5 text-center">
+                                <p className="text-[10px] text-muted font-semibold mb-1.5">
                                     총 수입
                                 </p>
-                                <p className="text-sm font-extrabold text-[#2ACF6A] num">
+                                <p className="text-sm font-extrabold text-income num">
                                     {fmt(yearTotalIncome)}
                                 </p>
-                                <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                <p className="text-[10px] text-muted mt-0.5">
                                     원
                                 </p>
                             </div>
-                            <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
-                                <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">
+                            <div className="bg-raised rounded-2xl p-3.5 text-center">
+                                <p className="text-[10px] text-muted font-semibold mb-1.5">
                                     총 지출
                                 </p>
-                                <p className="text-sm font-extrabold text-[#F25260] num">
+                                <p className="text-sm font-extrabold text-expense num">
                                     {fmt(yearTotalExpense)}
                                 </p>
-                                <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                <p className="text-[10px] text-muted mt-0.5">
                                     원
                                 </p>
                             </div>
-                            <div className="bg-[#2C2C2E] rounded-2xl p-3.5 text-center">
-                                <p className="text-[10px] text-[#4E5968] font-semibold mb-1.5">
+                            <div className="bg-raised rounded-2xl p-3.5 text-center">
+                                <p className="text-[10px] text-muted font-semibold mb-1.5">
                                     순 저축
                                 </p>
                                 <p
-                                    className={`text-sm font-extrabold num ${yearTotalIncome - yearTotalExpense >= 0 ? "text-white" : "text-[#F25260]"}`}
+                                    className={`text-sm font-extrabold num ${yearTotalIncome - yearTotalExpense >= 0 ? "text-white" : "text-expense"}`}
                                 >
                                     {fmt(
                                         Math.abs(
@@ -2081,14 +2081,14 @@ export default function Analytics({
                                         ),
                                     )}
                                 </p>
-                                <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                <p className="text-[10px] text-muted mt-0.5">
                                     원
                                 </p>
                             </div>
                         </div>
                         {yearTotalIncome > 0 && (
                             <div className="mt-4">
-                                <div className="flex justify-between text-xs text-[#4E5968] mb-1.5">
+                                <div className="flex justify-between text-xs text-muted mb-1.5">
                                     <span>연간 저축률</span>
                                     <span className="font-bold text-white num">
                                         {Math.round(
@@ -2102,7 +2102,7 @@ export default function Analytics({
                                         %
                                     </span>
                                 </div>
-                                <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                <div className="h-2 bg-raised rounded-full overflow-hidden">
                                     <div
                                         className="h-full rounded-full transition-all duration-700"
                                         style={{
@@ -2123,7 +2123,7 @@ export default function Analytics({
 
                     {/* 연간 지출 TOP5 */}
                     {yearlyCategoryData.length > 0 && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-4">
                                 {selectedYear}년 지출 TOP5
                             </p>
@@ -2131,25 +2131,25 @@ export default function Analytics({
                                 {yearlyCategoryData.map((d, i) => (
                                     <div key={d.cat}>
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-xs text-[#8B95A1]">
-                                                <span className="text-[10px] text-[#4E5968] mr-1">
+                                            <span className="text-xs text-muted">
+                                                <span className="text-[10px] text-muted mr-1">
                                                     #{i + 1}
                                                 </span>
                                                 {CATEGORY_EMOJI[d.cat] ?? ""}{" "}
                                                 {d.cat}
                                             </span>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[11px] text-[#8B95A1] num">
+                                                <span className="text-[11px] text-muted num">
                                                     {fmt(d.amt)}원
                                                 </span>
-                                                <span className="text-[11px] font-bold text-[#F25260] num">
+                                                <span className="text-[11px] font-bold text-expense num">
                                                     {d.pct}%
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full rounded-full bg-[#F25260] transition-all duration-700"
+                                                className="h-full rounded-full bg-tone-red transition-all duration-700"
                                                 style={{
                                                     width: progressMounted
                                                         ? `${d.pct}%`
@@ -2164,20 +2164,20 @@ export default function Analytics({
                     )}
 
                     {/* 12개월 차트 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-1">
                             월별 추이
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <span className="text-xs text-muted">
                                     수입
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#F25260]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <div className="w-2.5 h-2.5 rounded-full bg-tone-red" />
+                                <span className="text-xs text-muted">
                                     지출
                                 </span>
                             </div>
@@ -2195,7 +2195,7 @@ export default function Analytics({
                         );
                         if (withData.length === 0)
                             return (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <EmptyState
                                         size="compact"
                                         icon={Minus}
@@ -2211,17 +2211,17 @@ export default function Analytics({
                             b.balance < a.balance ? b : a,
                         );
                         return (
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <div className="flex items-center justify-between mb-4">
                                     <p className="text-[15px] font-bold text-white">
                                         월별 상세
                                     </p>
                                     {withData.length >= 2 && (
                                         <div className="flex items-center gap-1.5 text-[10px]">
-                                            <span className="px-1.5 py-0.5 rounded-md bg-[#2ACF6A]/15 text-[#2ACF6A] font-bold">
+                                            <span className="px-1.5 py-0.5 rounded-md bg-tone-green/15 text-income font-bold">
                                                 최고 {bestMonth.label}
                                             </span>
-                                            <span className="px-1.5 py-0.5 rounded-md bg-[#F25260]/15 text-[#F25260] font-bold">
+                                            <span className="px-1.5 py-0.5 rounded-md bg-tone-red/15 text-expense font-bold">
                                                 최저 {worstMonth.label}
                                             </span>
                                         </div>
@@ -2241,22 +2241,22 @@ export default function Analytics({
                                         return (
                                             <div
                                                 key={m.ym}
-                                                className={`flex items-center py-2.5 px-3 rounded-xl ${isCurrent ? "bg-[#3D8EF8]/10" : isBest ? "bg-[#2ACF6A]/8" : isWorst ? "bg-[#F25260]/8" : ""}`}
+                                                className={`flex items-center py-2.5 px-3 rounded-xl ${isCurrent ? "bg-tone-blue/10" : isBest ? "bg-tone-green/8" : isWorst ? "bg-tone-red/8" : ""}`}
                                             >
                                                 <span
-                                                    className={`text-sm font-bold w-10 shrink-0 ${isCurrent ? "text-[#3D8EF8]" : "text-[#8B95A1]"}`}
+                                                    className={`text-sm font-bold w-10 shrink-0 ${isCurrent ? "text-accent" : "text-muted"}`}
                                                 >
                                                     {m.label}
                                                 </span>
                                                 <div className="flex-1 flex justify-end gap-4 items-center">
-                                                    <span className="text-xs text-[#3D8EF8] num">
+                                                    <span className="text-xs text-accent num">
                                                         +{fmt(m.income)}
                                                     </span>
-                                                    <span className="text-xs text-[#F25260] num">
+                                                    <span className="text-xs text-expense num">
                                                         -{fmt(m.expense)}
                                                     </span>
                                                     <span
-                                                        className={`text-xs font-bold num w-16 text-right ${m.balance >= 0 ? "text-white" : "text-[#F25260]"}`}
+                                                        className={`text-xs font-bold num w-16 text-right ${m.balance >= 0 ? "text-white" : "text-expense"}`}
                                                     >
                                                         {m.balance >= 0
                                                             ? "+"
@@ -2264,12 +2264,12 @@ export default function Analytics({
                                                         {fmt(m.balance)}
                                                     </span>
                                                     {isBest && (
-                                                        <span className="text-[9px] text-[#2ACF6A]">
+                                                        <span className="text-[9px] text-income">
                                                             🏆
                                                         </span>
                                                     )}
                                                     {isWorst && (
-                                                        <span className="text-[9px] text-[#F25260]">
+                                                        <span className="text-[9px] text-expense">
                                                             ⚠️
                                                         </span>
                                                     )}
@@ -2288,7 +2288,7 @@ export default function Analytics({
             {viewMode === "tags" && (
                 <>
                     {tagData.length === 0 ? (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <EmptyState
                                 size="compact"
                                 icon={Hash}
@@ -2300,16 +2300,16 @@ export default function Analytics({
                     ) : (
                         <>
                             {/* 태그별 지출 순위 */}
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <div className="flex items-center gap-2 mb-4">
                                     <Hash
                                         size={15}
-                                        className="text-[#3D8EF8]"
+                                        className="text-accent"
                                     />
                                     <p className="text-[15px] font-bold text-white">
                                         태그별 지출 순위
                                     </p>
-                                    <span className="text-xs text-[#4E5968] ml-auto">
+                                    <span className="text-xs text-muted ml-auto">
                                         {yearMonth.replace("-", "년 ")}월
                                     </span>
                                 </div>
@@ -2327,18 +2327,18 @@ export default function Analytics({
                                             <div key={item.tag}>
                                                 <div className="flex items-center justify-between mb-1">
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="text-[10px] font-bold text-[#4E5968] w-4 num">
+                                                        <span className="text-[10px] font-bold text-muted w-4 num">
                                                             {idx + 1}
                                                         </span>
-                                                        <span className="text-[13px] font-semibold text-[#F1F3F6]">
+                                                        <span className="text-[13px] font-semibold text-fg">
                                                             #{item.tag}
                                                         </span>
-                                                        <span className="text-[10px] text-[#4E5968]">
+                                                        <span className="text-[10px] text-muted">
                                                             {item.count}건
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className="text-[13px] font-bold text-[#F25260] num">
+                                                        <span className="text-[13px] font-bold text-expense num">
                                                             -
                                                             {fmtFull(
                                                                 item.expense,
@@ -2346,7 +2346,7 @@ export default function Analytics({
                                                             원
                                                         </span>
                                                         {item.income > 0 && (
-                                                            <span className="text-[11px] text-[#2ACF6A] num ml-1.5">
+                                                            <span className="text-[11px] text-income num ml-1.5">
                                                                 +
                                                                 {fmtFull(
                                                                     item.income,
@@ -2355,7 +2355,7 @@ export default function Analytics({
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="h-1.5 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                <div className="h-1.5 bg-raised rounded-full overflow-hidden">
                                                     <div
                                                         className="h-full rounded-full transition-all duration-500"
                                                         style={{
@@ -2378,7 +2378,7 @@ export default function Analytics({
                                         onClick={() =>
                                             setShowAllTags((v) => !v)
                                         }
-                                        className="w-full mt-3 py-2 rounded-xl text-[12px] font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:bg-[#2C2C2E] transition-colors"
+                                        className="w-full mt-3 py-2 rounded-xl text-[12px] font-semibold text-muted hover:text-tone-gray hover:bg-tone-chip transition-colors"
                                     >
                                         {showAllTags
                                             ? "접기"
@@ -2389,7 +2389,7 @@ export default function Analytics({
 
                             {/* 태그 지출 막대 차트 (상위 6) */}
                             {tagData.length > 0 && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-4">
                                         태그 지출 비교
                                     </p>
@@ -2461,11 +2461,11 @@ export default function Analytics({
 
                             {/* 상위 3 태그 월별 트렌드 */}
                             {tagData.length > 0 && tagTrend.length > 0 && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-1">
                                         상위 태그 6개월 트렌드
                                     </p>
-                                    <p className="text-xs text-[#4E5968] mb-4">
+                                    <p className="text-xs text-muted mb-4">
                                         태그별 월간 지출 변화
                                     </p>
                                     <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
@@ -2481,7 +2481,7 @@ export default function Analytics({
                                                             topTagColors[i],
                                                     }}
                                                 />
-                                                <span className="text-[11px] text-[#8B95A1]">
+                                                <span className="text-[11px] text-muted">
                                                     #{t.tag}
                                                 </span>
                                             </div>
@@ -2556,22 +2556,22 @@ export default function Analytics({
 
                             {/* 태그 요약 통계 */}
                             <div className="grid grid-cols-3 gap-3">
-                                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                <div className="bg-surface rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                         태그 수
                                     </p>
                                     <p className="text-[17px] font-extrabold text-white num">
                                         {tagData.length}
                                     </p>
-                                    <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                    <p className="text-[10px] text-muted mt-0.5">
                                         개
                                     </p>
                                 </div>
-                                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                <div className="bg-surface rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                         태그 지출
                                     </p>
-                                    <p className="text-[13px] font-extrabold text-[#F25260] num">
+                                    <p className="text-[13px] font-extrabold text-expense num">
                                         {fmt(
                                             tagData.reduce(
                                                 (s, t) => s + t.expense,
@@ -2579,12 +2579,12 @@ export default function Analytics({
                                             ),
                                         )}
                                     </p>
-                                    <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                    <p className="text-[10px] text-muted mt-0.5">
                                         원
                                     </p>
                                 </div>
-                                <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
-                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                <div className="bg-surface rounded-2xl p-4 text-center">
+                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                         총 건수
                                     </p>
                                     <p className="text-[17px] font-extrabold text-white num">
@@ -2593,7 +2593,7 @@ export default function Analytics({
                                             0,
                                         )}
                                     </p>
-                                    <p className="text-[10px] text-[#4E5968] mt-0.5">
+                                    <p className="text-[10px] text-muted mt-0.5">
                                         건
                                     </p>
                                 </div>
@@ -2614,11 +2614,11 @@ export default function Analytics({
             {/* ──── 예산 vs 실지출 뷰 ──── */}
             {viewMode === "budget" && (
                 <>
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-1">
                             예산 vs 실지출
                         </p>
-                        <p className="text-xs text-[#8B95A1] mb-4">
+                        <p className="text-xs text-muted mb-4">
                             {yearMonth.replace("-", "년 ")}월 카테고리별 예산
                             대비 지출
                         </p>
@@ -2630,7 +2630,7 @@ export default function Analytics({
                     </div>
 
                     {budgetComplianceTrend.length > 0 && (
-                        <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                        <div className="bg-surface rounded-2xl p-5">
                             <p className="text-[15px] font-bold text-white mb-4">
                                 예산 준수율 추이
                             </p>
@@ -2673,12 +2673,12 @@ export default function Analytics({
                                                 />
                                             </div>
                                             <span
-                                                className={`text-[9px] font-bold ${isCurrent ? "text-[#3D8EF8]" : "text-[#4E5968]"}`}
+                                                className={`text-[9px] font-bold ${isCurrent ? "text-accent" : "text-muted"}`}
                                             >
                                                 {m.label}
                                             </span>
                                             <span
-                                                className={`text-[9px] num ${isCurrent ? "text-white" : "text-[#8B95A1]"}`}
+                                                className={`text-[9px] num ${isCurrent ? "text-white" : "text-muted"}`}
                                             >
                                                 {m.rate}%
                                             </span>
@@ -2695,29 +2695,29 @@ export default function Analytics({
             {viewMode === "cashflow" && (
                 <>
                     {/* 캐시플로 차트 */}
-                    <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                    <div className="bg-surface rounded-2xl p-5">
                         <p className="text-[15px] font-bold text-white mb-1">
                             6개월 캐시플로
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
                                 <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <span className="text-xs text-muted">
                                     수입
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#F25260]" />
-                                <span className="text-xs text-[#8B95A1]">
+                                <div className="w-2.5 h-2.5 rounded-full bg-tone-red" />
+                                <span className="text-xs text-muted">
                                     지출
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div
-                                    className="w-2.5 h-1 rounded-full bg-[#2ACF6A]"
+                                    className="w-2.5 h-1 rounded-full bg-tone-green"
                                     style={{borderStyle: "dashed"}}
                                 />
-                                <span className="text-xs text-[#8B95A1]">
+                                <span className="text-xs text-muted">
                                     순잔액
                                 </span>
                             </div>
@@ -2732,7 +2732,7 @@ export default function Analytics({
                             1,
                         );
                         return (
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <p className="text-[15px] font-bold text-white mb-4">
                                     월별 순이익
                                 </p>
@@ -2747,21 +2747,21 @@ export default function Analytics({
                                         return (
                                             <div
                                                 key={m.ym}
-                                                className={`py-2.5 px-3 rounded-xl ${isCurrent ? "bg-[#3D8EF8]/10" : ""}`}
+                                                className={`py-2.5 px-3 rounded-xl ${isCurrent ? "bg-tone-blue/10" : ""}`}
                                             >
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <span
-                                                        className={`text-sm font-bold ${isCurrent ? "text-[#3D8EF8]" : "text-[#8B95A1]"}`}
+                                                        className={`text-sm font-bold ${isCurrent ? "text-accent" : "text-muted"}`}
                                                     >
                                                         {m.label}
                                                     </span>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] text-[#4E5968] num">
+                                                        <span className="text-[10px] text-muted num">
                                                             {fmt(m.income)} /{" "}
                                                             {fmt(m.expense)}
                                                         </span>
                                                         <span
-                                                            className={`text-sm font-extrabold num ${isPositive ? "text-[#2ACF6A]" : "text-[#F25260]"}`}
+                                                            className={`text-sm font-extrabold num ${isPositive ? "text-income" : "text-expense"}`}
                                                         >
                                                             {isPositive
                                                                 ? "+"
@@ -2772,7 +2772,7 @@ export default function Analytics({
                                                 </div>
                                                 {m.income > 0 ||
                                                 m.expense > 0 ? (
-                                                    <div className="h-1 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                    <div className="h-1 bg-raised rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full rounded-full transition-all duration-700"
                                                             style={{
@@ -2800,25 +2800,25 @@ export default function Analytics({
                     {/* Best / Worst 월 */}
                     {cashflowStats && (
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
-                                <p className="text-[10px] text-[#4E5968] font-semibold mb-2">
+                            <div className="bg-surface rounded-2xl p-4 text-center">
+                                <p className="text-[10px] text-muted font-semibold mb-2">
                                     최고의 달 🏆
                                 </p>
                                 <p className="text-sm font-bold text-white">
                                     {cashflowStats.best.label}
                                 </p>
-                                <p className="text-[13px] font-extrabold text-[#2ACF6A] num mt-1">
+                                <p className="text-[13px] font-extrabold text-income num mt-1">
                                     +{fmt(cashflowStats.best.balance)}원
                                 </p>
                             </div>
-                            <div className="bg-[#1C1C1E] rounded-2xl p-4 text-center">
-                                <p className="text-[10px] text-[#4E5968] font-semibold mb-2">
+                            <div className="bg-surface rounded-2xl p-4 text-center">
+                                <p className="text-[10px] text-muted font-semibold mb-2">
                                     아쉬운 달 😓
                                 </p>
                                 <p className="text-sm font-bold text-white">
                                     {cashflowStats.worst.label}
                                 </p>
-                                <p className="text-[13px] font-extrabold text-[#F25260] num mt-1">
+                                <p className="text-[13px] font-extrabold text-expense num mt-1">
                                     {fmt(cashflowStats.worst.balance)}원
                                 </p>
                             </div>
@@ -2846,32 +2846,32 @@ function CompareCard({
 }) {
     const mainColor = isIncome ? "var(--income)" : "var(--expense)";
     return (
-        <div className="bg-[#2C2C2E] rounded-2xl p-4">
-            <p className="text-xs text-[#4E5968] font-semibold mb-2">{label}</p>
+        <div className="bg-raised rounded-2xl p-4">
+            <p className="text-xs text-muted font-semibold mb-2">{label}</p>
             <p
                 className="text-[17px] font-extrabold num"
                 style={{color: mainColor}}
             >
                 {current.toLocaleString()}
-                <span className="text-xs font-medium ml-0.5 text-[#4E5968]">
+                <span className="text-xs font-medium ml-0.5 text-muted">
                     원
                 </span>
             </p>
-            <p className="text-[11px] text-[#4E5968] num mt-0.5">
+            <p className="text-[11px] text-muted num mt-0.5">
                 전월 {prev.toLocaleString()}원
             </p>
             {diff !== null && (
                 <div
                     className={`flex items-center gap-1 mt-2 text-xs font-bold ${
                         diff === 0
-                            ? "text-[#4E5968]"
+                            ? "text-muted"
                             : isIncome
                               ? diff > 0
-                                  ? "text-[#2ACF6A]"
-                                  : "text-[#F25260]"
+                                  ? "text-income"
+                                  : "text-expense"
                               : diff > 0
-                                ? "text-[#F25260]"
-                                : "text-[#2ACF6A]"
+                                ? "text-expense"
+                                : "text-income"
                     }`}
                 >
                     {diff > 0 ? (

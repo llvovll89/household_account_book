@@ -117,7 +117,7 @@ function HighlightText({
                 p.toLowerCase() === query.toLowerCase() ? (
                     <mark
                         key={i}
-                        className="bg-[#F5BE3A]/30 text-[#F5BE3A] rounded-sm not-italic"
+                        className="bg-tone-amber/30 text-warning rounded-sm not-italic"
                     >
                         {p}
                     </mark>
@@ -1014,14 +1014,14 @@ export default function TransactionList({
         <div className="space-y-3 tab-content">
             {/* 뷰 전환 + 내보내기 */}
             <div className="transaction-toolbar flex flex-wrap items-center gap-2">
-                <div className="flex bg-[#1C1C1E] rounded-2xl p-1 gap-1">
+                <div className="flex bg-surface rounded-2xl p-1 gap-1">
                     <button
                         onClick={() => setViewMode("list")}
                         aria-pressed={viewMode === "list"}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "list"
                                 ? "bg-[#3D8EF8] text-white"
-                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                : "text-muted hover:text-tone-gray"
                         }`}
                     >
                         <ListIcon size={13} /> 목록
@@ -1032,7 +1032,7 @@ export default function TransactionList({
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "calendar"
                                 ? "bg-[#3D8EF8] text-white"
-                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                : "text-muted hover:text-tone-gray"
                         }`}
                     >
                         <CalendarDays size={13} /> 캘린더
@@ -1063,7 +1063,7 @@ export default function TransactionList({
                                 if (toolsRef.current) toolsRef.current.open = false;
                                 toolsRef.current?.querySelector('summary')?.focus();
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${isSelectionMode ? "bg-[#3D8EF8]/20 text-[#3D8EF8]" : "bg-[#1C1C1E] text-[#8B95A1] hover:text-white"}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors ${isSelectionMode ? "bg-tone-blue/20 text-accent" : "bg-surface text-muted hover:text-white"}`}
                         >
                             <CheckSquare size={13} />{" "}
                             {isSelectionMode ? "취소" : "선택"}
@@ -1074,7 +1074,7 @@ export default function TransactionList({
                             setShowExport(true);
                             if (toolsRef.current) toolsRef.current.open = false;
                         }}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface text-muted hover:text-white text-xs font-bold transition-colors"
                     >
                         <FileDown size={13} /> 내보내기
                     </button>
@@ -1099,13 +1099,13 @@ export default function TransactionList({
                     <>
                                     {/* 검색 */}
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             검색
                                         </p>
                                         <div role="search" className="relative">
                                             <Search
                                                 size={16}
-                                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA6B3]"
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
                                             />
                                             <input
                                                 ref={searchInputRef}
@@ -1121,10 +1121,10 @@ export default function TransactionList({
                                                     setSearch(e.target.value)
                                                 }
                                                 placeholder="카테고리, 설명, #태그로 검색"
-                                                className="w-full bg-[#2C2C2E] text-white placeholder-[#9CA6B3] text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                                                className="w-full bg-raised text-white placeholder-muted text-sm font-medium rounded-2xl pl-10 pr-10 py-3.5 focus:outline-none focus:ring-1 focus:ring-tone-blue/40"
                                             />
                                             {search !== debouncedSearch && (
-                                                <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-[#3D8EF8]/30 border-t-[#3D8EF8] animate-spin" />
+                                                <div className="absolute right-10 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-tone-blue/30 border-t-[#3D8EF8] animate-spin" />
                                             )}
                                             {search && (
                                                 <button
@@ -1136,7 +1136,7 @@ export default function TransactionList({
                                                 >
                                                     <X
                                                         size={14}
-                                                        className="text-[#9CA6B3]"
+                                                        className="text-muted"
                                                     />
                                                 </button>
                                             )}
@@ -1144,16 +1144,16 @@ export default function TransactionList({
                                         <p className="px-1 text-[11px] font-medium">
                                             {debouncedSearch ? (
                                                 <>
-                                                    <span className="text-[#3D8EF8] font-bold">
+                                                    <span className="text-accent font-bold">
                                                         {monthly.length}건
                                                     </span>
-                                                    <span className="text-[#9CA6B3]">
+                                                    <span className="text-muted">
                                                         {" "}
                                                         검색됨 · Esc 초기화
                                                     </span>
                                                 </>
                                             ) : (
-                                                <span className="search-shortcuts text-[#9CA6B3]">
+                                                <span className="search-shortcuts text-muted">
                                                     단축키: / 검색, Esc 초기화
                                                 </span>
                                             )}
@@ -1172,12 +1172,12 @@ export default function TransactionList({
                             </div>
                             <div className="transaction-result-summary" role="status" aria-live="polite" aria-atomic="true">
                                 <span>{fmt(monthly.length)}건</span>
-                                <span>수입 <strong className="text-[#2ACF6A] num">{fmt(filteredIncome)}원</strong></span>
-                                <span>지출 <strong className="text-[#F25260] num">{fmt(filteredExpense)}원</strong></span>
+                                <span>수입 <strong className="text-income num">{fmt(filteredIncome)}원</strong></span>
+                                <span>지출 <strong className="text-expense num">{fmt(filteredExpense)}원</strong></span>
                             </div>
                         </section>
 
-                        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                        <div className="bg-surface rounded-2xl overflow-hidden">
                             <div className="flex items-center gap-2 px-3 py-3">
                                 <button
                                     onClick={() =>
@@ -1191,7 +1191,7 @@ export default function TransactionList({
                                         <span className="text-sm font-bold text-white">
                                             상세 필터
                                         </span>
-                                        <span className="text-xs text-[#8B95A1] font-semibold shrink-0">
+                                        <span className="text-xs text-muted font-semibold shrink-0">
                                             {periodLabel} 단위
                                         </span>
                                         {activeFilterCount > 0 && (
@@ -1203,19 +1203,19 @@ export default function TransactionList({
                                     {isFilterPanelOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     )}
                                 </button>
                                 {isFiltered && (
                                     <button
                                         onClick={resetAllFilters}
-                                        className="shrink-0 text-[11px] px-2.5 py-1 rounded-lg bg-[#2C2C2E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                                        className="shrink-0 text-[11px] px-2.5 py-1 rounded-lg bg-raised text-muted font-bold hover:text-white hover:bg-tone-hover transition-colors"
                                     >
                                         초기화
                                     </button>
@@ -1228,10 +1228,10 @@ export default function TransactionList({
                                     className="space-y-4 px-3 pb-4"
                                 >
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             기간
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
+                                        <div className="bg-raised rounded-2xl p-2 space-y-2">
                                             <div className="flex gap-1">
                                                 {(
                                                     [
@@ -1266,7 +1266,7 @@ export default function TransactionList({
                                                             periodMode ===
                                                             mode.key
                                                                 ? "bg-[#3D8EF8] text-white"
-                                                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                                                : "text-muted hover:text-tone-gray"
                                                         }`}
                                                     >
                                                         {mode.label} 단위
@@ -1290,11 +1290,11 @@ export default function TransactionList({
                                                         />
                                                     </div>
                                                     {periodMode === "day" ? (
-                                                        <span className="text-xs text-[#8B95A1] font-semibold">
+                                                        <span className="text-xs text-muted font-semibold">
                                                             선택한 하루만 표시
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-[#8B95A1] font-semibold">
+                                                        <span className="text-xs text-muted font-semibold">
                                                             {formatWeekRangeLabel(
                                                                 weekRange.start,
                                                                 weekRange.end,
@@ -1307,10 +1307,10 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             빠른 필터
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-3 gap-1">
+                                        <div className="bg-raised rounded-2xl p-1 grid grid-cols-3 gap-1">
                                             {(
                                                 [
                                                     {key: "all", label: "전체"},
@@ -1350,7 +1350,7 @@ export default function TransactionList({
                                                         className={`py-2 rounded-xl text-[11px] font-bold transition-all ${
                                                             active
                                                                 ? "bg-[#3D8EF8] text-white"
-                                                                : "text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]"
+                                                                : "text-muted hover:text-fg hover:bg-tone-hover"
                                                         }`}
                                                     >
                                                         {preset.label}
@@ -1361,10 +1361,10 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             정렬
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-1 grid grid-cols-2 gap-1">
+                                        <div className="bg-raised rounded-2xl p-1 grid grid-cols-2 gap-1">
                                             {(
                                                 [
                                                     {
@@ -1400,7 +1400,7 @@ export default function TransactionList({
                                                         sortOption ===
                                                         option.key
                                                             ? "bg-[#3D8EF8] text-white"
-                                                            : "text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]"
+                                                            : "text-muted hover:text-fg hover:bg-tone-hover"
                                                     }`}
                                                 >
                                                     {option.label}
@@ -1410,10 +1410,10 @@ export default function TransactionList({
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             금액 범위
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-2 flex items-center gap-2">
+                                        <div className="bg-raised rounded-2xl p-2 flex items-center gap-2">
                                             <input
                                                 type="number"
                                                 inputMode="numeric"
@@ -1425,9 +1425,9 @@ export default function TransactionList({
                                                 }
                                                 placeholder="최소 금액"
                                                 aria-label="최소 금액"
-                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#9CA6B3] focus:outline-none num"
+                                                className="w-full min-w-0 bg-raised rounded-xl px-3 py-2 text-xs text-white placeholder-muted focus:outline-none num"
                                             />
-                                            <span className="text-[#9CA6B3] text-xs shrink-0">
+                                            <span className="text-muted text-xs shrink-0">
                                                 ~
                                             </span>
                                             <input
@@ -1441,21 +1441,21 @@ export default function TransactionList({
                                                 }
                                                 placeholder="최대 금액"
                                                 aria-label="최대 금액"
-                                                className="w-full min-w-0 bg-[#3A3A3C] rounded-xl px-3 py-2 text-xs text-white placeholder-[#9CA6B3] focus:outline-none num"
+                                                className="w-full min-w-0 bg-raised rounded-xl px-3 py-2 text-xs text-white placeholder-muted focus:outline-none num"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             제스처
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-2 space-y-2">
+                                        <div className="bg-raised rounded-2xl p-2 space-y-2">
                                             <div className="flex items-center justify-between px-1">
-                                                <span className="text-xs text-[#8B95A1] font-semibold">
+                                                <span className="text-xs text-muted font-semibold">
                                                     스와이프 민감도
                                                 </span>
-                                                <span className="text-[11px] text-[#9CA6B3] font-medium">
+                                                <span className="text-[11px] text-muted font-medium">
                                                     모바일 제스처
                                                 </span>
                                             </div>
@@ -1491,7 +1491,7 @@ export default function TransactionList({
                                                             swipeSensitivity ===
                                                             option.key
                                                                 ? "bg-[#3D8EF8] text-white"
-                                                                : "text-[#8B95A1] hover:text-[#C8D1DC] hover:bg-[#3A3A3C]"
+                                                                : "text-muted hover:text-fg hover:bg-tone-hover"
                                                         }`}
                                                     >
                                                         {option.label}
@@ -1503,15 +1503,15 @@ export default function TransactionList({
 
                                     {/* 필터 탭 */}
                                     <div>
-                                        <p className="text-[10px] font-bold text-[#9CA6B3] uppercase tracking-widest px-1 mb-1.5">
+                                        <p className="text-[10px] font-bold text-muted uppercase tracking-widest px-1 mb-1.5">
                                             결제수단
                                         </p>
-                                        <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
+                                        <div className="bg-raised rounded-2xl px-3 py-2.5 flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <span className="text-xs text-[#8B95A1] font-semibold">
+                                                <span className="text-xs text-muted font-semibold">
                                                     카드 결제일
                                                 </span>
-                                                <span className="text-xs text-[#9CC7FF] font-bold">
+                                                <span className="text-xs text-accent font-bold">
                                                     매월 {cardBillingDay}일
                                                 </span>
                                             </div>
@@ -1527,7 +1527,7 @@ export default function TransactionList({
                                                             true,
                                                         );
                                                     }}
-                                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#3D8EF8]/20 text-[#79B2FF] font-bold hover:bg-[#3D8EF8]/30 transition-colors"
+                                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-tone-blue/20 text-accent font-bold hover:bg-tone-blue/30 transition-colors"
                                                 >
                                                     변경
                                                 </button>
@@ -1546,7 +1546,7 @@ export default function TransactionList({
                                                         onFocus={(e) =>
                                                             e.target.select()
                                                         }
-                                                        className="w-12 bg-[#1C1C1E] text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/40"
+                                                        className="w-12 bg-surface text-white text-center rounded-lg px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-tone-blue/40"
                                                     />
                                                     <button
                                                         onClick={() => {
@@ -1562,7 +1562,7 @@ export default function TransactionList({
                                                                 false,
                                                             )
                                                         }
-                                                        className="text-[11px] px-2 py-1 rounded-lg bg-[#1C1C1E] text-[#8B95A1] font-bold"
+                                                        className="text-[11px] px-2 py-1 rounded-lg bg-surface text-muted font-bold"
                                                     >
                                                         취소
                                                     </button>
@@ -1571,8 +1571,8 @@ export default function TransactionList({
                                         </div>
 
                                         {statementMonthFilter && (
-                                            <div className="bg-[#2C2C2E] rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
-                                                <span className="text-xs text-[#9CC7FF] font-bold">
+                                            <div className="bg-raised rounded-2xl px-3 py-2 flex items-center justify-between gap-2">
+                                                <span className="text-xs text-accent font-bold">
                                                     청구월 필터:{" "}
                                                     {statementMonthFilter}
                                                 </span>
@@ -1582,7 +1582,7 @@ export default function TransactionList({
                                                             null,
                                                         )
                                                     }
-                                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-[#1C1C1E] text-[#8B95A1] font-bold hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                                                    className="text-[11px] px-2.5 py-1 rounded-lg bg-surface text-muted font-bold hover:text-white hover:bg-tone-hover transition-colors"
                                                 >
                                                     해제
                                                 </button>
@@ -1591,13 +1591,13 @@ export default function TransactionList({
 
                                         {userPaymentMethods.length > 0 ? (
                                             <div
-                                                className={`bg-[#2C2C2E] rounded-2xl p-1 ${userPaymentMethods.length > 4 ? "grid grid-cols-3 gap-1" : "flex"}`}
+                                                className={`bg-raised rounded-2xl p-1 ${userPaymentMethods.length > 4 ? "grid grid-cols-3 gap-1" : "flex"}`}
                                             >
                                                 <button
                                                     onClick={() =>
                                                         setMethodFilter("all")
                                                     }
-                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-[#3D8EF8] text-white" : "text-[#9CA6B3] hover:text-[#8B95A1]"}`}
+                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-[#3D8EF8] text-white" : "text-muted hover:text-tone-gray"}`}
                                                 >
                                                     전체
                                                 </button>
@@ -1616,12 +1616,12 @@ export default function TransactionList({
                                                                 isSelected
                                                                     ? m.type ===
                                                                       "cash"
-                                                                        ? "bg-[#2ACF6A]/22 text-[#2ACF6A]"
+                                                                        ? "bg-tone-green/22 text-income"
                                                                         : m.type ===
                                                                             "check"
-                                                                          ? "bg-[#6AD3C0]/22 text-[#6AD3C0]"
-                                                                          : "bg-[#3D8EF8]/22 text-[#79B2FF]"
-                                                                    : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                                                          ? "bg-tone-teal/22 text-tone-teal"
+                                                                          : "bg-tone-blue/22 text-accent"
+                                                                    : "text-muted hover:text-tone-gray"
                                                             }`}
                                                         >
                                                             {m.label}
@@ -1630,7 +1630,7 @@ export default function TransactionList({
                                                 })}
                                             </div>
                                         ) : (
-                                            <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
+                                            <div className="bg-raised rounded-2xl p-1 flex">
                                                 {(
                                                     [
                                                         {
@@ -1667,15 +1667,15 @@ export default function TransactionList({
                                                             f.key
                                                                 ? f.key ===
                                                                   "cash"
-                                                                    ? "bg-[#2ACF6A]/22 text-[#2ACF6A]"
+                                                                    ? "bg-tone-green/22 text-income"
                                                                     : f.key ===
                                                                         "check"
-                                                                      ? "bg-[#6AD3C0]/22 text-[#6AD3C0]"
+                                                                      ? "bg-tone-teal/22 text-tone-teal"
                                                                       : f.key ===
                                                                           "credit"
-                                                                        ? "bg-[#3D8EF8]/22 text-[#79B2FF]"
+                                                                        ? "bg-tone-blue/22 text-accent"
                                                                         : "bg-[#3D8EF8] text-white"
-                                                                : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                                                : "text-muted hover:text-tone-gray"
                                                         }`}
                                                     >
                                                         {f.label}
@@ -1684,7 +1684,7 @@ export default function TransactionList({
                                             </div>
                                         )}
 
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-1 flex">
+                                        <div className="bg-raised rounded-2xl p-1 flex">
                                             {(
                                                 [
                                                     {
@@ -1720,15 +1720,15 @@ export default function TransactionList({
                                                         billingFilter === f.key
                                                             ? f.key ===
                                                               "current"
-                                                                ? "bg-[#F5BE3A]/22 text-[#F5BE3A]"
+                                                                ? "bg-tone-amber/22 text-warning"
                                                                 : f.key ===
                                                                     "next"
-                                                                  ? "bg-[#3D8EF8]/22 text-[#79B2FF]"
+                                                                  ? "bg-tone-blue/22 text-accent"
                                                                   : f.key ===
                                                                       "later"
-                                                                    ? "bg-[#8B95A1]/22 text-[#B9C0C8]"
+                                                                    ? "bg-tone-gray/22 text-muted"
                                                                     : "bg-[#3D8EF8] text-white"
-                                                            : "text-[#9CA6B3] hover:text-[#8B95A1]"
+                                                            : "text-muted hover:text-tone-gray"
                                                     }`}
                                                 >
                                                     {f.label}
@@ -1741,7 +1741,7 @@ export default function TransactionList({
                         </div>
 
                         {/* 결제수단별 잔액 */}
-                        <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                        <div className="bg-surface rounded-2xl overflow-hidden">
                             <button
                                 onClick={() =>
                                     setIsBalanceSectionOpen((v) => !v)
@@ -1755,7 +1755,7 @@ export default function TransactionList({
                                         결제수단별 잔액
                                     </span>
                                     <span
-                                        className={`text-xs font-bold num ${methodsNetTotal > 0 ? "text-[#9CC7FF]" : methodsNetTotal < 0 ? "text-[#FF8D98]" : "text-[#8B95A1]"}`}
+                                        className={`text-xs font-bold num ${methodsNetTotal > 0 ? "text-accent" : methodsNetTotal < 0 ? "text-tone-red-soft" : "text-muted"}`}
                                     >
                                         {methodsNetTotal >= 0 ? "+" : ""}
                                         {fmt(methodsNetTotal)}원
@@ -1764,12 +1764,12 @@ export default function TransactionList({
                                 {isBalanceSectionOpen ? (
                                     <ChevronUp
                                         size={14}
-                                        className="text-[#9CA6B3] shrink-0"
+                                        className="text-muted shrink-0"
                                     />
                                 ) : (
                                     <ChevronDown
                                         size={14}
-                                        className="text-[#9CA6B3] shrink-0"
+                                        className="text-muted shrink-0"
                                     />
                                 )}
                             </button>
@@ -1808,20 +1808,20 @@ export default function TransactionList({
                                                   return (
                                                       <div
                                                           key={methodType}
-                                                          className="bg-[#2C2C2E] rounded-2xl px-4 py-3"
+                                                          className="bg-raised rounded-2xl px-4 py-3"
                                                       >
-                                                          <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">
+                                                          <p className="text-[11px] text-muted font-semibold mb-1">
                                                               {label} 잔액
                                                           </p>
                                                           <p
-                                                              className={`text-[15px] font-extrabold num ${net >= 0 ? "text-[#3D8EF8]" : "text-[#F25260]"}`}
+                                                              className={`text-[15px] font-extrabold num ${net >= 0 ? "text-accent" : "text-expense"}`}
                                                           >
                                                               {net >= 0
                                                                   ? "+"
                                                                   : ""}
                                                               {fmt(net)}원
                                                           </p>
-                                                          <p className="text-[10px] text-[#9CA6B3] mt-1">
+                                                          <p className="text-[10px] text-muted mt-1">
                                                               수입 +
                                                               {fmt(income)} /
                                                               지출 -
@@ -1846,9 +1846,9 @@ export default function TransactionList({
                                               return (
                                                   <div
                                                       key={method}
-                                                      className="bg-[#2C2C2E] rounded-2xl px-4 py-3"
+                                                      className="bg-raised rounded-2xl px-4 py-3"
                                                   >
-                                                      <p className="text-[11px] text-[#8B95A1] font-semibold mb-1">
+                                                      <p className="text-[11px] text-muted font-semibold mb-1">
                                                           {
                                                               PAYMENT_METHOD_LABEL[
                                                                   method
@@ -1857,12 +1857,12 @@ export default function TransactionList({
                                                           잔액
                                                       </p>
                                                       <p
-                                                          className={`text-[15px] font-extrabold num ${net >= 0 ? "text-[#3D8EF8]" : "text-[#F25260]"}`}
+                                                          className={`text-[15px] font-extrabold num ${net >= 0 ? "text-accent" : "text-expense"}`}
                                                       >
                                                           {net >= 0 ? "+" : ""}
                                                           {fmt(net)}원
                                                       </p>
-                                                      <p className="text-[10px] text-[#9CA6B3] mt-1">
+                                                      <p className="text-[10px] text-muted mt-1">
                                                           수입 +{fmt(income)} /
                                                           지출 -{fmt(expense)}
                                                       </p>
@@ -1874,7 +1874,7 @@ export default function TransactionList({
                         </div>
 
                         {tagSummary.length > 0 && (
-                            <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                            <div className="bg-surface rounded-2xl overflow-hidden">
                                 <div className="flex items-center justify-between px-5 py-3.5">
                                     <button
                                         onClick={() =>
@@ -1886,13 +1886,13 @@ export default function TransactionList({
                                     >
                                         <Hash
                                             size={14}
-                                            className="text-[#3D8EF8]"
+                                            className="text-accent"
                                         />
                                         <span className="text-sm font-bold text-white">
                                             태그별 합계
                                         </span>
                                         {activeTag && (
-                                            <span className="text-xs px-2 py-0.5 rounded-lg bg-[#3D8EF8]/20 text-[#3D8EF8] font-semibold">
+                                            <span className="text-xs px-2 py-0.5 rounded-lg bg-tone-blue/20 text-accent font-semibold">
                                                 #{activeTag} 필터 중
                                             </span>
                                         )}
@@ -1901,7 +1901,7 @@ export default function TransactionList({
                                         {onOpenTagManager && (
                                             <button
                                                 onClick={onOpenTagManager}
-                                                className="text-[11px] font-semibold text-[#8B95A1] hover:text-white px-2 py-1 rounded-lg bg-[#2C2C2E] transition-colors"
+                                                className="text-[11px] font-semibold text-muted hover:text-white px-2 py-1 rounded-lg bg-raised transition-colors"
                                             >
                                                 관리
                                             </button>
@@ -1914,12 +1914,12 @@ export default function TransactionList({
                                             {showTagSummary ? (
                                                 <ChevronUp
                                                     size={14}
-                                                    className="text-[#9CA6B3]"
+                                                    className="text-muted"
                                                 />
                                             ) : (
                                                 <ChevronDown
                                                     size={14}
-                                                    className="text-[#9CA6B3]"
+                                                    className="text-muted"
                                                 />
                                             )}
                                         </button>
@@ -1943,23 +1943,23 @@ export default function TransactionList({
                                                     }
                                                     className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all ${
                                                         isActive
-                                                            ? "bg-[#3D8EF8]/20 ring-1 ring-[#3D8EF8]/40"
-                                                            : "bg-[#2C2C2E] hover:bg-[#3A3A3C]"
+                                                            ? "bg-tone-blue/20 ring-1 ring-tone-blue/40"
+                                                            : "bg-raised hover:bg-tone-hover"
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         <span
-                                                            className={`text-sm font-bold ${isActive ? "text-[#3D8EF8]" : "text-white"}`}
+                                                            className={`text-sm font-bold ${isActive ? "text-accent" : "text-white"}`}
                                                         >
                                                             #{tag}
                                                         </span>
-                                                        <span className="text-xs text-[#9CA6B3] font-medium">
+                                                        <span className="text-xs text-muted font-medium">
                                                             {stat.count}건
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
                                                         {stat.income > 0 && (
-                                                            <div className="text-xs font-bold text-[#2ACF6A] num">
+                                                            <div className="text-xs font-bold text-income num">
                                                                 +
                                                                 {fmt(
                                                                     stat.income,
@@ -1968,7 +1968,7 @@ export default function TransactionList({
                                                             </div>
                                                         )}
                                                         {stat.expense > 0 && (
-                                                            <div className="text-xs font-bold text-[#F25260] num">
+                                                            <div className="text-xs font-bold text-expense num">
                                                                 -
                                                                 {fmt(
                                                                     stat.expense,
@@ -1980,7 +1980,7 @@ export default function TransactionList({
                                                             stat.expense >
                                                                 0 && (
                                                                 <div
-                                                                    className={`text-[11px] font-bold num ${net >= 0 ? "text-[#3D8EF8]" : "text-[#8B95A1]"}`}
+                                                                    className={`text-[11px] font-bold num ${net >= 0 ? "text-accent" : "text-muted"}`}
                                                                 >
                                                                     순{" "}
                                                                     {net >= 0
@@ -1998,7 +1998,7 @@ export default function TransactionList({
                                                 onClick={() =>
                                                     setActiveTag(null)
                                                 }
-                                                className="w-full text-xs font-bold text-[#9CA6B3] hover:text-[#8B95A1] py-1.5 transition-colors"
+                                                className="w-full text-xs font-bold text-muted hover:text-tone-gray py-1.5 transition-colors"
                                             >
                                                 필터 해제
                                             </button>
@@ -2010,7 +2010,7 @@ export default function TransactionList({
 
                         {/* 활성 필터 뱃지 */}
                         {isFiltered && (
-                            <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                            <div className="bg-surface rounded-2xl overflow-hidden">
                                 <button
                                     onClick={() =>
                                         setIsActiveFiltersSectionOpen((v) => !v)
@@ -2023,19 +2023,19 @@ export default function TransactionList({
                                         <span className="text-sm font-bold text-white">
                                             활성 필터 {activeFilterCount}개
                                         </span>
-                                        <span className="text-xs text-[#8B95A1] font-semibold num">
+                                        <span className="text-xs text-muted font-semibold num">
                                             {fmt(monthly.length)}건
                                         </span>
                                     </div>
                                     {isActiveFiltersSectionOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     )}
                                 </button>
@@ -2048,7 +2048,7 @@ export default function TransactionList({
                                         {filter !== "all" && (
                                             <button
                                                 onClick={() => setFilter("all")}
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-tone-blue/20 text-accent text-[11px] font-bold"
                                             >
                                                 {filter === "income"
                                                     ? "수입"
@@ -2061,7 +2061,7 @@ export default function TransactionList({
                                                 onClick={() =>
                                                     setMethodFilter("all")
                                                 }
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-tone-blue/20 text-accent text-[11px] font-bold"
                                             >
                                                 {userPaymentMethods.find(
                                                     (m) =>
@@ -2082,7 +2082,7 @@ export default function TransactionList({
                                                 onClick={() =>
                                                     setBillingFilter("all")
                                                 }
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F5BE3A]/20 text-[#F5BE3A] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-tone-amber/20 text-warning text-[11px] font-bold"
                                             >
                                                 {billingFilter === "current"
                                                     ? "이번 청구"
@@ -2099,7 +2099,7 @@ export default function TransactionList({
                                                         null,
                                                     )
                                                 }
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9CC7FF]/20 text-[#9CC7FF] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-tone-blue/20 text-accent text-[11px] font-bold"
                                             >
                                                 청구월 {statementMonthFilter}{" "}
                                                 <X size={10} />
@@ -2110,7 +2110,7 @@ export default function TransactionList({
                                                 onClick={() =>
                                                     setActiveTag(null)
                                                 }
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#3D8EF8]/20 text-[#79B2FF] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-tone-blue/20 text-accent text-[11px] font-bold"
                                             >
                                                 #{activeTag} <X size={10} />
                                             </button>
@@ -2118,7 +2118,7 @@ export default function TransactionList({
                                         {search && (
                                             <button
                                                 onClick={() => setSearch("")}
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#2C2C2E] text-[#8B95A1] text-[11px] font-bold"
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-raised text-muted text-[11px] font-bold"
                                             >
                                                 "{search}" <X size={10} />
                                             </button>
@@ -2130,7 +2130,7 @@ export default function TransactionList({
 
                         {(isFiltered && monthly.length > 0) ||
                         insightSummary ? (
-                            <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+                            <div className="bg-surface rounded-2xl overflow-hidden">
                                 <button
                                     onClick={() =>
                                         setIsInsightsSectionOpen((v) => !v)
@@ -2143,19 +2143,19 @@ export default function TransactionList({
                                         <span className="text-sm font-bold text-white">
                                             요약 인사이트
                                         </span>
-                                        <span className="text-xs text-[#8B95A1] font-semibold truncate">
+                                        <span className="text-xs text-muted font-semibold truncate">
                                             {insightHeaderText}
                                         </span>
                                     </div>
                                     {isInsightsSectionOpen ? (
                                         <ChevronUp
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     ) : (
                                         <ChevronDown
                                             size={14}
-                                            className="text-[#9CA6B3] shrink-0"
+                                            className="text-muted shrink-0"
                                         />
                                     )}
                                 </button>
@@ -2167,13 +2167,13 @@ export default function TransactionList({
                                     >
                                         {/* 필터 결과 합계 */}
                                         {isFiltered && monthly.length > 0 && (
-                                            <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3 flex items-center justify-between">
-                                                <span className="text-xs text-[#8B95A1] font-semibold">
+                                            <div className="bg-raised rounded-2xl px-4 py-3 flex items-center justify-between">
+                                                <span className="text-xs text-muted font-semibold">
                                                     {monthly.length}건
                                                 </span>
                                                 <div className="flex gap-3">
                                                     {filteredIncome > 0 && (
-                                                        <span className="text-xs font-bold text-[#2ACF6A] num">
+                                                        <span className="text-xs font-bold text-income num">
                                                             +
                                                             {fmt(
                                                                 filteredIncome,
@@ -2181,7 +2181,7 @@ export default function TransactionList({
                                                         </span>
                                                     )}
                                                     {filteredExpense > 0 && (
-                                                        <span className="text-xs font-bold text-[#F25260] num">
+                                                        <span className="text-xs font-bold text-expense num">
                                                             -
                                                             {fmt(
                                                                 filteredExpense,
@@ -2194,8 +2194,8 @@ export default function TransactionList({
 
                                         {insightSummary && (
                                             <div className="flex gap-2 mb-1">
-                                                <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
+                                                <div className="flex-1 bg-raised rounded-2xl px-3 py-2.5">
+                                                    <p className="text-[9px] text-muted mb-1">
                                                         최다 지출
                                                     </p>
                                                     <p className="text-[11px] font-bold text-white truncate">
@@ -2208,7 +2208,7 @@ export default function TransactionList({
                                                                 .topCat[0]
                                                         }
                                                     </p>
-                                                    <p className="text-[9px] num text-[#F25260]">
+                                                    <p className="text-[9px] num text-expense">
                                                         {fmt(
                                                             insightSummary
                                                                 .topCat[1],
@@ -2216,8 +2216,8 @@ export default function TransactionList({
                                                         원
                                                     </p>
                                                 </div>
-                                                <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
+                                                <div className="flex-1 bg-raised rounded-2xl px-3 py-2.5">
+                                                    <p className="text-[9px] text-muted mb-1">
                                                         평균 거래
                                                     </p>
                                                     <p className="text-[12px] font-bold num text-white">
@@ -2225,12 +2225,12 @@ export default function TransactionList({
                                                             insightSummary.avgAmt,
                                                         )}
                                                     </p>
-                                                    <p className="text-[9px] text-[#9CA6B3]">
+                                                    <p className="text-[9px] text-muted">
                                                         원/건
                                                     </p>
                                                 </div>
-                                                <div className="flex-1 bg-[#2C2C2E] rounded-2xl px-3 py-2.5">
-                                                    <p className="text-[9px] text-[#9CA6B3] mb-1">
+                                                <div className="flex-1 bg-raised rounded-2xl px-3 py-2.5">
+                                                    <p className="text-[9px] text-muted mb-1">
                                                         최대 단건
                                                     </p>
                                                     <p className="text-[11px] font-bold text-white truncate">
@@ -2243,7 +2243,7 @@ export default function TransactionList({
                                                                 .category
                                                         }
                                                     </p>
-                                                    <p className="text-[9px] num text-[#F25260]">
+                                                    <p className="text-[9px] num text-expense">
                                                         {fmt(
                                                             insightSummary.maxTx
                                                                 .amount,
@@ -2259,7 +2259,7 @@ export default function TransactionList({
                         ) : null}
 
                         {grouped.length === 0 ? (
-                            <div className="bg-[#1C1C1E] rounded-2xl">
+                            <div className="bg-surface rounded-2xl">
                                 <EmptyState
                                     emoji={search || activeTag ? "🔍" : "📋"}
                                     title={
@@ -2320,7 +2320,7 @@ export default function TransactionList({
                                     return (
                                         <div
                                             key={date}
-                                            className="bg-[#1C1C1E] rounded-2xl overflow-hidden"
+                                            className="bg-surface rounded-2xl overflow-hidden"
                                         >
                                             {/* 날짜 헤더 */}
                                             <button
@@ -2349,17 +2349,17 @@ export default function TransactionList({
                                                 </span>
                                                 <div className="flex items-center gap-2">
                                                     {dayIncome > 0 && (
-                                                        <span className="text-[11px] font-bold num text-[#2ACF6A]">
+                                                        <span className="text-[11px] font-bold num text-income">
                                                             +{fmt(dayIncome)}
                                                         </span>
                                                     )}
                                                     {dayExpense > 0 && (
-                                                        <span className="text-[11px] font-bold num text-[#F25260]">
+                                                        <span className="text-[11px] font-bold num text-expense">
                                                             -{fmt(dayExpense)}
                                                         </span>
                                                     )}
                                                     <span
-                                                        className={`text-[11px] font-bold num pl-1 border-l border-white/10 ${dayBalance >= 0 ? "text-[#3D8EF8]" : "text-[#F25260]"}`}
+                                                        className={`text-[11px] font-bold num pl-1 border-l border-white/10 ${dayBalance >= 0 ? "text-accent" : "text-expense"}`}
                                                     >
                                                         {dayBalance >= 0
                                                             ? "+"
@@ -2368,7 +2368,7 @@ export default function TransactionList({
                                                     </span>
                                                     <ChevronDown
                                                         size={13}
-                                                        className={`text-[#9CA6B3] transition-transform duration-200 shrink-0 ${collapsedGroups.has(date) ? "-rotate-90" : ""}`}
+                                                        className={`text-muted transition-transform duration-200 shrink-0 ${collapsedGroups.has(date) ? "-rotate-90" : ""}`}
                                                     />
                                                 </div>
                                             </button>
@@ -2411,7 +2411,7 @@ export default function TransactionList({
                                                                     {isFirstEverItem &&
                                                                         !isSwiped && (
                                                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 z-10 animate-pulse pointer-events-none">
-                                                                                <span className="text-[10px] font-bold text-[#8B95A1] bg-[#2C2C2E] px-2 py-1 rounded-lg">
+                                                                                <span className="text-[10px] font-bold text-muted bg-raised px-2 py-1 rounded-lg">
                                                                                     ←
                                                                                     스와이프로
                                                                                     편집/삭제
@@ -2434,7 +2434,7 @@ export default function TransactionList({
                                                                                     null,
                                                                                 );
                                                                             }}
-                                                                            className="w-11 h-11 rounded-xl bg-[#3D8EF8]/20 flex items-center justify-center text-[#3D8EF8]"
+                                                                            className="w-11 h-11 rounded-xl bg-tone-blue/20 flex items-center justify-center text-accent"
                                                                         >
                                                                             <Pencil
                                                                                 size={
@@ -2451,7 +2451,7 @@ export default function TransactionList({
                                                                                     t.id,
                                                                                 );
                                                                             }}
-                                                                            className="w-11 h-11 rounded-xl bg-[#F25260]/20 flex items-center justify-center text-[#F25260]"
+                                                                            className="w-11 h-11 rounded-xl bg-tone-red/20 flex items-center justify-center text-expense"
                                                                         >
                                                                             <Trash2
                                                                                 size={
@@ -2617,10 +2617,10 @@ export default function TransactionList({
                                                                                     null,
                                                                                 );
                                                                         }}
-                                                                        className="transaction-entry-row flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-[#1C1C1E]"
+                                                                        className="transaction-entry-row flex items-center gap-3 px-5 py-3.5 group cursor-pointer hover:bg-white/2 transition-colors bg-surface"
                                                                     >
                                                                         {isSelectionMode && (
-                                                                            <div className="shrink-0 text-[#3D8EF8]">
+                                                                            <div className="shrink-0 text-accent">
                                                                                 {selectedIds.has(
                                                                                     t.id,
                                                                                 ) ? (
@@ -2634,7 +2634,7 @@ export default function TransactionList({
                                                                                         size={
                                                                                             20
                                                                                         }
-                                                                                        className="text-[#9CA6B3]"
+                                                                                        className="text-muted"
                                                                                     />
                                                                                 )}
                                                                             </div>
@@ -2667,7 +2667,7 @@ export default function TransactionList({
                                                                                     query={
                                                                                         debouncedSearch
                                                                                     }
-                                                                                    className="text-xs text-[#9CA6B3] truncate mt-0.5 block"
+                                                                                    className="text-xs text-muted truncate mt-0.5 block"
                                                                                 />
                                                                             )}
                                                                             {(() => {
@@ -2685,11 +2685,11 @@ export default function TransactionList({
                                                                                         className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 font-bold ${
                                                                                             resolved.type ===
                                                                                             "credit"
-                                                                                                ? "bg-[#3D8EF8]/18 text-[#79B2FF]"
+                                                                                                ? "bg-tone-blue/18 text-accent"
                                                                                                 : resolved.type ===
                                                                                                     "check"
-                                                                                                  ? "bg-[#6AD3C0]/20 text-[#6AD3C0]"
-                                                                                                  : "bg-[#2ACF6A]/18 text-[#2ACF6A]"
+                                                                                                  ? "bg-tone-teal/20 text-tone-teal"
+                                                                                                  : "bg-tone-green/18 text-income"
                                                                                         }`}
                                                                                     >
                                                                                         {
@@ -2715,11 +2715,11 @@ export default function TransactionList({
                                                                                         className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] mt-1 ml-1 font-bold ${
                                                                                             meta.stage ===
                                                                                             "current"
-                                                                                                ? "bg-[#F5BE3A]/20 text-[#F5BE3A]"
+                                                                                                ? "bg-tone-amber/20 text-warning"
                                                                                                 : meta.stage ===
                                                                                                     "next"
-                                                                                                  ? "bg-[#3D8EF8]/20 text-[#79B2FF]"
-                                                                                                  : "bg-[#8B95A1]/20 text-[#B9C0C8]"
+                                                                                                  ? "bg-tone-blue/20 text-accent"
+                                                                                                  : "bg-tone-gray/20 text-muted"
                                                                                         }`}
                                                                                         title={`결제일 ${meta.txBillingDay}일 기준 · ${meta.statementYM} 청구`}
                                                                                         onClick={(
@@ -2745,7 +2745,7 @@ export default function TransactionList({
                                                                                 );
                                                                             })()}
                                                                             {t.dateEnd && (
-                                                                                <p className="text-[10px] text-[#3D8EF8] font-semibold mt-0.5">
+                                                                                <p className="text-[10px] text-accent font-semibold mt-0.5">
                                                                                     ~{" "}
                                                                                     {(() => {
                                                                                         const [
@@ -2783,8 +2783,8 @@ export default function TransactionList({
                                                                                                 className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all ${
                                                                                                     activeTag ===
                                                                                                     tag
-                                                                                                        ? "bg-[#3D8EF8]/30 text-[#3D8EF8]"
-                                                                                                        : "bg-[#2C2C2E] text-[#5A8EC8] hover:bg-[#3D8EF8]/15 hover:text-[#3D8EF8]"
+                                                                                                        ? "bg-tone-blue/30 text-accent"
+                                                                                                        : "bg-raised text-accent hover:bg-tone-blue/15 hover:text-tone-blue"
                                                                                                 }`}
                                                                                             >
                                                                                                 #
@@ -2838,7 +2838,7 @@ export default function TransactionList({
                                                                                             },
                                                                                         );
                                                                                     }}
-                                                                                    className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#3D8EF8] transition-colors"
+                                                                                    className="p-1.5 rounded-xl hover:bg-tone-blue/15 text-accent transition-colors"
                                                                                     title="영수증 보기"
                                                                                 >
                                                                                     📷
@@ -2856,7 +2856,7 @@ export default function TransactionList({
                                                                                         );
                                                                                     }}
                                                                                     aria-label={`${t.category} 내역 수정`}
-                                                                                    className="p-2.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#9CA6B3] hover:text-[#3D8EF8] transition-colors"
+                                                                                    className="p-2.5 rounded-xl hover:bg-tone-blue/15 text-muted hover:text-tone-blue transition-colors"
                                                                                 >
                                                                                     <Pencil
                                                                                         size={
@@ -2874,7 +2874,7 @@ export default function TransactionList({
                                                                                         );
                                                                                     }}
                                                                                     aria-label={`${t.category} 내역 삭제`}
-                                                                                    className="p-2.5 rounded-xl hover:bg-[#F25260]/15 text-[#9CA6B3] hover:text-[#F25260] transition-colors"
+                                                                                    className="p-2.5 rounded-xl hover:bg-tone-red/15 text-muted hover:text-tone-red transition-colors"
                                                                                 >
                                                                                     <Trash2
                                                                                         size={
@@ -2909,7 +2909,7 @@ export default function TransactionList({
                                                                         }),
                                                                     )
                                                                 }
-                                                                className="w-full py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+                                                                className="w-full py-2 rounded-xl bg-raised text-muted hover:text-white text-xs font-bold transition-colors"
                                                             >
                                                                 이 날짜 내역 더
                                                                 보기 (
@@ -2937,7 +2937,7 @@ export default function TransactionList({
                                             (prev) => prev + GROUP_PAGE_SIZE,
                                         )
                                     }
-                                    className="px-4 py-2 rounded-xl bg-[#1C1C1E] text-[#8B95A1] hover:text-white text-xs font-bold transition-colors"
+                                    className="px-4 py-2 rounded-xl bg-surface text-muted hover:text-white text-xs font-bold transition-colors"
                                 >
                                     내역 더 보기 ({visibleGrouped.length}/
                                     {grouped.length})
@@ -2951,14 +2951,14 @@ export default function TransactionList({
             {/* 일괄 액션바 */}
             {isSelectionMode && selectedIds.size > 0 && (
                 <div className="transaction-bulk-bar fixed left-0 right-0 flex justify-center z-40 px-4">
-                    <div className="flex items-center gap-3 bg-[#1C1C1E] border border-white/10 rounded-3xl px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+                    <div className="flex items-center gap-3 bg-surface border border-white/10 rounded-3xl px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                         <span className="text-white font-bold text-sm">
                             {selectedIds.size}개 선택됨
                         </span>
                         {onBulkEdit && (
                             <button
                                 onClick={() => setShowBulkCategoryPicker(true)}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#3D8EF8]/20 text-[#3D8EF8] font-bold text-sm"
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-tone-blue/20 text-accent font-bold text-sm"
                             >
                                 카테고리
                             </button>
@@ -2970,7 +2970,7 @@ export default function TransactionList({
                                 setIsSelectionMode(false);
                                 setSelectedIds(new Set());
                             }}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#F25260]/20 text-[#F25260] font-bold text-sm"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-tone-red/20 text-expense font-bold text-sm"
                         >
                             <Trash2 size={14} /> 삭제
                         </button>
@@ -2984,22 +2984,22 @@ export default function TransactionList({
                     onClose={() => setShowBulkCategoryPicker(false)}
                     label="카테고리 변경"
                     containerClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
-                    panelClassName="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8"
+                    panelClassName="relative w-full max-w-lg bg-surface rounded-t-[28px] px-5 pt-5 pb-8"
                 >
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <p className="text-[17px] font-bold text-white">
                                     카테고리 변경
                                 </p>
-                                <p className="text-[12px] text-[#8B95A1] mt-0.5">
+                                <p className="text-[12px] text-muted mt-0.5">
                                     {selectedIds.size}개 내역에 적용
                                 </p>
                             </div>
                             <button
                                 onClick={() => setShowBulkCategoryPicker(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E]"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-raised"
                             >
-                                <X size={16} className="text-[#8B95A1]" />
+                                <X size={16} className="text-muted" />
                             </button>
                         </div>
                         <div className="max-h-64 overflow-y-auto space-y-1">
@@ -3017,7 +3017,7 @@ export default function TransactionList({
                                             setIsSelectionMode(false);
                                             setSelectedIds(new Set());
                                         }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#2C2C2E] hover:bg-[#3A3A3C] text-left transition-colors"
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-raised hover:bg-tone-hover text-left transition-colors"
                                     >
                                         <span className="text-base">
                                             {CATEGORY_EMOJI[cat] ?? "📦"}
