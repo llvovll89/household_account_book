@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '../types'
 
 vi.mock('../firebase/firebase', () => ({
-  db: {},
+  getDb: async () => ({}),
 }))
 
 vi.mock('firebase/firestore', () => ({

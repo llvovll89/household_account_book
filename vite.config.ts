@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('xlsx')) return 'vendor-xlsx'
           if (id.includes('pdfjs-dist')) return 'vendor-pdf'
           if (id.includes('papaparse')) return 'vendor-csv'
+          // Firestore·Storage는 로그인 사용자만 쓰므로 공통 firebase 청크와 분리해 필요할 때 받는다
+          const normalizedId = id.replaceAll('\\', '/')
+          if (/\/@?firebase\/firestore\//.test(normalizedId)) return 'vendor-firestore'
+          if (/\/@?firebase\/storage\//.test(normalizedId)) return 'vendor-firebase-storage'
           if (id.includes('firebase')) return 'vendor-firebase'
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts'
           if (/node_modules\/(?:react|react-dom|react-is|scheduler)\//.test(id.replaceAll('\\', '/'))) return 'vendor-react'

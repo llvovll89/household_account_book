@@ -1,5 +1,4 @@
-import { ref, uploadBytes, deleteObject, getDownloadURL } from 'firebase/storage'
-import { storage } from '../firebase/firebase'
+import { getStorageInstance } from '../firebase/firebase'
 import { generateId } from './format'
 
 /**
@@ -25,7 +24,8 @@ export async function uploadReceiptImage(uid: string, file: File): Promise<strin
         // 파일 압축
         const compressedFile = await compressImage(file)
 
-        // Storage 경로
+        // Storage SDK는 영수증을 올릴 때만 불러온다
+        const [{ ref, uploadBytes, getDownloadURL }, storage] = await Promise.all([import('firebase/storage'), getStorageInstance()])
         const storageRef = ref(storage, `users/${uid}/receipts/${generateId()}`)
 
         // 업로드
@@ -47,6 +47,7 @@ export async function uploadReceiptImage(uid: string, file: File): Promise<strin
  */
 export async function deleteReceiptImage(downloadUrl: string): Promise<void> {
     try {
+        const [{ ref, deleteObject }, storage] = await Promise.all([import('firebase/storage'), getStorageInstance()])
         const storageRef = ref(storage, downloadUrl)
         await deleteObject(storageRef)
     } catch (error) {

@@ -9,8 +9,6 @@ import {
   indexedDBLocalPersistence,
   initializeAuth,
 } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -28,8 +26,17 @@ const app = initializeApp(firebaseConfig)
 export const auth = initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
 })
-export const db = getFirestore(app)
-export const storage = getStorage(app)
+// Firestore·Storage는 로그인 사용자만 쓰므로 처음 필요할 때 불러온다 (로그아웃 사용자의 시작 번들에서 제외)
+let firestorePromise: Promise<import('firebase/firestore').Firestore> | null = null
+export function getDb() {
+  firestorePromise ??= import('firebase/firestore').then(({ getFirestore }) => getFirestore(app))
+  return firestorePromise
+}
+let storagePromise: Promise<import('firebase/storage').FirebaseStorage> | null = null
+export function getStorageInstance() {
+  storagePromise ??= import('firebase/storage').then(({ getStorage }) => getStorage(app))
+  return storagePromise
+}
 export const googleProvider = new GoogleAuthProvider()
 
 function initAnalytics() {

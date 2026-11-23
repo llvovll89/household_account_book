@@ -6,7 +6,7 @@ import type { Transaction } from '../types'
 import { loadTransactions, saveTransactions, setStorageContext } from '../lib/storage'
 import { exportTransactionsCSV } from '../lib/exportCsv'
 
-vi.mock('../firebase/firebase', () => ({ db: {} }))
+vi.mock('../firebase/firebase', () => ({ getDb: async () => ({}) }))
 vi.mock('../lib/exportCsv', () => ({ exportTransactionsCSV: vi.fn(), exportTransactionsXLSX: vi.fn() }))
 vi.mock('./FancyDatePicker', () => ({
   default: ({ value, onChange }: { value: string; onChange: (value: string) => void }) =>

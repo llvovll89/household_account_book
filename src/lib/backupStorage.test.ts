@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-vi.mock('../firebase/firebase', () => ({ db: {} }))
+vi.mock('../firebase/firebase', () => ({ getDb: async () => ({}) }))
 vi.mock('firebase/firestore', () => ({ doc: vi.fn(), getDoc: vi.fn(), getDocFromServer: vi.fn(), runTransaction: vi.fn() }))
 import { getDocFromServer, runTransaction } from 'firebase/firestore'
 import { loadAllData, loadBackupState, restoreAllData, saveTransactions, setStorageContext, VERSION_KEYS } from './storage'
