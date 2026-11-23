@@ -80,3 +80,20 @@ it('lists every card expense in the current statement, including last month purc
   await waitFor(() => expect(screen.getByText('10월 결제분')).toBeTruthy())
   expect(screen.getByText('11월 결제분')).toBeTruthy()
 })
+
+it('finds records from other months only when searching all periods', async () => {
+  const transactions: Transaction[] = [
+    { id: 'old', type: 'expense', amount: 17000, category: '문화/여가', description: '넷플릭스 작년', date: '2025-11-05', createdAt: 1 },
+    { id: 'now', type: 'expense', amount: 17000, category: '문화/여가', description: '넷플릭스 이번달', date: '2026-11-05', createdAt: 2 },
+  ]
+  render(createElement(TransactionList, { transactions, yearMonth: '2026-11', onEdit: vi.fn(), onDelete: vi.fn() }))
+  fireEvent.change(screen.getByRole('searchbox', { name: '내역 검색' }), { target: { value: '넷플릭스' } })
+  await screen.findByText(/검색됨/)
+  // 검색어가 하이라이트로 쪼개지므로 화면 전체 글자로 확인한다
+  const shown = () => document.body.textContent ?? ''
+  expect(shown()).toContain('이번달')
+  expect(shown()).not.toContain('작년')
+  fireEvent.click(screen.getByRole('button', { name: '전체 기간' }))
+  await waitFor(() => expect(shown()).toContain('작년'))
+  expect(shown()).toContain('이번달')
+})
