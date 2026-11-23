@@ -51,7 +51,7 @@ src/
 │   ├── importDuplicates.ts / importMappings.ts / autoCategoryRules.ts
 │   ├── exportCsv.ts         # CSV/XLSX 내보내기 (수식 주입 방지)
 │   ├── tags.ts              # 태그 이름 변경·삭제 시 설명의 #태그 동기화
-│   ├── accountBalances.ts / loans.ts / subscriptions.ts / goals.ts  # 계좌 잔액, 대출 원금, 구독 주기·환산, 목표 집계
+│   ├── accountBalances.ts / loans.ts / subscriptions.ts / goals.ts  # 계좌 잔액(이체 포함)·순자산, 대출 원금·완납 예측, 구독 주기·환산·정기 내역 연결, 목표 집계
 │   ├── monthEndForecast.ts / notifications.ts  # 월말 예상 지출, 앱 내 알림 목록
 │   ├── weeklyReview.ts / expenseBreakdown.ts / useMonthlyData.ts / chartTheme.ts
 │   └── receiptStorage.ts / toast.ts / usageFlow.ts / pwaShortcuts.ts / categoryMigration.ts
@@ -149,6 +149,7 @@ CATEGORY_EMOJI      // Record<string, string>
 - 새 색상을 하드코딩할 때 라이트 테마 값(`:root[data-theme="light"]`)도 함께 정의할 것
 - Tailwind config 파일 생성 금지 (v4는 설정 파일 불필요)
 - 태그는 `tags` 필드로 읽는다. 저장 시 설명의 `#태그`에서 만들어지므로, 태그를 바꿀 때는 `lib/tags.ts` 헬퍼로 설명과 함께 바꿀 것
+- 계좌 간 이체·카드대금은 `AccountTransfer`(설정의 `transfers`)로 저장한다. `TransactionType`에 'transfer'를 추가하지 말 것 — 여러 곳이 '수입이 아니면 지출'로 합산한다
 - `getAuth()` 대신 `firebase/firebase.ts`의 `auth` 사용 (시작 시 로그인 iframe 로드 방지)
 - `firebase/firestore`·`firebase/storage`를 정적으로 import하지 말 것 → `getDb()`·`getStorageInstance()`와 동적 import (로그아웃 사용자 시작 번들에서 제외, #50)
 - 화면 안에서 조건부로 띄우는 시트·모달은 `components/ui/InlineDialog`로 감싼다 (포커스·Escape·dialog 역할)
