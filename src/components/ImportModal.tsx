@@ -369,7 +369,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
               return (
                 <div key={s} className="flex items-center gap-1 flex-1">
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                    step === s ? 'bg-[#3D8EF8] text-white' : done ? 'bg-tone-green text-white' : 'bg-raised text-muted'
+                    step === s ? 'bg-action text-on-action' : done ? 'bg-tone-green text-white' : 'bg-raised text-muted'
                   }`}>{done ? '✓' : i + 1}</div>
                   <span className={`text-[11px] font-semibold ${step === s ? 'text-accent' : 'text-muted'}`}>
                     {s === 'upload' ? '파일' : s === 'mapping' ? '컬럼' : '확인'}
@@ -541,7 +541,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                   <p className="text-sm text-expense font-medium">{error}</p>
                 </div>
               )}
-              <button onClick={proceedToPreview} className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
+              <button onClick={proceedToPreview} className="w-full py-4 rounded-2xl font-bold text-[15px] bg-action text-on-action hover:bg-action-hover transition-colors">
                 다음
               </button>
             </div>
@@ -636,7 +636,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                           type="button"
                           disabled={reviewExpenseCount === 0}
                           onClick={() => applyBulkCategoryToReview('expense', bulkExpenseCategory)}
-                          className="px-3 py-2 rounded-xl text-[11px] font-semibold text-white bg-[#3D8EF8] disabled:opacity-35"
+                          className="px-3 py-2 rounded-xl text-[11px] font-semibold bg-action text-on-action disabled:opacity-35"
                         >
                           지출 {reviewExpenseCount}건 적용
                         </button>
@@ -655,7 +655,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                           type="button"
                           disabled={reviewIncomeCount === 0}
                           onClick={() => applyBulkCategoryToReview('income', bulkIncomeCategory)}
-                          className="px-3 py-2 rounded-xl text-[11px] font-semibold text-white bg-[#3D8EF8] disabled:opacity-35"
+                          className="px-3 py-2 rounded-xl text-[11px] font-semibold bg-action text-on-action disabled:opacity-35"
                         >
                           수입 {reviewIncomeCount}건 적용
                         </button>
@@ -740,7 +740,7 @@ export default function ImportModal({ existingTransactions, autoCategoryRules = 
                   이전
                 </button>
                 <button onClick={handleImport} disabled={importCount === 0}
-                  className="flex-1 py-4 rounded-2xl font-bold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 transition-colors flex items-center justify-center gap-2">
+                  className="flex-1 py-4 rounded-2xl font-bold bg-action text-on-action hover:bg-action-hover disabled:opacity-30 transition-colors flex items-center justify-center gap-2">
                   <CheckCircle2 size={16} />
                   {importCount}개 가져오기
                 </button>

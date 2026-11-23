@@ -22,11 +22,11 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   const actual = payload.find((p) => p.name === '지출')?.value ?? 0
   const pct = budget > 0 ? Math.round((actual / budget) * 100) : null
   return (
-    <div className="bg-[#2C2C2E] border border-white/10 rounded-xl p-3 text-xs">
+    <div className="bg-raised border border-white/10 rounded-xl p-3 text-xs">
       <p className="font-bold text-white mb-1">{label}</p>
-      <p className="text-[#8B95A1]">예산 <span className="text-white font-bold">{fmt(budget)}원</span></p>
-      <p className="text-[#8B95A1]">지출 <span className={`font-bold ${actual > budget && budget > 0 ? 'text-[#F25260]' : 'text-[#3D8EF8]'}`}>{fmt(actual)}원</span></p>
-      {pct !== null && <p className="text-[#8B95A1] mt-0.5">달성률 <span className={`font-bold ${pct > 100 ? 'text-[#F25260]' : 'text-[#2ACF6A]'}`}>{pct}%</span></p>}
+      <p className="text-muted">예산 <span className="text-white font-bold">{fmt(budget)}원</span></p>
+      <p className="text-muted">지출 <span className={`font-bold ${actual > budget && budget > 0 ? 'text-expense' : 'text-accent'}`}>{fmt(actual)}원</span></p>
+      {pct !== null && <p className="text-muted mt-0.5">달성률 <span className={`font-bold ${pct > 100 ? 'text-expense' : 'text-income'}`}>{pct}%</span></p>}
     </div>
   )
 }
@@ -38,7 +38,7 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
 
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 text-[#4E5968]">
+      <div className="flex flex-col items-center justify-center py-10 text-muted">
         <p className="text-sm">예산이 설정되지 않았습니다</p>
       </div>
     )
@@ -46,7 +46,7 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-[#8B95A1]">선택한 달의 예산과 전월 이월액을 합산한 기준이에요.</p>
+      <p className="text-[11px] text-muted">선택한 달의 예산과 전월 이월액을 합산한 기준이에요.</p>
       <div role="img" aria-label="카테고리별 예산 대비 지출 비교 차트">
       <ResponsiveContainer width="100%" height={data.length * 52 + 20}>
         <BarChart data={data} layout="vertical" margin={{ left: 4, right: 12, top: 8, bottom: 8 }} barCategoryGap="28%">
@@ -76,15 +76,15 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
       <div className="flex items-center gap-4 px-1">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-sm bg-white/10" />
-          <span className="text-[11px] text-[#8B95A1]">예산</span>
+          <span className="text-[11px] text-muted">예산</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#3D8EF8]/70" />
-          <span className="text-[11px] text-[#8B95A1]">지출 (정상)</span>
+          <div className="w-3 h-3 rounded-sm bg-tone-blue/70" />
+          <span className="text-[11px] text-muted">지출 (정상)</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#F25260]/70" />
-          <span className="text-[11px] text-[#8B95A1]">지출 (초과)</span>
+          <div className="w-3 h-3 rounded-sm bg-tone-red/70" />
+          <span className="text-[11px] text-muted">지출 (초과)</span>
         </div>
       </div>
 
@@ -95,19 +95,19 @@ export default function BudgetCompareChart({ transactions, budgets, yearMonth }:
           const displayPct = d.budget > 0 ? Math.round((d.actual / d.budget) * 100) : 0
           const critical = displayPct >= 120
           return (
-            <div key={d.category} className={`space-y-1 rounded-xl px-2 py-1.5 transition-colors ${d.over ? 'bg-[#F25260]/8' : ''}`}>
+            <div key={d.category} className={`space-y-1 rounded-xl px-2 py-1.5 transition-colors ${d.over ? 'bg-tone-red/8' : ''}`}>
               <div className="flex justify-between items-center">
-                <span className="text-xs text-[#8B95A1]">{CATEGORY_EMOJI[d.category]} {d.category}</span>
+                <span className="text-xs text-muted">{CATEGORY_EMOJI[d.category]} {d.category}</span>
                 <div className="flex items-center gap-1">
                   {critical && <span className="text-[10px]">⚠️</span>}
-                  <span className={`text-xs font-bold num ${d.over ? 'text-[#F25260]' : 'text-[#2ACF6A]'}`}>
+                  <span className={`text-xs font-bold num ${d.over ? 'text-expense' : 'text-income'}`}>
                     {displayPct}%
                   </span>
                 </div>
               </div>
               <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${d.over ? 'bg-[#F25260]' : 'bg-[#3D8EF8]'}`}
+                  className={`h-full rounded-full transition-all duration-500 ${d.over ? 'bg-tone-red' : 'bg-action text-on-action'}`}
                   style={{ width: `${Math.min(pct, 100)}%` }}
                 />
               </div>

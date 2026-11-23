@@ -31,15 +31,15 @@ export default function MergeLocalDataModal({ onConfirm, onCancel, counts }: Pro
       aria-modal="true"
       aria-labelledby="merge-local-data-modal-title"
     >
-      <div ref={modalRef} className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
+      <div ref={modalRef} className="w-full sm:max-w-sm bg-raised border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="w-9 h-9 rounded-xl bg-[#3D8EF8]/15 border border-[#3D8EF8]/25 flex items-center justify-center shrink-0">
-              <Database size={17} className="text-[#79B2FF]" />
+            <span className="w-9 h-9 rounded-xl bg-tone-blue/15 border border-tone-blue/25 flex items-center justify-center shrink-0">
+              <Database size={17} className="text-accent" />
             </span>
             <div>
               <h3 id="merge-local-data-modal-title" className="text-white text-base font-bold">로컬 데이터 발견</h3>
-              <p className="text-xs text-[#8B95A1] mt-1 leading-relaxed">
+              <p className="text-xs text-muted mt-1 leading-relaxed">
                 로그인 전 저장된 데이터를 Firebase 계정과 병합할까요?
               </p>
             </div>
@@ -47,24 +47,24 @@ export default function MergeLocalDataModal({ onConfirm, onCancel, counts }: Pro
         </div>
 
         {items.length > 0 && (
-          <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
+          <div className="bg-surface rounded-2xl px-4 py-3 flex flex-wrap gap-x-4 gap-y-1.5">
             {items.map(({ key, label }) => (
-              <span key={key} className="text-xs text-[#8B95A1]">
+              <span key={key} className="text-xs text-muted">
                 {label} <span className="text-white font-bold num">{counts[key]}</span>건
               </span>
             ))}
           </div>
         )}
 
-        <p className="text-[11px] text-[#4E5968] leading-relaxed">
+        <p className="text-[11px] text-muted leading-relaxed">
           병합하지 않고 계속하면 로컬 데이터는 앱에서 사라지며, 이후 앱 내에서 다시 확인할 수 없습니다.
         </p>
 
         <div className="flex gap-2">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-[#1C1C1E] text-[#8B95A1] text-sm font-bold">
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl bg-surface text-muted text-sm font-bold">
             삭제 후 계속
           </button>
-          <button ref={mergeButtonRef} onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-[#3D8EF8] text-white text-sm font-bold hover:bg-[#5AA0FF] transition-colors">
+          <button ref={mergeButtonRef} onClick={onConfirm} className="flex-1 py-2.5 rounded-xl bg-action text-on-action text-sm font-bold hover:bg-action-hover transition-colors">
             병합하기
           </button>
         </div>

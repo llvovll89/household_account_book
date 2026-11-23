@@ -63,21 +63,21 @@ export default function AutoCategoryRuleModal({
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-surface rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-[17px] font-bold text-white">자동 분류 규칙</h2>
-            <p className="text-[12px] text-[#8B95A1] mt-0.5">설명에 키워드가 포함되면 카테고리를 자동 설정</p>
+            <p className="text-[12px] text-muted mt-0.5">설명에 키워드가 포함되면 카테고리를 자동 설정</p>
           </div>
-          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E]">
-            <X size={16} className="text-[#8B95A1]" />
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-raised">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
         {/* 규칙 추가 폼 */}
-        <div className="bg-[#2C2C2E] rounded-2xl p-4 mb-4 space-y-3">
-          <p className="text-[12px] font-semibold text-[#8B95A1] uppercase tracking-wide">새 규칙 추가</p>
+        <div className="bg-raised rounded-2xl p-4 mb-4 space-y-3">
+          <p className="text-[12px] font-semibold text-muted uppercase tracking-wide">새 규칙 추가</p>
           {/* 유형 토글 */}
           <div className="flex gap-2">
             {(['expense', 'income'] as TransactionType[]).map((t) => (
@@ -86,8 +86,8 @@ export default function AutoCategoryRuleModal({
                 onClick={() => { setRuleType(t); setRuleCategory('') }}
                 className={`flex-1 py-2 rounded-xl text-[13px] font-semibold transition-colors ${
                   ruleType === t
-                    ? t === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'bg-[#2ACF6A]/20 text-[#2ACF6A]'
-                    : 'text-[#4E5968]'
+                    ? t === 'expense' ? 'bg-tone-red/20 text-expense' : 'bg-tone-green/20 text-income'
+                    : 'text-muted'
                 }`}
               >
                 {t === 'expense' ? '지출' : '수입'}
@@ -102,13 +102,13 @@ export default function AutoCategoryRuleModal({
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addRule()}
-            className="w-full bg-[#1C1C1E] rounded-xl px-3 py-2.5 text-[14px] text-white placeholder-[#4E5968] focus:outline-none"
+            className="w-full bg-surface rounded-xl px-3 py-2.5 text-[14px] text-white placeholder-tone-slate focus:outline-none"
           />
           {/* 카테고리 선택 */}
           <select
             value={ruleCategory}
             onChange={(e) => setRuleCategory(e.target.value)}
-            className="w-full bg-[#1C1C1E] rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none appearance-none"
+            className="w-full bg-surface rounded-xl px-3 py-2.5 text-[14px] text-white focus:outline-none appearance-none"
           >
             <option value="">카테고리 선택</option>
             {categories.map((c) => (
@@ -120,7 +120,7 @@ export default function AutoCategoryRuleModal({
           <button
             onClick={addRule}
             disabled={!keyword.trim() || !ruleCategory}
-            className="w-full py-2.5 rounded-xl bg-[#3D8EF8] text-white text-[14px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl bg-action text-on-action text-[14px] font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
           >
             <Plus size={16} />
             추가
@@ -142,17 +142,17 @@ export default function AutoCategoryRuleModal({
             />
           ) : (
             list.map((rule) => (
-              <div key={rule.id} className={`flex items-center gap-3 bg-[#2C2C2E] rounded-xl px-4 py-3 ${!rule.enabled ? 'opacity-50' : ''}`}>
+              <div key={rule.id} className={`flex items-center gap-3 bg-raised rounded-xl px-4 py-3 ${!rule.enabled ? 'opacity-50' : ''}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
-                      rule.type === 'expense' ? 'bg-[#F25260]/20 text-[#F25260]' : 'bg-[#2ACF6A]/20 text-[#2ACF6A]'
+                      rule.type === 'expense' ? 'bg-tone-red/20 text-expense' : 'bg-tone-green/20 text-income'
                     }`}>
                       {rule.type === 'expense' ? '지출' : '수입'}
                     </span>
                     <span className="text-[13px] font-semibold text-white truncate">"{rule.keyword}"</span>
-                    <span className="text-[#8B95A1] text-[12px]">→</span>
-                    <span className="text-[13px] text-[#F1F3F6]">
+                    <span className="text-muted text-[12px]">→</span>
+                    <span className="text-[13px] text-fg">
                       {CATEGORY_EMOJI[rule.category] ?? ''} {rule.category}
                     </span>
                   </div>
@@ -164,14 +164,14 @@ export default function AutoCategoryRuleModal({
                     aria-pressed={rule.enabled}
                   >
                     {rule.enabled
-                      ? <ToggleRight size={22} className="text-[#3D8EF8]" />
-                      : <ToggleLeft size={22} className="text-[#4E5968]" />
+                      ? <ToggleRight size={22} className="text-accent" />
+                      : <ToggleLeft size={22} className="text-muted" />
                     }
                   </button>
                   <button
                     onClick={() => deleteRule(rule.id)}
                     aria-label={`${rule.keyword} 규칙 삭제`}
-                    className="text-[#4E5968] hover:text-[#F25260] transition-colors"
+                    className="text-muted hover:text-tone-red transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -184,7 +184,7 @@ export default function AutoCategoryRuleModal({
         {/* 저장 */}
         <button
           onClick={handleSave}
-          className="mt-4 w-full py-3.5 rounded-2xl bg-[#3D8EF8] text-white text-[15px] font-bold"
+          className="mt-4 w-full py-3.5 rounded-2xl bg-action text-on-action text-[15px] font-bold"
         >
           저장
         </button>

@@ -800,7 +800,7 @@ export default function GoalsView({
                                 <button
                                     key={m}
                                     onClick={() => setDepositMode(m)}
-                                    className={`flex-1 py-2.5 text-sm font-bold transition-colors ${depositMode === m ? "bg-[#3D8EF8] text-white" : "text-muted"}`}
+                                    className={`flex-1 py-2.5 text-sm font-bold transition-colors ${depositMode === m ? "bg-action text-on-action " : "text-muted"}`}
                                 >
                                     {m === "add" ? "💰 저금" : "💸 인출"}
                                 </button>
@@ -829,7 +829,7 @@ export default function GoalsView({
                         </div>
                         <button
                             onClick={handleDeposit}
-                            className="w-full py-3 bg-[#3D8EF8] text-white font-bold rounded-2xl flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-action text-on-action font-bold rounded-2xl flex items-center justify-center gap-2"
                         >
                             <Check size={16} />
                             확인
@@ -1108,7 +1108,7 @@ export default function GoalsView({
 
                         <button
                             onClick={handleSave}
-                            className="w-full py-3 bg-[#3D8EF8] text-white font-bold rounded-2xl flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-action text-on-action font-bold rounded-2xl flex items-center justify-center gap-2"
                         >
                             <Check size={16} />
                             {editing ? "수정 완료" : "목표 만들기"}

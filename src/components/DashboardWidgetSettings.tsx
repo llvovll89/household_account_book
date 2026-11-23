@@ -45,20 +45,20 @@ export default function DashboardWidgetSettings({ hiddenWidgets, onSave, onClose
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-surface rounded-t-[28px] px-5 pt-5 pb-8 max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-[17px] font-bold text-white">홈 위젯 설정</h2>
-            <p className="text-[12px] text-[#8B95A1] mt-0.5">표시할 위젯을 선택하세요</p>
+            <p className="text-[12px] text-muted mt-0.5">표시할 위젯을 선택하세요</p>
           </div>
-          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E]">
-            <X size={16} className="text-[#8B95A1]" />
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-raised">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
         {/* 고정 위젯 안내 */}
-        <div className="bg-[#2C2C2E] rounded-xl px-4 py-2.5 mb-4 flex items-center gap-2">
-          <span className="text-[12px] text-[#8B95A1]">잔액 카드와 예산 관리는 항상 표시됩니다</span>
+        <div className="bg-raised rounded-xl px-4 py-2.5 mb-4 flex items-center gap-2">
+          <span className="text-[12px] text-muted">잔액 카드와 예산 관리는 항상 표시됩니다</span>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
@@ -70,15 +70,15 @@ export default function DashboardWidgetSettings({ hiddenWidgets, onSave, onClose
                 onClick={() => toggle(w.id)}
                 aria-pressed={enabled}
                 aria-label={`${w.label} 위젯 ${enabled ? '숨기기' : '표시하기'}`}
-                className="w-full flex items-center gap-4 bg-[#2C2C2E] rounded-xl px-4 py-3 text-left"
+                className="w-full flex items-center gap-4 bg-raised rounded-xl px-4 py-3 text-left"
               >
                 {/* 토글 */}
-                <div className={`w-11 h-6 rounded-full transition-colors shrink-0 relative ${enabled ? 'bg-[#3D8EF8]' : 'bg-[#3A3A3C]'}`}>
+                <div className={`w-11 h-6 rounded-full transition-colors shrink-0 relative ${enabled ? 'bg-action text-on-action' : 'bg-raised'}`}>
                   <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[14px] font-semibold ${enabled ? 'text-white' : 'text-[#4E5968]'}`}>{w.label}</p>
-                  <p className="text-[11px] text-[#8B95A1] mt-0.5">{w.description}</p>
+                  <p className={`text-[14px] font-semibold ${enabled ? 'text-white' : 'text-muted'}`}>{w.label}</p>
+                  <p className="text-[11px] text-muted mt-0.5">{w.description}</p>
                 </div>
               </button>
             )

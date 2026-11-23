@@ -26,29 +26,29 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
       aria-labelledby="auto-apply-result-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="w-full sm:max-w-sm bg-[#0D0F14] border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="w-full sm:max-w-sm bg-raised border border-white/10 rounded-t-3xl sm:rounded-2xl p-5 space-y-4 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="w-9 h-9 rounded-xl bg-[#2ACF6A]/15 border border-[#2ACF6A]/25 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={17} className="text-[#2ACF6A]" />
+            <span className="w-9 h-9 rounded-xl bg-tone-green/15 border border-tone-green/25 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={17} className="text-income" />
             </span>
             <div>
               <h3 id="auto-apply-result-title" className="text-white text-base font-bold">정기 항목 등록 완료</h3>
-              <p className="text-xs text-[#8B95A1] mt-1 leading-relaxed">
+              <p className="text-xs text-muted mt-1 leading-relaxed">
                 총 {applied.length}건을 등록했어요. 적용된 항목을 확인하세요.
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="w-7 h-7 rounded-full bg-[#1C1C1E] text-[#8B95A1] flex items-center justify-center shrink-0"
+            className="w-7 h-7 rounded-full bg-surface text-muted flex items-center justify-center shrink-0"
             aria-label="닫기"
           >
             <X size={14} />
           </button>
         </div>
 
-        <div className="bg-[#1C1C1E] rounded-2xl px-4 py-3 space-y-2.5 max-h-72 overflow-y-auto">
+        <div className="bg-surface rounded-2xl px-4 py-3 space-y-2.5 max-h-72 overflow-y-auto">
           {applied.map((item) => {
             const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
@@ -60,13 +60,13 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
                   {CATEGORY_EMOJI[item.category] ?? '📦'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm text-[#F1F3F6] font-medium truncate block">{item.category}</span>
+                  <span className="text-sm text-fg font-medium truncate block">{item.category}</span>
                   {item.description && (
-                    <span className="text-xs text-[#4E5968] truncate block">{item.description}</span>
+                    <span className="text-xs text-muted truncate block">{item.description}</span>
                   )}
                 </div>
-                <span className="text-xs text-[#4E5968] shrink-0">{formatRecurringSchedule(item)}</span>
-                <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+                <span className="text-xs text-muted shrink-0">{formatRecurringSchedule(item)}</span>
+                <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-income' : 'text-expense'}`}>
                   {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()}원
                 </span>
               </div>
@@ -75,8 +75,8 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
         </div>
 
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs text-[#4E5968]">총 {applied.length}건</span>
-          <span className={`text-sm font-bold num ${total >= 0 ? 'text-[#2ACF6A]' : 'text-[#F25260]'}`}>
+          <span className="text-xs text-muted">총 {applied.length}건</span>
+          <span className={`text-sm font-bold num ${total >= 0 ? 'text-income' : 'text-expense'}`}>
             {total >= 0 ? '+' : ''}{total.toLocaleString()}원
           </span>
         </div>
@@ -85,7 +85,7 @@ export default function AutoApplyResultModal({ applied, onClose }: Props) {
           ref={closeButtonRef}
           type="button"
           onClick={handleClose}
-          className="w-full py-2.5 rounded-xl bg-[#3D8EF8] text-white text-sm font-bold hover:bg-[#5AA0FF] transition-colors"
+          className="w-full py-2.5 rounded-xl bg-action text-on-action text-sm font-bold hover:bg-action-hover transition-colors"
         >
           확인
         </button>

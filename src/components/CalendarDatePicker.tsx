@@ -29,13 +29,13 @@ const PickerTrigger = forwardRef<HTMLButtonElement, {
     ref={ref}
     type="button"
     onClick={onClick}
-    className={`fancy-date-trigger w-full rounded-xl border border-white/8 bg-[#131826] text-left text-[#D3D9E3] transition-colors hover:border-[#3D8EF8]/40 hover:bg-[#161D2E] ${
+    className={`fancy-date-trigger w-full rounded-xl border border-white/8 bg-raised text-left text-fg transition-colors hover:border-tone-blue/40 hover:bg-tone-hover ${
       size === 'sm' ? 'px-3 py-2 text-[13px] font-semibold' : 'px-3.5 py-2.5 text-sm font-bold'
     }`}
   >
     <span className="flex items-center justify-between gap-2">
       <span>{value}</span>
-      <CalendarDays size={15} className="text-[#6A7688]" />
+      <CalendarDays size={15} className="text-muted" />
     </span>
   </button>
 ))
@@ -70,7 +70,7 @@ export default function FancyDatePicker({ value, onChange, min, max, size = 'md'
           <button
             type="button"
             onClick={decreaseMonth}
-            className="w-7 h-7 rounded-lg bg-white/6 text-[#9AA3B2] hover:bg-white/12 hover:text-white flex items-center justify-center"
+            className="w-7 h-7 rounded-lg bg-white/6 text-muted hover:bg-white/12 hover:text-white flex items-center justify-center"
             aria-label="이전 달"
           >
             <ChevronLeft size={14} />
@@ -81,7 +81,7 @@ export default function FancyDatePicker({ value, onChange, min, max, size = 'md'
           <button
             type="button"
             onClick={increaseMonth}
-            className="w-7 h-7 rounded-lg bg-white/6 text-[#9AA3B2] hover:bg-white/12 hover:text-white flex items-center justify-center"
+            className="w-7 h-7 rounded-lg bg-white/6 text-muted hover:bg-white/12 hover:text-white flex items-center justify-center"
             aria-label="다음 달"
           >
             <ChevronRight size={14} />

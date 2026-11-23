@@ -68,7 +68,7 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
 
   if (chartData.length === 0) return (
     <div className="py-6 text-center">
-      <p className="text-sm text-[#4E5968]">이번 달 내역이 없어요</p>
+      <p className="text-sm text-muted">이번 달 내역이 없어요</p>
     </div>
   )
 
@@ -133,13 +133,13 @@ export default function CumulativeLineChart({ transactions, yearMonth }: Props) 
       <div className="flex items-center justify-end gap-4 mt-1 pr-3">
         <div className="flex items-center gap-1">
           <div className="w-5 h-0.5" style={{ backgroundColor: lineColor }} />
-          <span className="text-[9px] text-[#4E5968]">실제</span>
+          <span className="text-[9px] text-muted">실제</span>
         </div>
         <div className="flex items-center gap-1">
           <svg width={20} height={6}>
             <line x1="0" y1="3" x2="20" y2="3" stroke={lineColor} strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} />
           </svg>
-          <span className="text-[9px] text-[#4E5968]">예측</span>
+          <span className="text-[9px] text-muted">예측</span>
         </div>
       </div>
     )}

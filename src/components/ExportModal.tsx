@@ -134,7 +134,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
       aria-label="내역 내보내기"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -142,33 +142,33 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
         <div className="flex items-center justify-between px-6 pt-2 pb-5">
           <div>
             <h2 className="text-[18px] font-bold text-white">내역 내보내기</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">CSV 또는 엑셀 파일로 다운로드</p>
+            <p className="text-xs text-muted mt-0.5">CSV 또는 엑셀 파일로 다운로드</p>
           </div>
-          <button aria-label="내역 내보내기 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
-            <X size={16} className="text-[#8B95A1]" />
+          <button aria-label="내역 내보내기 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-raised flex items-center justify-center">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
         <div className="px-6 pb-8 space-y-4">
           {/* 스토리지 사용량 */}
-          <div className={`rounded-2xl px-4 py-3 ${isStorageWarning ? 'bg-[#F25260]/10 border border-[#F25260]/30' : 'bg-[#2C2C2E]'}`}>
+          <div className={`rounded-2xl px-4 py-3 ${isStorageWarning ? 'bg-tone-red/10 border border-tone-red/30' : 'bg-raised'}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-1.5">
-                {isStorageWarning && <AlertTriangle size={13} className="text-[#F5BE3A]" />}
-                <span className="text-[11px] font-semibold text-[#8B95A1]">저장 공간</span>
+                {isStorageWarning && <AlertTriangle size={13} className="text-warning" />}
+                <span className="text-[11px] font-semibold text-muted">저장 공간</span>
               </div>
-              <span className={`text-[11px] font-bold num ${isStorageWarning ? 'text-[#F5BE3A]' : 'text-[#F1F3F6]'}`}>
+              <span className={`text-[11px] font-bold num ${isStorageWarning ? 'text-warning' : 'text-fg'}`}>
                 {fmtBytes(storageUsed)} / 5MB
               </span>
             </div>
             <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${usagePct >= 90 ? 'bg-[#F25260]' : usagePct >= 70 ? 'bg-[#F5BE3A]' : 'bg-[#2ACF6A]'}`}
+                className={`h-full rounded-full transition-all ${usagePct >= 90 ? 'bg-tone-red' : usagePct >= 70 ? 'bg-tone-amber' : 'bg-tone-green'}`}
                 style={{ width: `${usagePct}%` }}
               />
             </div>
             {isStorageWarning && (
-              <p className="text-[10px] text-[#F5BE3A] mt-1.5">
+              <p className="text-[10px] text-warning mt-1.5">
                 저장 공간이 {fmtBytes(LOCAL_STORAGE_WARN_BYTES)}를 넘어섰어요. 오래된 내역을 내보내고 정리하세요.
               </p>
             )}
@@ -182,8 +182,8 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
                 onClick={() => { setRange(r.id); setArchiveConfirm(false) }}
                 className={`py-3 rounded-2xl text-sm font-bold transition-all ${
                   range === r.id
-                    ? 'bg-[#3D8EF8] text-white'
-                    : 'bg-[#2C2C2E] text-[#8B95A1] hover:text-white'
+                    ? 'bg-action text-on-action '
+                    : 'bg-raised text-muted hover:text-white'
                 }`}
               >
                 {r.label}
@@ -194,8 +194,8 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
           {/* 직접 설정 날짜 */}
           {range === 'custom' && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">시작일</p>
+              <div className="bg-raised rounded-2xl px-4 py-3">
+                <p className="text-[10px] font-semibold text-muted mb-1.5 uppercase tracking-wide">시작일</p>
                 <FancyDatePicker
                   value={customFrom}
                   onChange={setCustomFrom}
@@ -203,8 +203,8 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
                   size="sm"
                 />
               </div>
-              <div className="bg-[#2C2C2E] rounded-2xl px-4 py-3">
-                <p className="text-[10px] font-semibold text-[#4E5968] mb-1.5 uppercase tracking-wide">종료일</p>
+              <div className="bg-raised rounded-2xl px-4 py-3">
+                <p className="text-[10px] font-semibold text-muted mb-1.5 uppercase tracking-wide">종료일</p>
                 <FancyDatePicker
                   value={customTo}
                   onChange={setCustomTo}
@@ -216,11 +216,11 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
           )}
 
           {/* 미리보기 */}
-          <div className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
-            <FileText size={18} className="text-[#3D8EF8] shrink-0" />
+          <div className="flex items-center gap-3 bg-raised rounded-2xl px-4 py-3.5">
+            <FileText size={18} className="text-accent shrink-0" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{getFilename()}</p>
-              <p className="text-xs text-[#4E5968] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 {filtered.length > 0
                   ? `${filtered.length}개 내역 · 수입 ${filtered.filter(t => t.type === 'income').length}건 · 지출 ${filtered.filter(t => t.type === 'expense').length}건`
                   : '해당 기간에 내역이 없습니다'}
@@ -230,9 +230,9 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
 
           {/* 아카이브 확인 메시지 */}
           {archiveConfirm && (
-            <div className="bg-[#F25260]/10 border border-[#F25260]/30 rounded-2xl px-4 py-3.5">
-              <p className="text-sm font-semibold text-[#F25260] mb-1">정말 삭제할까요?</p>
-              <p className="text-xs text-[#8B95A1]">
+            <div className="bg-tone-red/10 border border-tone-red/30 rounded-2xl px-4 py-3.5">
+              <p className="text-sm font-semibold text-expense mb-1">정말 삭제할까요?</p>
+              <p className="text-xs text-muted">
                 CSV를 먼저 내보낸 뒤 앱에서 {filtered.length}개 내역을 삭제합니다. 이 작업은 되돌릴 수 없어요.
               </p>
             </div>
@@ -242,7 +242,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             <button
               onClick={handleExport}
               disabled={filtered.length === 0}
-              className="flex-1 py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-4 rounded-2xl font-bold text-[15px] bg-action text-on-action hover:bg-action-hover disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <Download size={18} />
               CSV
@@ -250,13 +250,13 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             <button
               onClick={handleExportXlsx}
               disabled={filtered.length === 0 || exportingXlsx}
-              className="flex-1 py-4 rounded-2xl font-bold text-white text-[15px] bg-[#2ACF6A] hover:bg-[#34D97A] disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-4 rounded-2xl font-bold text-white text-[15px] bg-tone-green hover:bg-tone-green disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
               <FileSpreadsheet size={18} />
               {exportingXlsx ? '변환 중...' : '엑셀'}
             </button>
           </div>
-          <p className="text-[11px] text-[#4E5968] -mt-2 text-center">
+          <p className="text-[11px] text-muted -mt-2 text-center">
             {filtered.length}개 내역을 CSV 또는 엑셀(.xlsx)로 다운로드해요
           </p>
 
@@ -266,14 +266,14 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
               <div className="flex gap-2">
                 <button
                   onClick={() => setArchiveConfirm(false)}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-[#8B95A1] text-sm bg-[#2C2C2E]"
+                  className="flex-1 py-3.5 rounded-2xl font-bold text-muted text-sm bg-raised"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleArchive}
                   disabled={archiving}
-                  className="flex-1 py-3.5 rounded-2xl font-bold text-white text-sm bg-[#F25260] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 py-3.5 rounded-2xl font-bold text-white text-sm bg-tone-red disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {archiving ? '처리 중...' : '내보내고 삭제'}
                 </button>
@@ -281,7 +281,7 @@ export default function ExportModal({ transactions, yearMonth, onClose, onArchiv
             ) : (
               <button
                 onClick={() => setArchiveConfirm(true)}
-                className="w-full py-3.5 rounded-2xl font-bold text-[#8B95A1] text-sm bg-[#2C2C2E] hover:text-white flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-2xl font-bold text-muted text-sm bg-raised hover:text-white flex items-center justify-center gap-2"
               >
                 <Archive size={16} />
                 내보내고 앱에서 삭제 (아카이브)

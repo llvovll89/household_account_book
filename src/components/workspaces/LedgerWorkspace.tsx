@@ -11,8 +11,8 @@ const GoalsView = lazy(() => import('../GoalsView'))
 
 function TabFallback() {
   return (
-    <div className="bg-[#1C1C1E] rounded-2xl p-6 text-center">
-      <p className="text-sm font-semibold text-[#8B95A1]">탭 화면을 불러오는 중...</p>
+    <div className="bg-surface rounded-2xl p-6 text-center">
+      <p className="text-sm font-semibold text-muted">탭 화면을 불러오는 중...</p>
     </div>
   )
 }

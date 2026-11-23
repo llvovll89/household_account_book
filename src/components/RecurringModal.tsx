@@ -137,7 +137,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
       aria-labelledby="recurring-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
@@ -145,17 +145,17 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
             <h2 id="recurring-modal-title" className="text-[18px] font-bold text-white">정기 지출 관리</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">반복되는 수입·지출과 결제수단을 관리하세요.</p>
+            <p className="text-xs text-muted mt-0.5">반복되는 수입·지출과 결제수단을 관리하세요.</p>
           </div>
-          <button aria-label="정기 지출 관리 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
-            <X size={16} className="text-[#8B95A1]" />
+          <button aria-label="정기 지출 관리 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-raised flex items-center justify-center">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-3">
           {/* 등록된 항목 목록 */}
           {items.length === 0 && !adding && (
-            <div className="bg-[#2C2C2E] rounded-2xl">
+            <div className="bg-raised rounded-2xl">
               <EmptyState
                 emoji="🔁"
                 title="등록된 정기 항목이 없어요"
@@ -169,7 +169,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
           {items.map((item) => {
             const color = CATEGORY_COLOR[item.category] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
-              <div key={item.id} className="flex items-center gap-3 bg-[#2C2C2E] rounded-2xl px-4 py-3.5">
+              <div key={item.id} className="flex items-center gap-3 bg-raised rounded-2xl px-4 py-3.5">
                 <div
                   className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
                   style={{ backgroundColor: color.bg }}
@@ -179,26 +179,26 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">{item.category}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/5 text-[#8B95A1]">
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/5 text-muted">
                       {formatRecurringSchedule(item)}
                     </span>
                   </div>
                   {item.description && (
-                    <p className="text-xs text-[#4E5968] truncate mt-0.5">{item.description}</p>
+                    <p className="text-xs text-muted truncate mt-0.5">{item.description}</p>
                   )}
-                  <label className="text-xs text-[#8B95A1] block mt-1">결제수단
+                  <label className="text-xs text-muted block mt-1">결제수단
                     <select aria-label={`${item.category} 정기 내역 결제수단`} className="w-full mt-1 p-1.5" value={methods.some(m => m.key === item.paymentMethodId) ? item.paymentMethodId : (methods.find(m => m.key === (item.paymentMethod ?? 'cash')) ?? methods.find(m => m.type === (item.paymentMethod ?? 'cash')))?.key ?? item.paymentMethod ?? 'cash'} onChange={e => changeItemMethod(item.id, e.target.value)}>
                       {methods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
                     </select>
                   </label>
                 </div>
-                <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-[#2ACF6A]' : 'text-white'}`}>
+                <span className={`text-sm font-bold num shrink-0 ${item.type === 'income' ? 'text-income' : 'text-white'}`}>
                   {item.type === 'income' ? '+' : '-'}{fmt(item.amount)}원
                 </span>
                 <button
                   onClick={() => handleDelete(item.id)}
                   aria-label={`${item.category} 정기 항목 삭제`}
-                  className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors shrink-0"
+                  className="p-1.5 rounded-xl hover:bg-tone-red/15 text-muted hover:text-tone-red transition-colors shrink-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -208,17 +208,17 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
           {/* 추가 폼 */}
           {adding && (
-            <div className="bg-[#2C2C2E] rounded-2xl p-4 space-y-3 border border-[#3D8EF8]/20">
+            <div className="bg-raised rounded-2xl p-4 space-y-3 border border-tone-blue/20">
               {/* 수입/지출 */}
-              <div className="flex gap-2 bg-[#1C1C1E] p-1 rounded-xl">
+              <div className="flex gap-2 bg-surface p-1 rounded-xl">
                 {(['expense', 'income'] as TransactionType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => { setNewType(t); setNewCategory(t === 'income' ? '급여' : '식비') }}
                     className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
                       newType === t
-                        ? t === 'income' ? 'bg-[#2ACF6A]/20 text-[#2ACF6A]' : 'bg-[#F25260]/20 text-[#F25260]'
-                        : 'text-[#4E5968]'
+                        ? t === 'income' ? 'bg-tone-green/20 text-income' : 'bg-tone-red/20 text-expense'
+                        : 'text-muted'
                     }`}
                   >
                     {t === 'income' ? '수입' : '지출'}
@@ -227,8 +227,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
               </div>
 
               {/* 반복 주기 */}
-              <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <label className="text-[10px] text-[#4E5968] font-semibold mb-1.5 block">반복 주기</label>
+              <div className="bg-surface rounded-xl px-3 py-2.5">
+                <label className="text-[10px] text-muted font-semibold mb-1.5 block">반복 주기</label>
                 <div className="flex gap-1.5">
                   {FREQUENCIES.map(({ key, label }) => (
                     <button
@@ -237,8 +237,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                       onClick={() => setNewFrequency(key)}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                         newFrequency === key
-                          ? 'bg-[#3D8EF8] text-white'
-                          : 'bg-[#2C2C2E] text-[#8B95A1]'
+                          ? 'bg-action text-on-action '
+                          : 'bg-raised text-muted'
                       }`}
                     >
                       {label}
@@ -249,8 +249,8 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
 
               <div className="grid grid-cols-2 gap-2">
                 {/* 금액 */}
-                <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5 overflow-hidden">
-                  <label htmlFor="recurring-amount" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">금액</label>
+                <div className="bg-surface rounded-xl px-3 py-2.5 overflow-hidden">
+                  <label htmlFor="recurring-amount" className="text-[10px] text-muted font-semibold mb-1 block">금액</label>
                   <div className="flex items-baseline gap-1">
                     <input
                       id="recurring-amount"
@@ -258,16 +258,16 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                       value={newAmount}
                       onChange={(e) => handleAmountChange(e.target.value)}
                       placeholder="0"
-                      className="flex-1 min-w-0 bg-transparent text-base font-bold text-white focus:outline-none num text-right placeholder-[#252A3F]"
+                      className="flex-1 min-w-0 bg-transparent text-base font-bold text-white focus:outline-none num text-right placeholder-tone-slate"
                     />
-                    <span className="text-xs text-[#4E5968] shrink-0">원</span>
+                    <span className="text-xs text-muted shrink-0">원</span>
                   </div>
                 </div>
 
                 {/* 날짜/요일 */}
                 {newFrequency === 'monthly' ? (
-                  <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                    <label htmlFor="recurring-day" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">매월 몇 일</label>
+                  <div className="bg-surface rounded-xl px-3 py-2.5">
+                    <label htmlFor="recurring-day" className="text-[10px] text-muted font-semibold mb-1 block">매월 몇 일</label>
                     <div className="relative">
                       <select
                         id="recurring-day"
@@ -275,14 +275,14 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                         onChange={(e) => setNewDay(Number(e.target.value))}
                         className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
                       >
-                        {DAYS.map((d) => <option key={d} value={d} className="bg-[#1C1C1E]">{d}일</option>)}
+                        {DAYS.map((d) => <option key={d} value={d} className="bg-surface">{d}일</option>)}
                       </select>
-                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                    <label htmlFor="recurring-weekday" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">무슨 요일</label>
+                  <div className="bg-surface rounded-xl px-3 py-2.5">
+                    <label htmlFor="recurring-weekday" className="text-[10px] text-muted font-semibold mb-1 block">무슨 요일</label>
                     <div className="relative">
                       <select
                         id="recurring-weekday"
@@ -290,17 +290,17 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                         onChange={(e) => setNewWeekday(Number(e.target.value))}
                         className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
                       >
-                        {WEEKDAYS.map((w, i) => <option key={w} value={i} className="bg-[#1C1C1E]">{w}요일</option>)}
+                        {WEEKDAYS.map((w, i) => <option key={w} value={i} className="bg-surface">{w}요일</option>)}
                       </select>
-                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                      <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     </div>
                   </div>
                 )}
               </div>
 
               {/* 카테고리 */}
-              <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <label htmlFor="recurring-category" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">카테고리</label>
+              <div className="bg-surface rounded-xl px-3 py-2.5">
+                <label htmlFor="recurring-category" className="text-[10px] text-muted font-semibold mb-1 block">카테고리</label>
                 <div className="relative">
                   <select
                     id="recurring-category"
@@ -308,39 +308,39 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
                     onChange={(e) => setNewCategory(e.target.value)}
                     className="w-full appearance-none bg-transparent text-sm font-bold text-white focus:outline-none"
                   >
-                    {categories.map((c) => <option key={c} value={c} className="bg-[#1C1C1E]">{CATEGORY_EMOJI[c]} {c}</option>)}
+                    {categories.map((c) => <option key={c} value={c} className="bg-surface">{CATEGORY_EMOJI[c]} {c}</option>)}
                   </select>
-                  <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-[#4E5968] pointer-events-none" />
+                  <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label htmlFor="recurring-method" className="text-xs text-[#8B95A1] block mb-2">결제수단</label>
-                <select id="recurring-method" value={methodKey} onChange={e => setMethodKey(e.target.value)} className="w-full p-3 rounded-xl bg-[#1C1C1E] text-sm">
+                <label htmlFor="recurring-method" className="text-xs text-muted block mb-2">결제수단</label>
+                <select id="recurring-method" value={methodKey} onChange={e => setMethodKey(e.target.value)} className="w-full p-3 rounded-xl bg-surface text-sm">
                   {methods.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
                 </select>
               </div>
-              {amountError && <p role="alert" className="text-xs text-[#F25260]">{amountError}</p>}
+              {amountError && <p role="alert" className="text-xs text-expense">{amountError}</p>}
               {/* 메모 */}
-              <div className="bg-[#1C1C1E] rounded-xl px-3 py-2.5">
-                <label htmlFor="recurring-note" className="text-[10px] text-[#4E5968] font-semibold mb-1 block">메모 (선택)</label>
+              <div className="bg-surface rounded-xl px-3 py-2.5">
+                <label htmlFor="recurring-note" className="text-[10px] text-muted font-semibold mb-1 block">메모 (선택)</label>
                 <textarea
                   id="recurring-note"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="예: 넷플릭스, 월세"
                   rows={2}
-                  className="w-full bg-transparent text-sm font-medium text-white placeholder-[#2D3352] focus:outline-none resize-none leading-relaxed"
+                  className="w-full bg-transparent text-sm font-medium text-white placeholder-tone-slate focus:outline-none resize-none leading-relaxed"
                 />
               </div>
 
               <div className="flex gap-2">
                 <button onClick={() => setAdding(false)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-[#8B95A1] bg-[#1C1C1E] hover:bg-[#2C2C2E] transition-colors">
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-muted bg-surface hover:bg-tone-chip transition-colors">
                   취소
                 </button>
                 <button onClick={handleAdd}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors">
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-action text-on-action hover:bg-action-hover transition-colors">
                   추가
                 </button>
               </div>
@@ -350,7 +350,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
           {!adding && items.length > 0 && (
             <button
               onClick={() => setAdding(true)}
-              className="w-full flex items-center gap-2 justify-center py-3.5 rounded-2xl border border-dashed border-white/10 text-sm font-semibold text-[#4E5968] hover:text-[#8B95A1] hover:border-white/20 transition-colors"
+              className="w-full flex items-center gap-2 justify-center py-3.5 rounded-2xl border border-dashed border-white/10 text-sm font-semibold text-muted hover:text-tone-gray hover:border-white/20 transition-colors"
             >
               <Plus size={15} />
               정기 항목 추가
@@ -362,7 +362,7 @@ export default function RecurringModal({ recurring, customExpenseCategories = []
           <button
             onClick={handleSave}
             disabled={adding}
-            className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
+            className="w-full py-4 rounded-2xl font-bold text-[15px] bg-action text-on-action hover:bg-action-hover active:scale-[0.98] transition-all"
           >
             저장하기
           </button>

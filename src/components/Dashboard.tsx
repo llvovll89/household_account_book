@@ -50,7 +50,7 @@ export default function Dashboard(props: DashboardProps) {
       }} />
     <details className="home-monthly-details" ref={detailsRef} onToggle={e => setExpanded(e.currentTarget.open)}>
       <summary>월간 현황과 상세 위젯 <span>잔액 · 예산 관리 · 분석</span></summary>
-      {expanded && <Suspense fallback={<p role="status" className="p-6 text-sm text-[#8B95A1]">상세 위젯을 불러오는 중...</p>}>
+      {expanded && <Suspense fallback={<p role="status" className="p-6 text-sm text-muted">상세 위젯을 불러오는 중...</p>}>
         <MonthlyDashboard {...props} />
       </Suspense>}
     </details>

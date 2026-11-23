@@ -19,7 +19,7 @@ export default function DonutChart({ data }: Props) {
   if (data.length === 0) return (
     <div className="py-8 text-center">
       <p className="text-3xl mb-2">📊</p>
-      <p className="text-sm text-[#4E5968]">지출 내역을 추가하면 분석이 표시돼요</p>
+      <p className="text-sm text-muted">지출 내역을 추가하면 분석이 표시돼요</p>
     </div>
   )
 
@@ -103,7 +103,7 @@ export default function DonutChart({ data }: Props) {
               }}
             >
               <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-[11px] text-[#8B95A1] font-medium truncate">{item.cat}</span>
+              <span className="text-[11px] text-muted font-medium truncate">{item.cat}</span>
               <span className="text-[11px] font-bold ml-auto shrink-0" style={{ color }}>{item.pct}%</span>
             </button>
           )

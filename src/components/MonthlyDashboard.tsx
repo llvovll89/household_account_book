@@ -786,7 +786,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
         <p className="summary-note mt-2 text-xs leading-relaxed text-muted">기록한 수입 − 지출 기준이에요. 실제 계좌 잔액과 다를 수 있어요.</p>
         {onAddTransaction && (
           <button type="button" onClick={onAddTransaction}
-            className="summary-record mt-5 w-full min-h-12 rounded-2xl bg-[#3182F6] text-white text-sm font-semibold hover:bg-[#2272EB] active:scale-[0.98] transition-colors">
+            className="summary-record mt-5 w-full min-h-12 rounded-2xl bg-action text-on-action text-sm font-semibold hover:bg-action-hover active:scale-[0.98] transition-colors">
             내역 기록하기
           </button>
         )}
@@ -1417,7 +1417,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             <div className="flex items-center gap-2">
               <span className="text-[9px] text-accent font-semibold w-7 shrink-0">시간</span>
               <div className="relative flex-1 h-2 bg-raised rounded-full overflow-hidden">
-                <div className="h-full rounded-full bg-[#3D8EF8] transition-all duration-700" style={{ width: `${spendingPace.timePct}%` }} />
+                <div className="h-full rounded-full bg-action text-on-action transition-all duration-700" style={{ width: `${spendingPace.timePct}%` }} />
               </div>
               <span className="text-[9px] text-accent font-bold num w-6 text-right shrink-0">{spendingPace.timePct}%</span>
             </div>
@@ -1635,13 +1635,13 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
           <div className="flex gap-2 mb-1">
             <button
               onClick={() => { setPaydayInput(paydayInput === 'last' ? '' : paydayInput); setPaydayError('') }}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput !== 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-raised text-muted'}`}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput !== 'last' ? 'bg-action text-on-action ' : 'bg-raised text-muted'}`}
             >
               날짜 입력
             </button>
             <button
               onClick={() => { setPaydayInput('last'); setPaydayError('') }}
-              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput === 'last' ? 'bg-[#3D8EF8] text-white' : 'bg-raised text-muted'}`}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-colors ${paydayInput === 'last' ? 'bg-action text-on-action ' : 'bg-raised text-muted'}`}
             >
               매월 말일
             </button>
@@ -1665,7 +1665,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
             )}
             <span className="text-sm font-semibold text-white shrink-0">이 월급날</span>
             <button onClick={handleSavePayday}
-              className="px-3 py-2 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0">
+              className="px-3 py-2 rounded-xl bg-action text-on-action text-xs font-bold hover:bg-action-hover transition-colors shrink-0">
               저장
             </button>
             <button onClick={() => { setEditingPayday(false); setPaydayError('') }}

@@ -1062,7 +1062,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
               </div>
             ) : isEditMode ? (
               <button type="submit" form="transaction-entry-form" disabled={uploading}
-                className={`w-full py-4 rounded-2xl font-bold text-white text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-[#3182F6] hover:bg-[#2272EB]`}>
+                className={`w-full py-4 rounded-2xl font-bold text-[15px] disabled:opacity-60 active:scale-[0.98] transition-all flex items-center justify-center gap-2 bg-action text-on-action hover:bg-action-hover`}>
                 {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {uploading ? '저장 중...' : '저장'}
               </button>
@@ -1079,7 +1079,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
                     계속 입력
                   </button>
                   <button type="submit" form="transaction-entry-form" disabled={uploading}
-                    className={`font-bold text-white text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5' : 'flex-1 py-3.5'} bg-[#3182F6] hover:bg-[#2272EB]`}>
+                    className={`font-bold text-[14px] rounded-2xl active:scale-[0.98] disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${queue.length > 0 ? 'flex-[1.5] py-3.5' : 'flex-1 py-3.5'} bg-action text-on-action hover:bg-action-hover`}>
                     {uploading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {uploading ? '저장 중...' : queue.length > 0 ? `저장 (${queue.length + (amount ? 1 : 0)}건)` : '저장'}
                   </button>

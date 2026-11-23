@@ -234,7 +234,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
     return (
         <div className="space-y-3 pb-6">
             {/* ── 기간 선택 ──────────────────────────────────────── */}
-            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+            <div className="bg-surface rounded-2xl p-5">
                 <p className="text-[15px] font-bold text-white mb-3">
                     분석 기간
                 </p>
@@ -247,8 +247,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                             onClick={() => handlePreset(p.key)}
                             className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                                 preset === p.key
-                                    ? "bg-[#3D8EF8] text-white"
-                                    : "bg-[#2C2C2E] text-[#8B95A1] hover:text-white"
+                                    ? "bg-action text-on-action "
+                                    : "bg-raised text-muted hover:text-white"
                             }`}
                         >
                             {p.label}
@@ -259,7 +259,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                 {/* 날짜 입력 */}
                 <div className="grid grid-cols-2 gap-3">
                     <div>
-                        <p className="text-[11px] text-[#4E5968] font-semibold mb-1.5">
+                        <p className="text-[11px] text-muted font-semibold mb-1.5">
                             시작일
                         </p>
                         <FancyDatePicker
@@ -269,7 +269,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                         />
                     </div>
                     <div>
-                        <p className="text-[11px] text-[#4E5968] font-semibold mb-1.5">
+                        <p className="text-[11px] text-muted font-semibold mb-1.5">
                             종료일
                         </p>
                         <FancyDatePicker
@@ -283,9 +283,9 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
 
             {/* ── 날짜 미설정 시 안내 ─────────────────────────────── */}
             {!isValidRange && (
-                <div className="bg-[#1C1C1E] rounded-2xl p-8 text-center">
+                <div className="bg-surface rounded-2xl p-8 text-center">
                     <p className="text-3xl mb-3">📅</p>
-                    <p className="text-sm text-[#8B95A1]">
+                    <p className="text-sm text-muted">
                         분석할 기간을 선택해주세요
                     </p>
                 </div>
@@ -294,7 +294,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
             {isValidRange && (
                 <>
                     {periodTxs.length === 0 ? (
-                        <div className="bg-[#1C1C1E] rounded-2xl">
+                        <div className="bg-surface rounded-2xl">
                             <EmptyState
                                 emoji="📭"
                                 title="선택한 기간에 내역이 없어요"
@@ -308,19 +308,19 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                     ) : (
                         <>
                             {/* ── 요약 카드 ────────────────────────────────────── */}
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <div className="flex items-center justify-between mb-4">
                                     <p className="text-[15px] font-bold text-white">
                                         기간 요약
                                     </p>
                                     <button
                                         onClick={handleCopy}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#2C2C2E] text-xs text-[#8B95A1] hover:text-white transition-colors"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-raised text-xs text-muted hover:text-white transition-colors"
                                     >
                                         {copied ? (
                                             <Check
                                                 size={12}
-                                                className="text-[#2ACF6A]"
+                                                className="text-income"
                                             />
                                         ) : (
                                             <Copy size={12} />
@@ -329,25 +329,25 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                     </button>
                                 </div>
 
-                                <p className="text-[11px] text-[#4E5968] mb-3">
+                                <p className="text-[11px] text-muted mb-3">
                                     {fmtDate(startDate)} – {fmtDate(endDate)} (
                                     {days}일)
                                 </p>
 
                                 <div className="grid grid-cols-2 gap-3 mb-4">
-                                    <div className="bg-[#2C2C2E] rounded-2xl p-3.5">
-                                        <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                    <div className="bg-raised rounded-2xl p-3.5">
+                                        <p className="text-[10px] text-muted font-semibold mb-1">
                                             총 지출
                                         </p>
-                                        <p className="text-[17px] font-extrabold text-[#F25260] num">
+                                        <p className="text-[17px] font-extrabold text-expense num">
                                             {fmt(totalExpense)}
-                                            <span className="text-[11px] font-medium text-[#4E5968] ml-0.5">
+                                            <span className="text-[11px] font-medium text-muted ml-0.5">
                                                 원
                                             </span>
                                         </p>
                                         {expenseDiff !== null && (
                                             <p
-                                                className={`text-[11px] font-bold mt-1 num ${expenseDiff > 0 ? "text-[#F25260]" : expenseDiff < 0 ? "text-[#2ACF6A]" : "text-[#4E5968]"}`}
+                                                className={`text-[11px] font-bold mt-1 num ${expenseDiff > 0 ? "text-expense" : expenseDiff < 0 ? "text-income" : "text-muted"}`}
                                             >
                                                 {expenseDiff > 0
                                                     ? "▲"
@@ -359,8 +359,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                             </p>
                                         )}
                                     </div>
-                                    <div className="bg-[#2C2C2E] rounded-2xl p-3.5">
-                                        <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                    <div className="bg-raised rounded-2xl p-3.5">
+                                        <p className="text-[10px] text-muted font-semibold mb-1">
                                             일평균 지출
                                         </p>
                                         <p className="text-[17px] font-extrabold text-white num">
@@ -371,11 +371,11 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                       )
                                                     : 0,
                                             )}
-                                            <span className="text-[11px] font-medium text-[#4E5968] ml-0.5">
+                                            <span className="text-[11px] font-medium text-muted ml-0.5">
                                                 원
                                             </span>
                                         </p>
-                                        <p className="text-[11px] text-[#4E5968] mt-1 num">
+                                        <p className="text-[11px] text-muted mt-1 num">
                                             월 환산{" "}
                                             {fmt(
                                                 Math.round(
@@ -390,7 +390,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                 {/* 지출/수입 비율 바 */}
                                 {totalIncome > 0 ? (
                                     <div>
-                                        <div className="flex justify-between text-xs text-[#4E5968] mb-1.5">
+                                        <div className="flex justify-between text-xs text-muted mb-1.5">
                                             <span>지출 비율</span>
                                             <span
                                                 className="font-bold num"
@@ -405,13 +405,13 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                     ),
                                                 )}
                                                 %
-                                                <span className="font-normal text-[#4E5968]">
+                                                <span className="font-normal text-muted">
                                                     {" "}
                                                     (수입 {fmt(totalIncome)}원)
                                                 </span>
                                             </span>
                                         </div>
-                                        <div className="h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                        <div className="h-2 bg-raised rounded-full overflow-hidden">
                                             <div
                                                 className="h-full rounded-full transition-all duration-700"
                                                 style={{
@@ -422,7 +422,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-[11px] text-[#4E5968]">
+                                    <p className="text-[11px] text-muted">
                                         수입을 기록하면 지출 비율을 볼 수 있어요
                                     </p>
                                 )}
@@ -431,13 +431,13 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                             {/* ── 카테고리 / 태그 분석 ─────────────────────────── */}
                             {(categoryData.length > 0 ||
                                 tagData.length > 0) && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <div className="flex items-center justify-between mb-4">
                                         <p className="text-[15px] font-bold text-white">
                                             카테고리 분석
                                         </p>
                                         {hasTagData && (
-                                            <div className="flex bg-[#2C2C2E] rounded-xl p-0.5">
+                                            <div className="flex bg-raised rounded-xl p-0.5">
                                                 <button
                                                     onClick={() =>
                                                         setShowCat("category")
@@ -447,8 +447,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                     }
                                                     className={`px-3 py-1 rounded-[10px] text-[11px] font-bold transition-all ${
                                                         showCat === "category"
-                                                            ? "bg-[#3D8EF8] text-white"
-                                                            : "text-[#4E5968]"
+                                                            ? "bg-action text-on-action "
+                                                            : "text-muted"
                                                     }`}
                                                 >
                                                     카테고리
@@ -462,8 +462,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                     }
                                                     className={`px-3 py-1 rounded-[10px] text-[11px] font-bold transition-all ${
                                                         showCat === "tag"
-                                                            ? "bg-[#3D8EF8] text-white"
-                                                            : "text-[#4E5968]"
+                                                            ? "bg-action text-on-action "
+                                                            : "text-muted"
                                                     }`}
                                                 >
                                                     태그
@@ -504,7 +504,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                                     )}
                                                                     원
                                                                 </span>
-                                                                <span className="text-[11px] text-[#4E5968] ml-1.5 num">
+                                                                <span className="text-[11px] text-muted ml-1.5 num">
                                                                     하루{" "}
                                                                     {fmt(
                                                                         item.daily,
@@ -514,7 +514,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <div className="flex-1 h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                            <div className="flex-1 h-2 bg-raised rounded-full overflow-hidden">
                                                                 <div
                                                                     className="h-full rounded-full transition-all duration-500"
                                                                     style={{
@@ -524,7 +524,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                                     }}
                                                                 />
                                                             </div>
-                                                            <span className="text-[11px] text-[#4E5968] font-semibold w-8 text-right num">
+                                                            <span className="text-[11px] text-muted font-semibold w-8 text-right num">
                                                                 {item.pct}%
                                                             </span>
                                                         </div>
@@ -541,11 +541,11 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                             #{item.tag}
                                                         </span>
                                                         <div className="text-right">
-                                                            <span className="text-sm font-bold text-[#3D8EF8] num">
+                                                            <span className="text-sm font-bold text-accent num">
                                                                 {fmt(item.amt)}
                                                                 원
                                                             </span>
-                                                            <span className="text-[11px] text-[#4E5968] ml-1.5 num">
+                                                            <span className="text-[11px] text-muted ml-1.5 num">
                                                                 하루{" "}
                                                                 {fmt(
                                                                     item.daily,
@@ -555,15 +555,15 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <div className="flex-1 h-2 bg-[#2C2C2E] rounded-full overflow-hidden">
+                                                        <div className="flex-1 h-2 bg-raised rounded-full overflow-hidden">
                                                             <div
-                                                                className="h-full rounded-full bg-[#3D8EF8] transition-all duration-500"
+                                                                className="h-full rounded-full bg-action text-on-action transition-all duration-500"
                                                                 style={{
                                                                     width: `${item.pct}%`,
                                                                 }}
                                                             />
                                                         </div>
-                                                        <span className="text-[11px] text-[#4E5968] font-semibold w-8 text-right num">
+                                                        <span className="text-[11px] text-muted font-semibold w-8 text-right num">
                                                             {item.pct}%
                                                         </span>
                                                     </div>
@@ -575,7 +575,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                             )}
 
                             {/* ── 절감 제안 ────────────────────────────────────── */}
-                            <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                            <div className="bg-surface rounded-2xl p-5">
                                 <p className="text-[15px] font-bold text-white mb-4">
                                     절감 제안
                                 </p>
@@ -583,10 +583,10 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                 {suggestions.length === 0 ? (
                                     <div className="text-center py-6">
                                         <p className="text-3xl mb-2">✅</p>
-                                        <p className="text-sm text-[#8B95A1]">
+                                        <p className="text-sm text-muted">
                                             이 기간 지출은 양호해요
                                         </p>
-                                        <p className="text-xs text-[#4E5968] mt-1">
+                                        <p className="text-xs text-muted mt-1">
                                             지출 내역을 더 추가하면 더 정확한
                                             분석이 가능해요
                                         </p>
@@ -600,7 +600,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                             return (
                                                 <div
                                                     key={s.id}
-                                                    className="bg-[#2C2C2E] rounded-2xl overflow-hidden"
+                                                    className="bg-raised rounded-2xl overflow-hidden"
                                                     style={{
                                                         borderLeft: `3px solid ${borderColor}`,
                                                     }}
@@ -642,27 +642,27 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                         {isOpen ? (
                                                             <ChevronUp
                                                                 size={16}
-                                                                className="text-[#4E5968] shrink-0"
+                                                                className="text-muted shrink-0"
                                                             />
                                                         ) : (
                                                             <ChevronDown
                                                                 size={16}
-                                                                className="text-[#4E5968] shrink-0"
+                                                                className="text-muted shrink-0"
                                                             />
                                                         )}
                                                     </button>
 
                                                     {isOpen && (
                                                         <div className="px-4 pb-4 space-y-2">
-                                                            <p className="text-sm text-[#8B95A1] leading-relaxed">
+                                                            <p className="text-sm text-muted leading-relaxed">
                                                                 {s.body}
                                                             </p>
                                                             {s.savingHint && (
-                                                                <div className="flex items-center gap-2 bg-[#1C1C1E] rounded-xl px-3 py-2">
+                                                                <div className="flex items-center gap-2 bg-surface rounded-xl px-3 py-2">
                                                                     <span className="text-base">
                                                                         💡
                                                                     </span>
-                                                                    <p className="text-xs font-semibold text-[#F5BE3A]">
+                                                                    <p className="text-xs font-semibold text-warning">
                                                                         {
                                                                             s.savingHint
                                                                         }
@@ -680,11 +680,11 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
 
                             {/* ── 절약 시뮬레이터 ──────────────────────────────── */}
                             {categoryData.length > 0 && (
-                                <div className="bg-[#1C1C1E] rounded-2xl p-5">
+                                <div className="bg-surface rounded-2xl p-5">
                                     <p className="text-[15px] font-bold text-white mb-1">
                                         절약 시뮬레이터
                                     </p>
-                                    <p className="text-xs text-[#4E5968] mb-4">
+                                    <p className="text-xs text-muted mb-4">
                                         특정 카테고리를 줄이면 얼마나 절약할 수
                                         있는지 계산해요
                                     </p>
@@ -710,7 +710,7 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                         className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
                                                             isSelected
                                                                 ? "text-white"
-                                                                : "bg-[#2C2C2E] text-[#4E5968] border-transparent"
+                                                                : "bg-raised text-muted border-transparent"
                                                         }`}
                                                         style={
                                                             isSelected
@@ -742,8 +742,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                 onClick={() => setSimPct(pct)}
                                                 className={`flex-1 py-3 rounded-xl text-xs font-bold transition-all ${
                                                     simPct === pct
-                                                        ? "bg-[#3D8EF8] text-white"
-                                                        : "bg-[#2C2C2E] text-[#4E5968]"
+                                                        ? "bg-action text-on-action "
+                                                        : "bg-raised text-muted"
                                                 }`}
                                             >
                                                 -{pct}%
@@ -753,8 +753,8 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
 
                                     {/* 결과 */}
                                     {simCatData && (
-                                        <div className="bg-[#2C2C2E] rounded-2xl p-4 space-y-3">
-                                            <p className="text-sm text-[#8B95A1]">
+                                        <div className="bg-raised rounded-2xl p-4 space-y-3">
+                                            <p className="text-sm text-muted">
                                                 {CATEGORY_EMOJI[
                                                     simCatData.cat
                                                 ] ?? "📦"}{" "}
@@ -762,33 +762,33 @@ export default function SpendingAnalysisView({transactions, budgets}: Props) {
                                                     {simCatData.cat}
                                                 </span>
                                                 을(를){" "}
-                                                <span className="text-[#3D8EF8] font-bold">
+                                                <span className="text-accent font-bold">
                                                     {simPct}%
                                                 </span>{" "}
                                                 줄인다면...
                                             </p>
                                             <div className="grid grid-cols-3 gap-2 text-center">
                                                 <div>
-                                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                                         기간 절감
                                                     </p>
-                                                    <p className="text-sm font-extrabold text-[#2ACF6A] num">
+                                                    <p className="text-sm font-extrabold text-income num">
                                                         {fmt(simSaving)}원
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                                         월 환산
                                                     </p>
-                                                    <p className="text-sm font-extrabold text-[#2ACF6A] num">
+                                                    <p className="text-sm font-extrabold text-income num">
                                                         {fmt(simMonthly)}원
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] text-[#4E5968] font-semibold mb-1">
+                                                    <p className="text-[10px] text-muted font-semibold mb-1">
                                                         연 환산
                                                     </p>
-                                                    <p className="text-sm font-extrabold text-[#2ACF6A] num">
+                                                    <p className="text-sm font-extrabold text-income num">
                                                         {fmt(simYearly)}원
                                                     </p>
                                                 </div>
