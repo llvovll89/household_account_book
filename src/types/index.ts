@@ -158,6 +158,8 @@ export interface Subscription {
   cycle?: 'monthly' | 'yearly'
   /** 연간 결제 월 (1-12), cycle이 yearly일 때만 */
   billingMonth?: number
+  /** 자동 기록용으로 연결된 정기 내역 (RecurringTransaction.id) */
+  recurringId?: string
   category: string      // EXPENSE_CATEGORIES 중 하나
   memo: string          // 선택 메모
   color?: string        // 카드 아이콘/포인트 색상

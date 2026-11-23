@@ -173,6 +173,8 @@ export default function LedgerWorkspace({
               subscriptions={subscriptions}
               addTrigger={subscriptionAddTrigger}
               onChange={onSubscriptionsChange}
+              recurring={recurring}
+              onRecurringChange={onRecurringSave}
             />
           </Suspense>
         </div>

@@ -33,7 +33,10 @@ export function buildNotifications({ transactions, budgets, recurring, subscript
   const ym = toYearMonth(today)
   const list: AppNotification[] = []
 
+  // 자동 기록으로 정기 내역에 연결된 구독은 정기 지출 알림으로 한 번만 알린다
+  const linkedRecurringIds = new Set(recurring.map((r) => r.id))
   for (const s of subscriptions) {
+    if (s.recurringId && linkedRecurringIds.has(s.recurringId)) continue
     const days = getDaysUntilNextBilling(s, today)
     if (days > 1) continue
     list.push({ id: `subscription:${s.id}:${todayStr}`, kind: 'subscription', priority: 3 - days,

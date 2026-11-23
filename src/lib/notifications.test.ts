@@ -29,3 +29,13 @@ it('reminds after two days without records but not for new users', () => {
   expect(buildNotifications({ ...base, transactions: [tx('2026-11-20')] }).map((n) => n.title)).toEqual(['3일째 기록이 없어요'])
   expect(buildNotifications(base)).toEqual([])
 })
+
+it('does not notify twice for a subscription recorded through a linked recurring item', () => {
+  const list = buildNotifications({
+    ...base,
+    transactions: [tx('2026-11-23')],
+    subscriptions: [{ id: 'n', name: '넷플릭스', amount: 17000, currency: 'KRW', billingDay: 24, category: '문화/여가', memo: '', createdAt: 1, recurringId: 'r' }],
+    recurring: [{ id: 'r', type: 'expense', category: '문화/여가', amount: 17000, description: '넷플릭스', dayOfMonth: 24, lastAppliedMonth: '2026-10', createdAt: 1 }],
+  })
+  expect(list.map((n) => n.title)).toEqual(['넷플릭스 내일 나가요'])
+})
