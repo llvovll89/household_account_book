@@ -349,7 +349,7 @@ export default function MemoSection({
                             setSelectedDate(null);
                         }}
                         aria-pressed={viewMode === "cards"}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "cards" ? "bg-[#3D8EF8] text-white" : "bg-raised text-muted"}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "cards" ? "bg-action text-on-action" : "bg-raised text-muted"}`}
                     >
                         <LayoutGrid size={12} />
                         카드
@@ -357,7 +357,7 @@ export default function MemoSection({
                     <button
                         onClick={() => setViewMode("calendar")}
                         aria-pressed={viewMode === "calendar"}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "calendar" ? "bg-[#3D8EF8] text-white" : "bg-raised text-muted"}`}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${viewMode === "calendar" ? "bg-action text-on-action" : "bg-raised text-muted"}`}
                     >
                         <CalendarDays size={12} />
                         캘린더
@@ -572,7 +572,7 @@ export default function MemoSection({
                                         {cell.date && (
                                             <>
                                                 <span
-                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${cell.isToday ? "bg-[#3D8EF8] text-white" : colIdx === 0 ? "text-tone-red/80" : colIdx === 6 ? "text-tone-blue/80" : "text-white/70"}`}
+                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${cell.isToday ? "bg-action text-on-action" : colIdx === 0 ? "text-tone-red/80" : colIdx === 6 ? "text-tone-blue/80" : "text-white/70"}`}
                                                 >
                                                     {parseInt(
                                                         cell.date.split("-")[2],
@@ -584,7 +584,7 @@ export default function MemoSection({
                                                         <span className="mt-0.5 text-[10px] font-semibold text-muted">
                                                             {cell.count}개
                                                         </span>
-                                                        <div className="w-1 h-1 rounded-full mt-0.5 bg-[#3D8EF8]" />
+                                                        <div className="w-1 h-1 rounded-full mt-0.5 bg-action text-on-action" />
                                                     </>
                                                 )}
                                             </>
@@ -1025,7 +1025,7 @@ export default function MemoSection({
                                 )}
                                 <button
                                     onClick={handleSave}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-[#3D8EF8] hover:bg-[#5AA0FF] transition-colors"
+                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-action text-on-action hover:bg-action-hover transition-colors"
                                 >
                                     <Check size={13} />
                                     {editingId

@@ -42,7 +42,7 @@ export default function BottomNavigation({
                 className={`ledger-navigation-item ${isActive ? 'is-active' : ''}`}
               >
                 <div className={`flex items-center justify-center w-7 h-7 transition-colors duration-200`}>
-                  <Icon size={20} strokeWidth={1.7} className={`transition-colors duration-150 ${isActive ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'}`} />
+                  <Icon size={20} strokeWidth={1.7} className={`transition-colors duration-150 ${isActive ? 'text-accent' : 'text-muted'}`} />
                 </div>
                 <span className="ledger-navigation-label">{label === '내역' ? '거래 내역' : label}</span>
               </button>

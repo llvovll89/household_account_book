@@ -1026,7 +1026,7 @@ export default function TransactionList({
                         aria-pressed={viewMode === "list"}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "list"
-                                ? "bg-[#3D8EF8] text-white"
+                                ? "bg-action text-on-action "
                                 : "text-muted hover:text-tone-gray"
                         }`}
                     >
@@ -1037,7 +1037,7 @@ export default function TransactionList({
                         aria-pressed={viewMode === "calendar"}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                             viewMode === "calendar"
-                                ? "bg-[#3D8EF8] text-white"
+                                ? "bg-action text-on-action "
                                 : "text-muted hover:text-tone-gray"
                         }`}
                     >
@@ -1214,7 +1214,7 @@ export default function TransactionList({
                                             {periodLabel} 단위
                                         </span>
                                         {activeFilterCount > 0 && (
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#3D8EF8] text-white leading-none shrink-0">
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-action text-on-action leading-none shrink-0">
                                                 {activeFilterCount}
                                             </span>
                                         )}
@@ -1284,7 +1284,7 @@ export default function TransactionList({
                                                         className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
                                                             periodMode ===
                                                             mode.key
-                                                                ? "bg-[#3D8EF8] text-white"
+                                                                ? "bg-action text-on-action "
                                                                 : "text-muted hover:text-tone-gray"
                                                         }`}
                                                     >
@@ -1368,7 +1368,7 @@ export default function TransactionList({
                                                         }
                                                         className={`py-2 rounded-xl text-[11px] font-bold transition-all ${
                                                             active
-                                                                ? "bg-[#3D8EF8] text-white"
+                                                                ? "bg-action text-on-action "
                                                                 : "text-muted hover:text-fg hover:bg-tone-hover"
                                                         }`}
                                                     >
@@ -1418,7 +1418,7 @@ export default function TransactionList({
                                                     className={`py-2 rounded-xl text-[11px] font-bold transition-all ${
                                                         sortOption ===
                                                         option.key
-                                                            ? "bg-[#3D8EF8] text-white"
+                                                            ? "bg-action text-on-action "
                                                             : "text-muted hover:text-fg hover:bg-tone-hover"
                                                     }`}
                                                 >
@@ -1509,7 +1509,7 @@ export default function TransactionList({
                                                         className={`py-2 rounded-xl text-xs font-bold transition-all ${
                                                             swipeSensitivity ===
                                                             option.key
-                                                                ? "bg-[#3D8EF8] text-white"
+                                                                ? "bg-action text-on-action "
                                                                 : "text-muted hover:text-fg hover:bg-tone-hover"
                                                         }`}
                                                     >
@@ -1571,7 +1571,7 @@ export default function TransactionList({
                                                         onClick={() => {
                                                             void handleSaveBillingDay();
                                                         }}
-                                                        className="text-[11px] px-2 py-1 rounded-lg bg-[#3D8EF8] text-white font-bold"
+                                                        className="text-[11px] px-2 py-1 rounded-lg bg-action text-on-action font-bold"
                                                     >
                                                         저장
                                                     </button>
@@ -1616,7 +1616,7 @@ export default function TransactionList({
                                                     onClick={() =>
                                                         setMethodFilter("all")
                                                     }
-                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-[#3D8EF8] text-white" : "text-muted hover:text-tone-gray"}`}
+                                                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${methodFilter === "all" ? "bg-action text-on-action " : "text-muted hover:text-tone-gray"}`}
                                                 >
                                                     전체
                                                 </button>
@@ -1693,7 +1693,7 @@ export default function TransactionList({
                                                                       : f.key ===
                                                                           "credit"
                                                                         ? "bg-tone-blue/22 text-accent"
-                                                                        : "bg-[#3D8EF8] text-white"
+                                                                        : "bg-action text-on-action "
                                                                 : "text-muted hover:text-tone-gray"
                                                         }`}
                                                     >
@@ -1746,7 +1746,7 @@ export default function TransactionList({
                                                                   : f.key ===
                                                                       "later"
                                                                     ? "bg-tone-gray/22 text-muted"
-                                                                    : "bg-[#3D8EF8] text-white"
+                                                                    : "bg-action text-on-action "
                                                             : "text-muted hover:text-tone-gray"
                                                     }`}
                                                 >

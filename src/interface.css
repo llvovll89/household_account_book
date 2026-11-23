@@ -114,7 +114,7 @@ svg { stroke-width: 1.7; }
 [class~="text-[#2ACF6A]"] { color: var(--income); }
 [class~="text-[#F25260]"] { color: var(--expense); }
 [class~="bg-[#3D8EF8]"], [class~="bg-[#3182F6]"], [class~="bg-[#244268]"] { background-color: var(--action); color: var(--on-action); }
-button:is([class~="bg-[#3D8EF8]"], [class~="bg-[#3182F6]"], [class~="bg-[#244268]"]):hover { background-color: var(--action-hover); }
+button:is([class~="bg-[#3D8EF8]"], [class~="bg-[#3182F6]"], [class~="bg-[#244268]"], [class~="bg-action"]):hover { background-color: var(--action-hover); }
 button[class~="bg-white"] { background-color: var(--raised); color: var(--text); }
 [class*="border-white/"], [class*="border-[rgba(255,255,255,"] { border-color: var(--line); }
 [class~="rounded-2xl"], [class~="rounded-3xl"], [class~="rounded-[24px]"] { border-radius: 18px; }

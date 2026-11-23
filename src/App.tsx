@@ -1506,7 +1506,7 @@ export default function App() {
                         데이터를 안전하게 불러오고 있어요
                     </p>
                     <div className="mt-4 flex items-center justify-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#3D8EF8] animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-action text-on-action animate-pulse" />
                         <span className="w-1.5 h-1.5 rounded-full bg-tone-blue/80 animate-pulse [animation-delay:180ms]" />
                         <span className="w-1.5 h-1.5 rounded-full bg-tone-blue/65 animate-pulse [animation-delay:360ms]" />
                     </div>
@@ -1531,7 +1531,7 @@ export default function App() {
                         </p>
                         <button
                             onClick={() => updateServiceWorker(true)}
-                            className="px-3 py-1.5 rounded-xl bg-[#3D8EF8] text-white text-xs font-bold hover:bg-[#5AA0FF] transition-colors shrink-0"
+                            className="px-3 py-1.5 rounded-xl bg-action text-on-action text-xs font-bold hover:bg-action-hover transition-colors shrink-0"
                         >
                             업데이트
                         </button>
@@ -1879,7 +1879,7 @@ export default function App() {
                                 {isRetryingPersist && retryProgress && (
                                     <div className="mt-1.5 h-1.5 rounded-full bg-raised overflow-hidden">
                                         <div
-                                            className="h-full bg-[#3D8EF8] transition-all"
+                                            className="h-full bg-action text-on-action transition-all"
                                             style={{width: `${retryRatio}%`}}
                                         />
                                     </div>
@@ -2222,7 +2222,7 @@ export default function App() {
                                             fabExpanded ? "추가 메뉴 닫기" : activeTab === "memos" ? "메모 추가" : activeTab === "subscriptions" ? "구독 추가" : activeTab === "goals" ? "목표 추가" : "내역 추가"
                                         }
                                         aria-expanded={fabExpanded}
-                                        className={`ledger-add-button pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 text-white rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-raised shadow-black/40" : "bg-[#3D8EF8] hover:bg-[#5AA0FF] shadow-tone-blue/30"}`}
+                                        className={`ledger-add-button pointer-events-auto absolute right-5 bottom-fab-safe min-w-12 h-12 px-4 gap-2 rounded-2xl shadow-lg flex items-center justify-center transition-all active:scale-95 ${fabExpanded ? "bg-raised text-white shadow-black/40" : "bg-action text-on-action hover:bg-action-hover shadow-tone-blue/30"}`}
                                     >
                                         <Plus
                                             size={20}
@@ -2668,7 +2668,7 @@ export default function App() {
                         <button
                             onClick={handleEmailAuth}
                             disabled={authBusy}
-                            className="w-full py-2.5 rounded-xl bg-[#3D8EF8] disabled:opacity-50 text-white text-sm font-bold"
+                            className="w-full py-2.5 rounded-xl bg-action text-on-action disabled:opacity-50 text-sm font-bold"
                         >
                             {authBusy
                                 ? "처리 중..."

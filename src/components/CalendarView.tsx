@@ -69,13 +69,13 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
   return (
     <div className="space-y-3">
       {/* 요일 헤더 */}
-      <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden">
+      <div className="bg-surface rounded-2xl overflow-hidden">
         <div className="grid grid-cols-7 border-b border-white/5">
           {WEEKDAYS.map((d, i) => (
             <div
               key={d}
               className={`text-center py-2.5 text-xs font-bold ${
-                i === 0 ? 'text-[#F25260]' : i === 6 ? 'text-[#3D8EF8]' : 'text-[#8B95A1]'
+                i === 0 ? 'text-expense' : i === 6 ? 'text-accent' : 'text-muted'
               }`}
             >
               {d}
@@ -98,7 +98,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                 disabled={!cell.date}
                 className={`relative flex flex-col items-center pt-2 pb-1.5 min-h-[60px] transition-colors border-b border-r border-white/3 ${
                   isSelected
-                    ? 'bg-[#3D8EF8]/15'
+                    ? 'bg-tone-blue/15'
                     : cell.date ? 'hover:bg-white/3 active:bg-white/5' : ''
                 } ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}`}
               >
@@ -108,13 +108,13 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                     <span
                       className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
                         cell.isToday
-                          ? 'bg-[#3D8EF8] text-white'
+                          ? 'bg-action text-on-action '
                           : isSelected
-                          ? 'text-[#3D8EF8]'
+                          ? 'text-accent'
                           : colIdx === 0
-                          ? 'text-[#F25260]/80'
+                          ? 'text-tone-red/80'
                           : colIdx === 6
-                          ? 'text-[#3D8EF8]/80'
+                          ? 'text-tone-blue/80'
                           : 'text-white/70'
                       }`}
                     >
@@ -125,12 +125,12 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                     {hasData && (
                       <div className="flex flex-col items-center gap-0.5 mt-0.5">
                         {cell.expense > 0 && (
-                          <span className="text-[10px] font-semibold text-[#F25260] leading-none num">
+                          <span className="text-[10px] font-semibold text-expense leading-none num">
                             -{cell.expense >= 10000 ? `${Math.round(cell.expense / 10000)}만` : fmt(cell.expense)}
                           </span>
                         )}
                         {cell.income > 0 && (
-                          <span className="text-[10px] font-semibold text-[#2ACF6A] leading-none num">
+                          <span className="text-[10px] font-semibold text-income leading-none num">
                             +{cell.income >= 10000 ? `${Math.round(cell.income / 10000)}만` : fmt(cell.income)}
                           </span>
                         )}
@@ -158,16 +158,16 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
           onClose={closeModal}
           label={`${formatSelectedDate(selectedDate)} 내역`}
           containerClassName="fixed inset-0 z-70 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
-          panelClassName="w-full sm:max-w-lg max-h-[82vh] bg-[#1C1C1E] rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content"
+          panelClassName="w-full sm:max-w-lg max-h-[82vh] bg-surface rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content"
         >
-            <div className="px-5 pt-4 pb-3 border-b border-white/5 sticky top-0 bg-[#1C1C1E] z-10">
+            <div className="px-5 pt-4 pb-3 border-b border-white/5 sticky top-0 bg-surface z-10">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
                 <div className="flex items-center gap-2">
                   {selectedTx.length > 0 && (
                     <span className={`text-sm font-bold num ${
                       selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0) >= 0
-                        ? 'text-[#3D8EF8]' : 'text-[#F25260]'
+                        ? 'text-accent' : 'text-expense'
                     }`}>
                       {(() => {
                         const net = selectedTx.reduce((s, t) => t.type === 'income' ? s + t.amount : s - t.amount, 0)
@@ -177,7 +177,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                   )}
                   <button
                     onClick={closeModal}
-                    className="p-1.5 rounded-xl text-[#8B95A1] hover:text-white hover:bg-white/6"
+                    className="p-1.5 rounded-xl text-muted hover:text-white hover:bg-white/6"
                     aria-label="닫기"
                   >
                     <X size={14} />
@@ -189,14 +189,14 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
             {selectedTx.length === 0 ? (
               <div className="py-10 text-center flex flex-col items-center gap-2">
                 <span className="text-3xl">📅</span>
-                <p className="text-sm text-[#4E5968]">이 날은 내역이 없어요</p>
+                <p className="text-sm text-muted">이 날은 내역이 없어요</p>
                 {onAddTransaction && (
                   <button
                     onClick={() => {
                       closeModal()
                       onAddTransaction()
                     }}
-                    className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-[#2C2C2E] text-[#8B95A1] hover:text-white hover:bg-[#3A3A3C] transition-colors"
+                    className="mt-4 text-xs font-bold px-4 py-2 rounded-xl bg-raised text-muted hover:text-white hover:bg-tone-hover transition-colors"
                   >
                     내역 추가
                   </button>
@@ -222,7 +222,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                       <div className="flex-1 min-w-0">
                         <p className="text-[14px] font-semibold text-white">{t.category}</p>
                         {t.description && (
-                          <p className="text-xs text-[#4E5968] truncate mt-0.5">{t.description}</p>
+                          <p className="text-xs text-muted truncate mt-0.5">{t.description}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
@@ -239,14 +239,14 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                               onEdit(t)
                             }}
                             aria-label={`${t.category} 내역 수정`}
-                            className="p-1.5 rounded-xl hover:bg-[#3D8EF8]/15 text-[#4E5968] hover:text-[#3D8EF8] transition-colors"
+                            className="p-1.5 rounded-xl hover:bg-tone-blue/15 text-muted hover:text-tone-blue transition-colors"
                           >
                             <Pencil size={12} />
                           </button>
                           <button
                             onClick={() => onDelete(t.id)}
                             aria-label={`${t.category} 내역 삭제`}
-                            className="p-1.5 rounded-xl hover:bg-[#F25260]/15 text-[#4E5968] hover:text-[#F25260] transition-colors"
+                            className="p-1.5 rounded-xl hover:bg-tone-red/15 text-muted hover:text-tone-red transition-colors"
                           >
                             <Trash2 size={12} />
                           </button>

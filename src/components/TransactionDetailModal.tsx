@@ -73,7 +73,7 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
       aria-labelledby="transaction-detail-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[88vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] border-t border-white/6 max-h-[88vh] flex flex-col modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -82,8 +82,8 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 pt-2 pb-3 shrink-0">
           <h2 id="transaction-detail-modal-title" className="text-[17px] font-bold text-white">내역 상세</h2>
-          <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
-            <X size={16} className="text-[#8B95A1]" />
+          <button onClick={handleClose} aria-label="닫기" className="w-8 h-8 rounded-full bg-raised flex items-center justify-center">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
@@ -116,25 +116,25 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
             </div>
           </div>
 
-          {t.type === 'expense' && t.category === '대출' && <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 text-sm">
+          {t.type === 'expense' && t.category === '대출' && <div className="bg-raised rounded-2xl px-5 py-4 text-sm">
             <h3 className="font-semibold mb-2">대출 상환 구분</h3>
-            {t.loanPrincipal !== undefined && t.loanInterest !== undefined ? <p>원금 {fmt(t.loanPrincipal)}원 / 이자 {fmt(t.loanInterest)}원</p> : <p className="text-[#8B95A1]">원금·이자를 구분하지 않은 내역이에요. 수정에서 입력할 수 있어요.</p>}
+            {t.loanPrincipal !== undefined && t.loanInterest !== undefined ? <p>원금 {fmt(t.loanPrincipal)}원 / 이자 {fmt(t.loanInterest)}원</p> : <p className="text-muted">원금·이자를 구분하지 않은 내역이에요. 수정에서 입력할 수 있어요.</p>}
           </div>}
           {/* 메모 */}
           {t.description && (
-            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-1.5">
-              <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">메모</p>
+            <div className="bg-raised rounded-2xl px-5 py-4 space-y-1.5">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">메모</p>
               <p className="text-[14px] text-white leading-relaxed whitespace-pre-wrap">{t.description}</p>
             </div>
           )}
 
           {/* 태그 */}
           {tags.length > 0 && (
-            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
-              <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">태그</p>
+            <div className="bg-raised rounded-2xl px-5 py-4 space-y-2">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">태그</p>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
-                  <span key={tag} className="inline-flex items-center px-3 py-1.5 rounded-xl text-[12px] font-bold bg-[#3D8EF8]/15 text-[#3D8EF8]">
+                  <span key={tag} className="inline-flex items-center px-3 py-1.5 rounded-xl text-[12px] font-bold bg-tone-blue/15 text-accent">
                     #{tag}
                   </span>
                 ))}
@@ -144,8 +144,8 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
 
           {/* 영수증 */}
           {t.receiptImageUrl && (
-            <div className="bg-[#2C2C2E] rounded-2xl px-5 py-4 space-y-2">
-              <p className="text-[11px] font-semibold text-[#4E5968] uppercase tracking-wide">영수증</p>
+            <div className="bg-raised rounded-2xl px-5 py-4 space-y-2">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">영수증</p>
               <div className="rounded-xl overflow-hidden border border-white/8">
                 <img src={t.receiptImageUrl} alt="영수증" className="w-full max-h-72 object-contain bg-black/20" />
               </div>
@@ -156,14 +156,14 @@ export default function TransactionDetailModal({ transaction: t, userPaymentMeth
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleEdit}
-              className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-[#3D8EF8] text-white hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
+              className="flex-[2] flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-action text-on-action hover:bg-action-hover active:scale-[0.98] transition-all"
             >
               <Pencil size={15} />
               수정하기
             </button>
             <button
               onClick={handleDelete}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-[#2C2C2E] text-[#F25260] hover:bg-[#F25260]/15 active:scale-[0.98] transition-all"
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[14px] bg-raised text-expense hover:bg-tone-red/15 active:scale-[0.98] transition-all"
             >
               <Trash2 size={15} />
               삭제

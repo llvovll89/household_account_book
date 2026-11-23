@@ -11,8 +11,8 @@ interface Props {
 export default function SparklineCard({ data, color, label, value, trend }: Props) {
   const gradId = `spark-${label}-grad`
   return (
-    <div className="flex-1 bg-[#1C1C1E] rounded-2xl p-3 min-w-0">
-      <p className="text-[10px] font-semibold text-[#4E5968] mb-0.5">{label}</p>
+    <div className="flex-1 bg-surface rounded-2xl p-3 min-w-0">
+      <p className="text-[10px] font-semibold text-muted mb-0.5">{label}</p>
       <p className="text-sm font-extrabold num truncate" style={{ color }}>{value}</p>
       {trend !== null && trend !== undefined && (
         <p className="text-[10px] font-bold mt-0.5" style={{ color: trend >= 0 ? '#2ACF6A' : '#F25260' }}>

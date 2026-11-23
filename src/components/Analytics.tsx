@@ -787,7 +787,7 @@ export default function Analytics({
                         aria-label={`${TAB_LABELS[m]} 분석 보기`}
                         className={`py-2 rounded-xl transition-all flex flex-col items-center gap-0.5 ${
                             viewMode === m
-                                ? "bg-[#3D8EF8] text-white"
+                                ? "bg-action text-on-action "
                                 : "text-muted hover:text-tone-gray"
                         }`}
                     >
@@ -1175,7 +1175,7 @@ export default function Analytics({
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-action text-on-action" />
                                 <span className="text-xs text-muted">
                                     수입
                                 </span>
@@ -1702,7 +1702,7 @@ export default function Analytics({
                                                     체크
                                                 </span>
                                                 <span className="inline-flex items-center gap-1.5 text-muted">
-                                                    <span className="w-2 h-2 rounded-full bg-[#3D8EF8]" />
+                                                    <span className="w-2 h-2 rounded-full bg-action text-on-action" />
                                                     신용
                                                 </span>
                                             </div>
@@ -2170,7 +2170,7 @@ export default function Analytics({
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-action text-on-action" />
                                 <span className="text-xs text-muted">
                                     수입
                                 </span>
@@ -2701,7 +2701,7 @@ export default function Analytics({
                         </p>
                         <div className="flex items-center gap-4 mb-4">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 rounded-full bg-[#3D8EF8]" />
+                                <div className="w-2.5 h-2.5 rounded-full bg-action text-on-action" />
                                 <span className="text-xs text-muted">
                                     수입
                                 </span>

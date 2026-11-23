@@ -80,27 +80,27 @@ export default function BudgetModal({ budgets, baseBudgets, initialCategory, cus
       aria-labelledby="budget-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
         </div>
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
             <h2 id="budget-modal-title" className="text-[18px] font-bold text-white">예산 설정</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">카테고리별 월 예산을 입력하세요</p>
+            <p className="text-xs text-muted mt-0.5">카테고리별 월 예산을 입력하세요</p>
           </div>
-          <button aria-label="예산 설정 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center">
-            <X size={16} className="text-[#8B95A1]" />
+          <button aria-label="예산 설정 닫기" onClick={handleClose} className="w-8 h-8 rounded-full bg-raised flex items-center justify-center">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
         <div className="px-6 pb-3 shrink-0">
-          <div className="flex items-center gap-2 rounded-2xl bg-[#2C2C2E] p-1">
+          <div className="flex items-center gap-2 rounded-2xl bg-raised p-1">
             <button
               type="button"
               onClick={() => changeScope('base')}
               aria-pressed={scope === 'base'}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'base' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'base' ? 'bg-action text-on-action ' : 'text-muted'}`}
             >
               전체 (기본값)
             </button>
@@ -108,24 +108,24 @@ export default function BudgetModal({ budgets, baseBudgets, initialCategory, cus
               type="button"
               onClick={() => changeScope('thisMonth')}
               aria-pressed={scope === 'thisMonth'}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'thisMonth' ? 'bg-[#3D8EF8] text-white' : 'text-[#8B95A1]'}`}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${scope === 'thisMonth' ? 'bg-action text-on-action ' : 'text-muted'}`}
             >
               {formatYearMonthLabel(yearMonth)}만
             </button>
           </div>
-          <p className="text-[10px] text-[#4E5968] mt-1.5 px-1">
+          <p className="text-[10px] text-muted mt-1.5 px-1">
             {scope === 'thisMonth'
               ? `${formatYearMonthLabel(yearMonth)}에만 적용되고, 다른 달의 기본 예산은 그대로 유지돼요.`
               : '매달 반복 적용되는 기본 예산이에요.'}
           </p>
-          <p className="text-[10px] text-[#4E5968] mt-1 px-1">이월액은 전월의 예산·이월 설정으로 계산하며, 이미 이월된 금액은 다시 넘기지 않아요.</p>
+          <p className="text-[10px] text-muted mt-1 px-1">이월액은 전월의 예산·이월 설정으로 계산하며, 이미 이월된 금액은 다시 넘기지 않아요.</p>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-4 space-y-2.5">
           {[...new Set([...EXPENSE_CATEGORIES, ...customExpenseCategories, ...budgets.map(b => b.category), ...(initialCategory ? [initialCategory] : [])])].map((cat) => {
             const color = CATEGORY_COLOR[cat] ?? { bg: 'rgba(139,149,161,0.12)', text: 'var(--muted)' }
             return (
-              <div key={cat} className="bg-[#2C2C2E] rounded-2xl px-4 py-3 space-y-2.5">
+              <div key={cat} className="bg-raised rounded-2xl px-4 py-3 space-y-2.5">
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
@@ -144,18 +144,18 @@ export default function BudgetModal({ budgets, baseBudgets, initialCategory, cus
                       value={values[cat] ?? ''}
                       onChange={(e) => handleChange(cat, e.target.value)}
                       placeholder="제한 없음"
-                      className="w-28 bg-[#3A3A3C] text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#3D8EF8]/50 placeholder-[#4E5968] num"
+                      className="w-28 bg-raised text-white text-sm font-semibold text-right rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tone-blue/50 placeholder-tone-slate num"
                     />
-                    <span className="text-xs text-[#4E5968]">원</span>
+                    <span className="text-xs text-muted">원</span>
                   </div>
                 </div>
                 {(values[cat] ?? '') !== '' && (
                   <div className="flex items-center justify-between pl-13">
-                    <span className="text-xs text-[#4E5968]">이 달의 미사용 기본 예산을 다음 달로 이월</span>
+                    <span className="text-xs text-muted">이 달의 미사용 기본 예산을 다음 달로 이월</span>
                     <button
                       type="button"
                       onClick={() => setCarryoverMap((prev) => ({ ...prev, [cat]: !prev[cat] }))}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${carryoverMap[cat] ? 'bg-[#3D8EF8]' : 'bg-[#3A3A3C]'}`}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${carryoverMap[cat] ? 'bg-action text-on-action' : 'bg-raised'}`}
                       aria-pressed={carryoverMap[cat]}
                       aria-label={`${cat} 미사용 예산 이월 ${carryoverMap[cat] ? '끄기' : '켜기'}`}
                     >
@@ -173,7 +173,7 @@ export default function BudgetModal({ budgets, baseBudgets, initialCategory, cus
         <div className="px-6 pb-8 pt-3 border-t border-white/5 shrink-0">
           <button
             onClick={handleSave}
-            className="w-full py-4 rounded-2xl font-bold text-white text-[15px] bg-[#3D8EF8] hover:bg-[#5AA0FF] active:scale-[0.98] transition-all"
+            className="w-full py-4 rounded-2xl font-bold text-[15px] bg-action text-on-action hover:bg-action-hover active:scale-[0.98] transition-all"
           >
             저장하기
           </button>

@@ -54,14 +54,14 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
   return (
     <div className={`fixed inset-0 z-50 flex items-end justify-center ${closing ? 'animate-fade-out' : 'animate-fade-in'}`}>
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-      <div ref={modalRef} className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8 max-h-[80vh] flex flex-col">
+      <div ref={modalRef} className="relative w-full max-w-lg bg-surface rounded-t-[28px] px-5 pt-5 pb-8 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-[17px] font-bold text-white">태그 관리</h2>
-            <p className="text-[12px] text-[#8B95A1] mt-0.5">태그 이름 변경 또는 삭제</p>
+            <p className="text-[12px] text-muted mt-0.5">태그 이름 변경 또는 삭제</p>
           </div>
-          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2C2C2E]">
-            <X size={16} className="text-[#8B95A1]" />
+          <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-raised">
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
@@ -75,10 +75,10 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
             />
           ) : (
             tags.map((tag) => (
-              <div key={tag.name} className="bg-[#2C2C2E] rounded-xl px-4 py-3 flex items-center gap-3">
+              <div key={tag.name} className="bg-raised rounded-xl px-4 py-3 flex items-center gap-3">
                 {editingTag === tag.name ? (
                   <>
-                    <span className="text-[#3D8EF8] text-[14px] font-bold">#</span>
+                    <span className="text-accent text-[14px] font-bold">#</span>
                     <input
                       autoFocus
                       value={editValue}
@@ -87,12 +87,12 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
                         if (e.key === 'Enter') confirmRename(tag.name)
                         if (e.key === 'Escape') setEditingTag(null)
                       }}
-                      className="flex-1 bg-[#1C1C1E] rounded-lg px-2 py-1 text-[14px] text-white focus:outline-none"
+                      className="flex-1 bg-surface rounded-lg px-2 py-1 text-[14px] text-white focus:outline-none"
                     />
-                    <button onClick={() => confirmRename(tag.name)} className="text-[#2ACF6A]">
+                    <button onClick={() => confirmRename(tag.name)} className="text-income">
                       <Check size={18} />
                     </button>
-                    <button onClick={() => setEditingTag(null)} className="text-[#4E5968]">
+                    <button onClick={() => setEditingTag(null)} className="text-muted">
                       <X size={16} />
                     </button>
                   </>
@@ -100,30 +100,30 @@ export default function TagManagerModal({ transactions, onRenameTag, onDeleteTag
                   <>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-[#3D8EF8] text-[14px] font-bold">#</span>
+                        <span className="text-accent text-[14px] font-bold">#</span>
                         <span className="text-[14px] font-semibold text-white truncate">{tag.name}</span>
-                        <span className="text-[11px] text-[#4E5968]">{tag.count}건</span>
+                        <span className="text-[11px] text-muted">{tag.count}건</span>
                       </div>
                       <div className="flex gap-3 mt-0.5 text-[11px]">
                         {tag.totalExpense > 0 && (
-                          <span className="text-[#F25260]">-{fmt(tag.totalExpense)}원</span>
+                          <span className="text-expense">-{fmt(tag.totalExpense)}원</span>
                         )}
                         {tag.totalIncome > 0 && (
-                          <span className="text-[#2ACF6A]">+{fmt(tag.totalIncome)}원</span>
+                          <span className="text-income">+{fmt(tag.totalIncome)}원</span>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={() => startEdit(tag.name)}
                       aria-label={`#${tag.name} 태그 이름 변경`}
-                      className="text-[#8B95A1] hover:text-white transition-colors p-1"
+                      className="text-muted hover:text-white transition-colors p-1"
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => onDeleteTag(tag.name)}
                       aria-label={`#${tag.name} 태그 삭제`}
-                      className="text-[#4E5968] hover:text-[#F25260] transition-colors p-1"
+                      className="text-muted hover:text-tone-red transition-colors p-1"
                     >
                       <Trash2 size={15} />
                     </button>

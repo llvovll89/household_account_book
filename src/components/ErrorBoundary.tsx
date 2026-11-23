@@ -17,15 +17,15 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#181818] flex flex-col items-center justify-center px-6 text-center">
+        <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6 text-center">
           <p className="text-5xl mb-4">⚠️</p>
           <p className="text-lg font-bold text-white mb-2">앱에 오류가 발생했어요</p>
-          <p className="text-sm text-[#4E5968] mb-6">
+          <p className="text-sm text-muted mb-6">
             {this.state.error?.message ?? '알 수 없는 오류'}
           </p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-3 rounded-2xl bg-[#3D8EF8] text-white font-bold text-sm"
+            className="px-6 py-3 rounded-2xl bg-action text-on-action font-bold text-sm"
           >
             앱 다시 시작
           </button>

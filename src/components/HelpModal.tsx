@@ -92,7 +92,7 @@ export default function HelpModal({ onClose, onInstall, onUsageInsights, onBacku
       aria-labelledby="help-modal-title"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
     >
-      <div ref={modalRef} className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
+      <div ref={modalRef} className="bg-surface w-full max-w-lg rounded-t-[28px] max-h-[85vh] flex flex-col border-t border-white/6 modal-panel" {...(closing ? { 'data-closing': '' } : {})}>
         {/* 핸들 */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-9 h-1 bg-white/10 rounded-full" />
@@ -102,14 +102,14 @@ export default function HelpModal({ onClose, onInstall, onUsageInsights, onBacku
         <div className="flex items-center justify-between px-6 pt-2 pb-4 shrink-0">
           <div>
             <h2 id="help-modal-title" className="text-[18px] font-bold text-white">사용 가이드</h2>
-            <p className="text-xs text-[#4E5968] mt-0.5">잔고플랜 앱 기능 안내</p>
+            <p className="text-xs text-muted mt-0.5">잔고플랜 앱 기능 안내</p>
           </div>
           <button
             aria-label="사용 가이드 닫기"
             onClick={handleClose}
-            className="w-8 h-8 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-raised flex items-center justify-center"
           >
-            <X size={16} className="text-[#8B95A1]" />
+            <X size={16} className="text-muted" />
           </button>
         </div>
 
@@ -119,7 +119,7 @@ export default function HelpModal({ onClose, onInstall, onUsageInsights, onBacku
           {onInstall && <button type="button" onClick={onInstall} className="home-primary-action">홈 화면에 추가하는 방법</button>}
           {onUsageInsights && <button type="button" onClick={onUsageInsights} className="home-text-button">사용 패턴 보기</button>}
           {sections.map(({ icon: Icon, color, title, items }) => (
-            <div key={title} className="bg-[#2C2C2E] rounded-2xl p-4">
+            <div key={title} className="bg-raised rounded-2xl p-4">
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -132,22 +132,22 @@ export default function HelpModal({ onClose, onInstall, onUsageInsights, onBacku
               <ul className="space-y-2">
                 {items.map((item) => (
                   <li key={item} className="flex items-start gap-2">
-                    <span className="mt-1.25 w-1 h-1 rounded-full bg-[#4E5968] shrink-0" />
-                    <span className="text-[13px] text-[#8B95A1] leading-relaxed">{item}</span>
+                    <span className="mt-1.25 w-1 h-1 rounded-full bg-tone-slate shrink-0" />
+                    <span className="text-[13px] text-muted leading-relaxed">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
 
-          <nav aria-label="공개 사용 가이드" className="flex flex-wrap gap-4 text-sm text-[#79B2FF]">
+          <nav aria-label="공개 사용 가이드" className="flex flex-wrap gap-4 text-sm text-accent">
             <a href="/about/" className="underline underline-offset-4 min-h-11 inline-flex items-center">잔고플랜 소개</a>
             <a href="/guide/" className="underline underline-offset-4 min-h-11 inline-flex items-center">자세한 사용법</a>
           </nav>
           {/* 팁 */}
-          <div className="bg-[#3D8EF8]/10 border border-[#3D8EF8]/20 rounded-2xl p-4 flex gap-3">
-            <TrendingUp size={17} className="text-[#3D8EF8] shrink-0 mt-0.5" />
-            <p className="text-[13px] text-[#8B95A1] leading-relaxed">
+          <div className="bg-tone-blue/10 border border-tone-blue/20 rounded-2xl p-4 flex gap-3">
+            <TrendingUp size={17} className="text-accent shrink-0 mt-0.5" />
+            <p className="text-[13px] text-muted leading-relaxed">
               비로그인 데이터는 이 기기에 저장되고, 로그인 데이터는 Firebase 계정에 저장돼요. 앱을 홈 화면에 추가하면 오프라인에서도 사용할 수 있어요.
             </p>
           </div>

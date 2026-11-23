@@ -124,7 +124,8 @@ CATEGORY_EMOJI      // Record<string, string>
   - 의미: `bg-page` `bg-surface` `bg-raised` `text-fg` `text-muted` `text-accent` `text-income` `text-expense` `text-warning` `border-line`
   - 틴트·테두리·링: `bg-tone-blue/15` `border-tone-red/20` `ring-tone-green/40` 등 (`tone-blue|red|green|amber|teal|slate`, 두 테마 모두 원래 밝은 색)
   - 중립·연한 글자: `hover:bg-tone-hover` `hover:text-tone-gray` `to-tone-chip` `text-tone-faint` `text-fg-strong` `text-tone-*-pale|soft`
-  - hex 클래스(`bg-[#1C1C1E]` 등)는 쓰지 말 것. 토큰으로 옮긴 파일은 ESLint가 막는다. 기존 파일 치환: `node scripts/migrate-theme-tokens.mjs <파일>`
+  - 액션 버튼: `bg-action text-on-action hover:bg-action-hover` (`text-white`와 같이 쓰지 말 것 — 라이트에서 `text-white`는 어두운 글자로 바뀜)
+  - hex 클래스(`bg-[#1C1C1E]` 등)는 쓰지 말 것. `src/**/*.tsx` 전체에서 ESLint가 막는다
 - **배경 팔레트**: `#111111` (앱 배경), `#1C1C1E` (카드), `#2C2C2E` (입력/칩)
 - **강조색**: `#3D8EF8` (파랑/기본), `#2ACF6A` (수입), `#F25260` (지출)
 - **텍스트**: `#F1F3F6` (기본), `#8B95A1` (보조), `#4E5968` (비활성)
