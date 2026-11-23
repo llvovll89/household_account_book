@@ -53,3 +53,4 @@
 | 2026-11-23 | [구독 연간 결제와 USD 환율](2026-11-23-16-subscription-cycles.md) | #54 |
 | 2026-11-23 | [앱 내 알림 센터](2026-11-23-17-notification-center.md) | #55 |
 | 2026-11-23 | [하단 탭 6개 → 4개 (더보기)](2026-11-23-18-more-tab.md) | #56 |
+| 2026-11-23 | [App.tsx 분리 1단계: useSyncPersistence](2026-11-23-19-use-sync-persistence.md) | #57 |
