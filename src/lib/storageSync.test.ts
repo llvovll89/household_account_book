@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Memo, Transaction } from '../types'
 
-vi.mock('../firebase/firebase', () => ({ db: {} }))
+vi.mock('../firebase/firebase', () => ({ getDb: async () => ({}) }))
 
 // 원격 문서 하나를 메모리에 두고 Firestore 트랜잭션을 흉내 낸다
 const remote = vi.hoisted(() => ({ doc: undefined as Record<string, unknown> | undefined, online: true }))

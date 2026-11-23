@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
-vi.mock('../firebase/firebase', () => ({ storage: {} }))
+vi.mock('../firebase/firebase', () => ({ getStorageInstance: async () => ({}) }))
 vi.mock('firebase/storage', () => ({ ref: vi.fn(), uploadBytes: vi.fn(), deleteObject: vi.fn(), getDownloadURL: vi.fn() }))
 
 import { uploadReceiptImage } from './receiptStorage'

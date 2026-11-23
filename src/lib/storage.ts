@@ -1,5 +1,8 @@
-import { doc, getDoc, getDocFromServer, runTransaction } from 'firebase/firestore'
-import { db } from '../firebase/firebase'
+import type { DocumentReference } from 'firebase/firestore'
+import { getDb } from '../firebase/firebase'
+
+// Firestore SDK는 Firebase 모드에서만 불러온다
+const loadFirestore = () => import('firebase/firestore')
 import type { AutoCategoryRule, Budget, DashboardWidgetId, Memo, RecurringTransaction, SavingsGoal, Subscription, Transaction, UserPaymentMethod } from '../types'
 import { showToast } from './toast'
 import { validateBackupData } from './backup'
@@ -445,7 +448,8 @@ function hasValidBillingDay(value: number | null): boolean {
   return Number.isInteger(value) && value !== null && value >= 1 && value <= 31
 }
 
-function getUserDocRef(uid: string) {
+async function getUserDocRef(uid: string): Promise<DocumentReference> {
+  const [{ doc }, db] = await Promise.all([loadFirestore(), getDb()])
   return doc(db, 'users', uid, 'app', 'default')
 }
 
@@ -492,7 +496,8 @@ function normalizeRemoteState(raw: unknown): RemoteState {
  * 일부 키만 쓰는 로드가 다른 키의 낙관적 잠금 기준을 덮어쓰지 않게 하기 위함이다.
  */
 async function loadRemoteState(uid: string, refreshKeys: readonly RemoteVersionKey[] = VERSION_KEYS): Promise<RemoteState> {
-  const snap = await getDoc(getUserDocRef(uid))
+  const { getDoc } = await loadFirestore()
+  const snap = await getDoc(await getUserDocRef(uid))
   const raw = snap.data()
   const versions = normalizeVersions(raw && typeof raw === 'object' ? (raw as Record<string, unknown>).versions : undefined)
   if (!cachedRemoteVersions) {
@@ -521,8 +526,8 @@ async function saveRemotePatch(uid: string, patch: Partial<RemoteState>, options
   let committedVersions: RemoteVersions | null = null
   remoteWritesInFlight += 1
   try {
+    const [{ runTransaction }, db, ref] = await Promise.all([loadFirestore(), getDb(), getUserDocRef(uid)])
     await runTransaction(db, async (tx) => {
-      const ref = getUserDocRef(uid)
       const snap = await tx.get(ref)
       const raw = snap.data() ?? {}
       const remoteVersions = normalizeVersions(
@@ -1112,7 +1117,8 @@ export async function loadBackupState(): Promise<BackupState> {
     }))
     return { data: strictBackupState(raw), target: '이 기기', token: { mode, uid, localStamp: localBackupStamp() } }
   }
-  const snap = await withTimeout(getDocFromServer(getUserDocRef(getStorageUid())), REMOTE_WRITE_TIMEOUT_MS)
+  const { getDocFromServer } = await loadFirestore()
+  const snap = await withTimeout(getDocFromServer(await getUserDocRef(getStorageUid())), REMOTE_WRITE_TIMEOUT_MS)
   assertBackupReady(mode, uid)
   const raw = snap.data() ?? {}
   const data = strictBackupState(raw)
@@ -1133,9 +1139,9 @@ export async function restoreAllData(input: AppDataSnapshot, token: BackupState[
     } else {
       const uid = getStorageUid()
       let committedVersions: RemoteVersions | null = null
+      const [{ runTransaction }, db, ref] = await Promise.all([loadFirestore(), getDb(), getUserDocRef(uid)])
       await runTransaction(db, async tx => {
         if (storageMode !== token.mode || storageUid !== token.uid) throw new Error('복원 대상 계정이 바뀌었어요.')
-        const ref = getUserDocRef(uid)
         const snap = await tx.get(ref)
         const raw = snap.data() ?? {}
         const versions = normalizeVersions(raw.versions)
