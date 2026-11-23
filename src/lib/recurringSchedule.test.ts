@@ -29,6 +29,11 @@ describe('isRecurringDueToday', () => {
     expect(isRecurringDueToday(r, new Date(2026, 7, 15), '2026-08')).toBe(true)
   })
 
+  it('monthly: 다른 시간대 기기가 다음 달분을 먼저 적용했으면 false', () => {
+    const r = { dayOfMonth: 1, lastAppliedMonth: '2026-12' }
+    expect(isRecurringDueToday(r, new Date(2026, 10, 30), '2026-11')).toBe(false)
+  })
+
   it('monthly: 이미 이번 달에 적용됐으면 false', () => {
     const r = { dayOfMonth: 10, lastAppliedMonth: '2026-08' }
     expect(isRecurringDueToday(r, new Date(2026, 7, 15), '2026-08')).toBe(false)

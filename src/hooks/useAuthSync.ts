@@ -115,7 +115,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       if (shouldMerge) {
         const result = await mergeLocalIntoFirebase()
         showToast(result.message)
-      } else {
+      } else if (auth.currentUser) {
+        // 로그아웃된 뒤 남은 모달에서 고르면 로컬 모드의 원본 데이터가 지워지므로 로그인 상태에서만 비운다
         clearLocalData()
       }
     } catch {
@@ -157,6 +158,8 @@ export function useAuthSync({ hydrateData }: UseAuthSyncParams): UseAuthSyncResu
       setIsSyncing(false)
 
       if (!nextUser) {
+        // 회원가입 직후 자동 로그인→로그아웃 시 띄운 병합 모달을 닫는다
+        setShowMergeModal(false)
         // 이전 계정 캐시가 로컬 모드에 노출되거나 다음 계정에 병합되지 않도록 정리
         clearFirebaseCacheOnSignOut()
         setStorageContext('local', null)

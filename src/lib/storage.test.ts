@@ -27,6 +27,7 @@ import {
   loadBudgets,
   saveBudgets,
   mergeLocalIntoFirebase,
+  mergeSettings,
   resetAllData,
   StorageConflictError,
   saveTransactions,
@@ -491,4 +492,33 @@ it('rejects a quota failure and preserves previously saved transactions', async 
   } finally {
     spy.mockRestore()
   }
+})
+
+describe('mergeSettings', () => {
+  const base = {
+    payday: null, cardBillingDay: null, customExpenseCategories: [], customIncomeCategories: [],
+    transactionTemplates: [], autoCategoryRules: [], hiddenWidgets: [],
+  }
+  const defaults = [
+    { id: 'cash', type: 'cash' as const, label: '현금' },
+    { id: 'check_1', type: 'check' as const, label: '체크카드' },
+    { id: 'credit_1', type: 'credit' as const, label: '신용카드', billingDay: 25 },
+  ]
+  const remoteCard = { id: 'card_hd', type: 'credit' as const, label: '현대카드', billingDay: 14 }
+
+  it('keeps the account payment methods and display settings when local only has migrated defaults', () => {
+    const merged = mergeSettings(
+      { ...base, userPaymentMethods: [remoteCard], swipeSensitivity: 'high', hiddenWidgets: ['subscription-alert'] },
+      { ...base, userPaymentMethods: defaults, swipeSensitivity: 'medium' },
+    )
+    expect(merged.userPaymentMethods).toEqual([remoteCard])
+    expect(merged.swipeSensitivity).toBe('high')
+    expect(merged.hiddenWidgets).toEqual(['subscription-alert'])
+  })
+
+  it('adds cards created locally without dropping the account cards', () => {
+    const localCard = { id: 'card_new', type: 'check' as const, label: '새 체크' }
+    const merged = mergeSettings({ ...base, userPaymentMethods: [remoteCard] }, { ...base, userPaymentMethods: [...defaults, localCard] })
+    expect(merged.userPaymentMethods.map((m) => m.id)).toEqual(['card_hd', 'cash', 'check_1', 'credit_1', 'card_new'])
+  })
 })

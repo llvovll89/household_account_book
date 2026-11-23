@@ -5,7 +5,7 @@ import { useCallback } from 'react'
 import type { Dispatch } from 'react'
 import type { AutoCategoryRule, DashboardWidgetId, Transaction, Memo, Budget, RecurringTransaction, Subscription, SavingsGoal, UserPaymentMethod, TransactionTemplate } from '../types'
 import type { RemoteVersionKey } from '../lib/storage'
-import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings, loadTransactions } from '../lib/storage'
+import { saveBudgets, saveMemos, saveRecurring, saveSettings, saveSubscriptions, saveGoals, saveTransactions, loadSettings } from '../lib/storage'
 import { generateId, toLocalDateStr } from '../lib/format'
 import { deleteTransactionTag, renameTransactionTag } from '../lib/tags'
 import { showToast } from '../lib/toast'
@@ -197,7 +197,8 @@ export function useAppHandlers({
     persist(() => saveGoals(items), '목표 저장에 실패했습니다.', 'goals')
   }, [persist, setGoals])
 
-  const handleApplyRecurring = useCallback(async (pending: RecurringTransaction[], targetYM?: string) => {
+  // 거래 저장이 끝나면 true, 실패하면 false로 끝난다 (실패 안내는 persist가 맡는다)
+  const handleApplyRecurring = useCallback((pending: RecurringTransaction[], targetYM?: string): Promise<boolean> => {
     const ym = targetYM ?? yearMonth
     const today = new Date()
     const todayStr = toLocalDateStr(today)
@@ -208,19 +209,12 @@ export function useAppHandlers({
     }))
     const newTx: Transaction[] = pending.flatMap(r => (occurrences.get(r.id) ?? [todayStr]).map(date =>
       createRecurringTransaction(r, ym, date, generateId())))
-    const newTxIds = new Set(newTx.map((t) => t.id))
     const nextTxs = [...transactions, ...newTx]
+    const ids = new Set(pending.map((r) => r.id))
+    // 거래와 기준 월을 함께 진행한다. 원격 저장만 실패하면 둘 다 로컬에 남아 다음 동기화 때 같이 올라가므로
+    // 거래만 올라가고 기준 월이 그대로여서 다시 자동 적용되는 중복이 생기지 않는다
     setTransactions(nextTxs)
-    try {
-      await saveTransactions(nextTxs)
-    } catch (e) {
-      console.error('[handleApplyRecurring] 거래 저장 실패', e)
-      showToast('정기내역 적용 저장에 실패했습니다.')
-      setTransactions((prev) => prev.filter((t) => !newTxIds.has(t.id)))
-      return
-    }
     setRecurring((prev) => {
-      const ids = new Set(pending.map((r) => r.id))
       const next = prev.map((r) => {
         if (!ids.has(r.id)) return r
         if (r.frequency === 'weekly' || r.frequency === 'biweekly') {
@@ -231,6 +225,13 @@ export function useAppHandlers({
       })
       persist(() => saveRecurring(next), '정기내역 상태 저장에 실패했습니다.', 'recurring')
       return next
+    })
+    return new Promise<boolean>((resolve) => {
+      persist(async () => {
+        try { await saveTransactions(nextTxs) }
+        catch (error) { resolve(false); throw error }
+        resolve(true)
+      }, '정기내역 적용 저장에 실패했습니다.', 'transactions')
     })
   }, [transactions, persist, yearMonth, setTransactions, setRecurring])
 
@@ -271,15 +272,12 @@ export function useAppHandlers({
   }, [persist, setAutoCategoryRules])
 
   const handleRenameTag = useCallback((oldName: string, newName: string) => {
-    setTransactions((prev) => prev.map((t) => renameTransactionTag(t, oldName, newName)))
-    persist(
-      async () => {
-        const current = await loadTransactions()
-        await saveTransactions(current.map((t) => renameTransactionTag(t, oldName, newName)))
-      },
-      '태그 이름 변경에 실패했습니다.',
-      'transactions'
-    )
+    // 원격 목록을 다시 읽어 저장하면 아직 올라가지 않은 로컬 거래가 사라지므로 화면 상태 기준으로 저장한다
+    setTransactions((prev) => {
+      const next = prev.map((t) => renameTransactionTag(t, oldName, newName))
+      persist(() => saveTransactions(next), '태그 이름 변경에 실패했습니다.', 'transactions')
+      return next
+    })
   }, [persist, setTransactions])
 
   const handleDeleteTag = useCallback((name: string) => {
@@ -289,15 +287,11 @@ export function useAppHandlers({
       confirmLabel: '삭제',
       confirmVariant: 'danger',
       onConfirm: () => {
-        setTransactions((prev) => prev.map((t) => deleteTransactionTag(t, name)))
-        persist(
-          async () => {
-            const current = await loadTransactions()
-            await saveTransactions(current.map((t) => deleteTransactionTag(t, name)))
-          },
-          '태그 삭제에 실패했습니다.',
-          'transactions'
-        )
+        setTransactions((prev) => {
+          const next = prev.map((t) => deleteTransactionTag(t, name))
+          persist(() => saveTransactions(next), '태그 삭제에 실패했습니다.', 'transactions')
+          return next
+        })
       },
     })
   }, [persist, setTransactions, dispatchUI])

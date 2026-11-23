@@ -927,7 +927,11 @@ export default function App() {
     );
 
     const retryFailedPersistTasks = useCallback(
-        (allowedScopes?: RemoteVersionKey[], mode: RetryRunMode = "all") => {
+        (
+            allowedScopes?: RemoteVersionKey[],
+            mode: RetryRunMode = "all",
+            afterSuccess?: () => Promise<void>,
+        ) => {
             if (isRetryingPersist) return;
             const allow =
                 allowedScopes && allowedScopes.length > 0
@@ -1052,6 +1056,12 @@ export default function App() {
                     }
                     setLastRetryReasons(nextReasonState);
 
+                    if (succeededCount > 0 && afterSuccess) {
+                        await afterSuccess().catch(() => {
+                            showToast("저장한 데이터를 다시 불러오지 못했어요.");
+                        });
+                    }
+
                     if (stillFailed.length === 0) {
                         setHasPendingSync(false);
                         setLastSyncSuccessAt(Date.now());
@@ -1149,9 +1159,11 @@ export default function App() {
         setConflictVersionDiffs({});
         setConflictCountDiffs({});
         setConflictRemoteUpdatedAt(null);
+        // 재전송한 내 변경이 원격에 반영된 뒤 화면도 원격과 다시 맞춘다.
+        // 맞추지 않으면 화면은 다른 기기 데이터로 남아, 다음 편집이 방금 지킨 변경을 덮어쓴다.
         void hydrateData()
             .then(() => {
-                retryFailedPersistTasks(selectedConflictKeys);
+                retryFailedPersistTasks(selectedConflictKeys, "all", hydrateData);
             })
             .catch(() => {
                 showToast("동기화 후 재시도에 실패했어요.");
@@ -1255,15 +1267,15 @@ export default function App() {
 
         if (autoApplyMode === "always") {
             const appliedItems = [...pending];
-            void handleApplyRecurring(pending, todayYM)
-                .then(() => {
-                    showToast(
-                        `정기 항목 ${pending.length}건 자동 등록: ${formatRecurringToastSummary(pending)}`,
-                    );
-                    setAutoApplyResultItems(appliedItems);
-                    setShowAutoApplyResultModal(true);
-                })
-                .catch(() => showToast("정기 항목 자동 등록에 실패했어요."));
+            // 실패 안내는 persist가 띄우므로 성공했을 때만 결과를 알린다
+            void handleApplyRecurring(pending, todayYM).then((saved) => {
+                if (!saved) return;
+                showToast(
+                    `정기 항목 ${pending.length}건 자동 등록: ${formatRecurringToastSummary(pending)}`,
+                );
+                setAutoApplyResultItems(appliedItems);
+                setShowAutoApplyResultModal(true);
+            });
             return;
         }
 
@@ -2568,10 +2580,11 @@ export default function App() {
                         onConfirm={async () => {
                             const todayYM = toYearMonth(new Date());
                             setShowAutoApplyModal(false);
-                            await handleApplyRecurring(
+                            const saved = await handleApplyRecurring(
                                 autoApplyPending,
                                 todayYM,
                             );
+                            if (!saved) return;
                             showToast(
                                 `정기 항목 ${autoApplyPending.length}건 등록: ${formatRecurringToastSummary(autoApplyPending)}`,
                             );
