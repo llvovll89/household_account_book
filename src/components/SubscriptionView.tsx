@@ -6,6 +6,7 @@ import { fmt, fmtPrice } from '../lib/format'
 import { generateId } from '../lib/format'
 import EmptyState from './ui/EmptyState'
 import { getDaysUntilMonthDay } from '../lib/recurringSchedule'
+import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
   subscriptions: Subscription[]
@@ -246,14 +247,14 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                         <button
                           onClick={() => openEdit(sub)}
                           aria-label={`${sub.name} 구독 수정`}
-                          className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                          className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                         >
                           <Pencil size={11} />
                         </button>
                         <button
                           onClick={() => handleDelete(sub.id)}
                           aria-label={`${sub.name} 구독 삭제`}
-                          className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                          className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                         >
                           <Trash2 size={11} />
                         </button>
@@ -305,11 +306,12 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
 
       {/* 추가/수정 바텀시트 */}
       {showSheet && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-          onClick={(e) => e.target === e.currentTarget && setShowSheet(false)}
+        <InlineDialog
+            onClose={() => setShowSheet(false)}
+            label={editing ? '구독 수정' : '구독 추가'}
+            containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
+            panelClassName="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto w-full max-w-lg modal-panel"
         >
-          <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[85vh] overflow-y-auto w-full max-w-lg modal-panel">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-1">
               <p className="text-base font-bold text-white">{editing ? '구독 수정' : '구독 추가'}</p>
@@ -441,8 +443,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
               <Check size={16} />
               {editing ? '수정 완료' : '추가하기'}
             </button>
-          </div>
-        </div>
+        </InlineDialog>
       )}
     </div>
   )

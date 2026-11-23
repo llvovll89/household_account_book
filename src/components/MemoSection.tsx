@@ -22,6 +22,7 @@ import FancyDatePicker from "./FancyDatePicker";
 import EmptyState from "./ui/EmptyState";
 import {parseYmdLocal, toLocalDateStr, toYearMonth} from "../lib/format";
 import {showToast} from "../lib/toast";
+import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
     memos: Memo[];
@@ -597,14 +598,12 @@ export default function MemoSection({
             )}
 
             {selectedDate && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-                    onClick={() => setSelectedDate(null)}
+                <InlineDialog
+                    onClose={() => setSelectedDate(null)}
+                    label={`${formatSelectedDateLabel(selectedDate)} 일정`}
+                    containerClassName="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+                    panelClassName="modal-panel w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col"
                 >
-                    <div
-                        className="modal-panel w-full max-w-md bg-[#1C1C1E] rounded-2xl overflow-hidden border border-white/8 max-h-[75vh] flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                    >
                         <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between shrink-0">
                             <p className="text-sm font-bold text-white">
                                 {formatSelectedDateLabel(selectedDate)} 일정
@@ -615,7 +614,7 @@ export default function MemoSection({
                                 </span>
                                 <button
                                     onClick={() => setSelectedDate(null)}
-                                    className="w-7 h-7 rounded-full bg-[#2C2C2E] flex items-center justify-center"
+                                    className="w-9 h-9 rounded-full bg-[#2C2C2E] flex items-center justify-center"
                                     aria-label="상세 닫기"
                                 >
                                     <X size={12} className="text-[#8B95A1]" />
@@ -759,18 +758,16 @@ export default function MemoSection({
                                 })}
                             </div>
                         )}
-                    </div>
-                </div>
+                </InlineDialog>
             )}
 
             {showForm && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    onClick={(e) =>
-                        e.target === e.currentTarget && handleCancel()
-                    }
+                <InlineDialog
+                    onClose={handleCancel}
+                    label="메모 입력"
+                    containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
+                    panelClassName="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel"
                 >
-                    <div className="bg-[#1C1C1E] w-full max-w-lg rounded-t-[28px] max-h-[90vh] flex flex-col border-t border-white/6 modal-panel">
                         <div className="flex justify-center pt-3 pb-1 shrink-0">
                             <div className="w-9 h-1 bg-white/10 rounded-full" />
                         </div>
@@ -1039,8 +1036,7 @@ export default function MemoSection({
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
+                </InlineDialog>
             )}
         </div>
     );

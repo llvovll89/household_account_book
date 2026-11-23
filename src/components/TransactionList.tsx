@@ -39,6 +39,7 @@ import {
     resolvePaymentMethod,
 } from "../lib/cardBilling";
 import {showToast} from "../lib/toast";
+import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
     transactions: Transaction[];
@@ -2979,14 +2980,12 @@ export default function TransactionList({
 
             {/* 일괄 카테고리 변경 */}
             {showBulkCategoryPicker && (
-                <div
-                    className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
-                    onClick={() => setShowBulkCategoryPicker(false)}
+                <InlineDialog
+                    onClose={() => setShowBulkCategoryPicker(false)}
+                    label="카테고리 변경"
+                    containerClassName="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
+                    panelClassName="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8"
                 >
-                    <div
-                        className="relative w-full max-w-lg bg-[#1C1C1E] rounded-t-[28px] px-5 pt-5 pb-8"
-                        onClick={(e) => e.stopPropagation()}
-                    >
                         <div className="flex items-center justify-between mb-4">
                             <div>
                                 <p className="text-[17px] font-bold text-white">
@@ -3030,8 +3029,7 @@ export default function TransactionList({
                                 ),
                             )}
                         </div>
-                    </div>
-                </div>
+                </InlineDialog>
             )}
 
             {/* 내역 상세 모달 */}
@@ -3053,17 +3051,17 @@ export default function TransactionList({
 
             {/* 영수증 모달 */}
             {receiptModal.open && (
-                <div
-                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-                    onClick={() => setReceiptModal({open: false, url: ""})}
+                <InlineDialog
+                    onClose={() => setReceiptModal({open: false, url: ""})}
+                    label="영수증"
+                    containerClassName="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
                 >
                     <img
                         src={receiptModal.url}
                         alt="영수증"
                         className="max-w-full max-h-[90vh] rounded-2xl"
-                        onClick={(e) => e.stopPropagation()}
                     />
-                </div>
+                </InlineDialog>
             )}
 
             {showExport && (

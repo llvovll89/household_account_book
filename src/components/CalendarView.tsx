@@ -3,6 +3,7 @@ import { Pencil, Trash2, X } from 'lucide-react'
 import type { Transaction } from '../types'
 import { CATEGORY_EMOJI, CATEGORY_COLOR } from '../types'
 import { fmt, parseYmdLocal, toLocalDateStr } from '../lib/format'
+import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
   transactions: Transaction[]
@@ -153,14 +154,12 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
 
       {/* 선택된 날짜 내역 모달 */}
       {selectedDate && (
-        <div className="fixed inset-0 z-70 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <button
-            onClick={closeModal}
-            className="absolute inset-0 bg-black/60"
-            aria-label="날짜 내역 닫기"
-          />
-
-          <div className="relative w-full sm:max-w-lg max-h-[82vh] bg-[#1C1C1E] rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content">
+        <InlineDialog
+          onClose={closeModal}
+          label={`${formatSelectedDate(selectedDate)} 내역`}
+          containerClassName="fixed inset-0 z-70 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60"
+          panelClassName="w-full sm:max-w-lg max-h-[82vh] bg-[#1C1C1E] rounded-t-3xl sm:rounded-2xl overflow-hidden tab-content"
+        >
             <div className="px-5 pt-4 pb-3 border-b border-white/5 sticky top-0 bg-[#1C1C1E] z-10">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold text-white">{formatSelectedDate(selectedDate)}</span>
@@ -258,8 +257,7 @@ export default function CalendarView({ transactions, yearMonth, onEdit, onDelete
                 })}
               </div>
             )}
-          </div>
-        </div>
+        </InlineDialog>
       )}
     </div>
   )

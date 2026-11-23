@@ -5,6 +5,7 @@ import {EXPENSE_CATEGORIES, INCOME_CATEGORIES, CATEGORY_EMOJI} from "../types";
 import {fmt, generateId, parseYmdLocal} from "../lib/format";
 import {showToast} from "../lib/toast";
 import EmptyState from "./ui/EmptyState";
+import { InlineDialog } from './ui/InlineDialog'
 
 interface Props {
     goals: SavingsGoal[];
@@ -567,7 +568,7 @@ export default function GoalsView({
                                                 <button
                                                     onClick={() => openEdit(g)}
                                                     aria-label={`${g.name} 목표 수정`}
-                                                    className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
+                                                    className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-white transition-colors"
                                                 >
                                                     <Pencil size={11} />
                                                 </button>
@@ -576,7 +577,7 @@ export default function GoalsView({
                                                         handleDelete(g.id)
                                                     }
                                                     aria-label={`${g.name} 목표 삭제`}
-                                                    className="w-7 h-7 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
+                                                    className="w-9 h-9 rounded-lg bg-[#2C2C2E] flex items-center justify-center text-[#8B95A1] hover:text-[#F25260] transition-colors"
                                                 >
                                                     <Trash2 size={11} />
                                                 </button>
@@ -777,13 +778,12 @@ export default function GoalsView({
 
             {/* 저금/인출 시트 */}
             {depositGoal && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    onClick={(e) =>
-                        e.target === e.currentTarget && setDepositGoal(null)
-                    }
+                <InlineDialog
+                    onClose={() => setDepositGoal(null)}
+                    label={`${depositGoal.name} 저금·인출`}
+                    containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
+                    panelClassName="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg modal-panel"
                 >
-                    <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 w-full max-w-lg modal-panel">
                         <div className="flex items-center justify-between">
                             <p className="text-base font-bold text-white">
                                 {depositGoal.emoji} {depositGoal.name}
@@ -834,19 +834,17 @@ export default function GoalsView({
                             <Check size={16} />
                             확인
                         </button>
-                    </div>
-                </div>
+                </InlineDialog>
             )}
 
             {/* 추가/수정 바텀시트 */}
             {showSheet && (
-                <div
-                    className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
-                    onClick={(e) =>
-                        e.target === e.currentTarget && setShowSheet(false)
-                    }
+                <InlineDialog
+                    onClose={() => setShowSheet(false)}
+                    label={editing ? "목표 수정" : "목표 추가"}
+                    containerClassName="fixed inset-0 z-50 bg-black/60 flex items-end justify-center modal-backdrop"
+                    panelClassName="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg modal-panel"
                 >
-                    <div className="relative bg-[#1A1E30] rounded-t-[28px] p-5 space-y-4 max-h-[90vh] overflow-y-auto w-full max-w-lg modal-panel">
                         <div className="flex items-center justify-between">
                             <p className="text-base font-bold text-white">
                                 {editing ? "목표 수정" : "목표 추가"}
@@ -1115,8 +1113,7 @@ export default function GoalsView({
                             <Check size={16} />
                             {editing ? "수정 완료" : "목표 만들기"}
                         </button>
-                    </div>
-                </div>
+                </InlineDialog>
             )}
         </div>
     );
