@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Pencil, Trash2, X, Check } from 'lucide-react'
-import type { Subscription } from '../types'
+import type { RecurringTransaction, Subscription } from '../types'
 import { EXPENSE_CATEGORIES, CATEGORY_COLOR } from '../types'
 import { fmt, fmtPrice } from '../lib/format'
 import { generateId } from '../lib/format'
 import EmptyState from './ui/EmptyState'
-import { getDaysUntilNextBilling, getMonthlyKrw, getSubscriptionTotals, isYearly } from '../lib/subscriptions'
+import { canAutoRecord, getDaysUntilNextBilling, getMonthlyKrw, getSubscriptionTotals, isYearly, syncSubscriptionRecurring } from '../lib/subscriptions'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { InlineDialog } from './ui/InlineDialog'
@@ -14,6 +14,9 @@ interface Props {
   subscriptions: Subscription[]
   addTrigger?: number
   onChange: (items: Subscription[]) => void
+  /** 자동 기록(정기 내역 연결)용. 없으면 토글을 숨긴다 */
+  recurring?: RecurringTransaction[]
+  onRecurringChange?: (items: RecurringTransaction[]) => void
 }
 
 const SERVICE_COLORS = [
@@ -39,7 +42,8 @@ const EMPTY: Omit<Subscription, 'id' | 'createdAt'> = {
   memo: '',
 }
 
-export default function SubscriptionView({ subscriptions, addTrigger, onChange }: Props) {
+export default function SubscriptionView({ subscriptions, addTrigger, onChange, recurring, onRecurringChange }: Props) {
+  const [autoRecord, setAutoRecord] = useState(false)
   const [showSheet, setShowSheet] = useState(false)
   const [editing, setEditing] = useState<Subscription | null>(null)
   const [form, setForm] = useState({ ...EMPTY })
@@ -51,6 +55,7 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   function openAdd() {
     setEditing(null)
     setForm({ ...EMPTY })
+    setAutoRecord(false)
     setAmountStr('')
     setColorIdx(subscriptions.length % SERVICE_COLORS.length)
     setErrors({})
@@ -75,6 +80,8 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       category: sub.category,
       memo: sub.memo,
     })
+    // 정기 내역 화면에서 연결된 항목을 지웠으면 꺼진 것으로 보여준다
+    setAutoRecord(!!sub.recurringId && !!recurring?.some(r => r.id === sub.recurringId))
     setAmountStr(sub.amount > 0 ? String(sub.amount) : '')
     const idx = SERVICE_COLORS.indexOf(sub.color ?? SERVICE_COLORS[0])
     setColorIdx(idx >= 0 ? idx : 0)
@@ -99,21 +106,17 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
       ? { cycle: 'yearly' as const, billingMonth: form.billingMonth ?? new Date().getMonth() + 1 }
       : { cycle: 'monthly' as const, billingMonth: undefined }
 
-    if (editing) {
-      onChange(subscriptions.map(s =>
-        s.id === editing.id ? { ...s, ...form, ...cycleFields, amount, color } : s
-      ))
-    } else {
-      const next: Subscription = {
-        id: generateId(),
-        ...form,
-        ...cycleFields,
-        amount,
-        color,
-        createdAt: Date.now(),
-      }
-      onChange([...subscriptions, next])
+    const draft: Subscription = editing
+      ? { ...editing, ...form, ...cycleFields, amount, color }
+      : { id: generateId(), ...form, ...cycleFields, amount, color, createdAt: Date.now() }
+    // 자동 기록을 켜면 연결된 정기 내역을 만들고, 끄거나 조건이 안 맞으면 지운다
+    let saved = draft
+    if (recurring && onRecurringChange) {
+      const synced = syncSubscriptionRecurring(draft, autoRecord, recurring, new Date(), generateId)
+      saved = synced.subscription
+      if (synced.recurring !== recurring) onRecurringChange(synced.recurring)
     }
+    onChange(editing ? subscriptions.map(s => (s.id === editing.id ? saved : s)) : [...subscriptions, saved])
     setShowSheet(false)
   }
 
@@ -122,6 +125,11 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
   }
 
   function confirmDelete(id: string) {
+    const target = subscriptions.find(s => s.id === id)
+    // 연결된 정기 내역도 함께 지워 구독 없이 기록만 남지 않게 한다
+    if (target?.recurringId && recurring && onRecurringChange) {
+      onRecurringChange(recurring.filter(r => r.id !== target.recurringId))
+    }
     onChange(subscriptions.filter(s => s.id !== id))
     setConfirmingId(null)
   }
@@ -465,6 +473,25 @@ export default function SubscriptionView({ subscriptions, addTrigger, onChange }
                 placeholder="직접 입력 (1-31)"
               />
             </div>
+
+            {/* 자동 기록 */}
+            {recurring && onRecurringChange && (
+              <label className="flex items-start gap-2.5 bg-raised rounded-xl px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={autoRecord && canAutoRecord(form)}
+                  disabled={!canAutoRecord(form)}
+                  onChange={e => setAutoRecord(e.target.checked)}
+                />
+                <span className="text-[12px] text-fg">
+                  결제일마다 지출로 자동 기록
+                  <span className="block text-[10px] text-muted mt-0.5">
+                    {canAutoRecord(form) ? '정기 내역에 연결해요. 결제수단은 정기 내역에서 바꿀 수 있어요.' : '매월·원화 구독만 자동 기록할 수 있어요.'}
+                  </span>
+                </span>
+              </label>
+            )}
 
             {/* 카테고리 */}
             <div>

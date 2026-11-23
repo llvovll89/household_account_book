@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Subscription } from '../types'
-import { getDaysUntilNextBilling, getSubscriptionTotals } from './subscriptions'
+import { getDaysUntilNextBilling, getSubscriptionTotals, syncSubscriptionRecurring } from './subscriptions'
 
 const sub = (extra: Partial<Subscription>): Subscription =>
   ({ id: 'x', name: 'x', amount: 10000, currency: 'KRW', billingDay: 15, category: '문화/여가', memo: '', createdAt: 1, ...extra })
@@ -33,5 +33,31 @@ describe('getSubscriptionTotals', () => {
 
   it('reports USD separately when no rate is set', () => {
     expect(getSubscriptionTotals(list)).toEqual({ monthlyKrw: 27000, annualKrw: 27000 * 12, unconvertedUsd: 10 })
+  })
+})
+
+describe('syncSubscriptionRecurring', () => {
+  const today = new Date(2026, 10, 20)
+  const base = sub({ id: 's', name: '넷플릭스', amount: 17000, billingDay: 25 })
+  const ids = () => 'r1'
+
+  it('creates a linked monthly recurring item that waits for this month when the day is ahead', () => {
+    const { subscription, recurring } = syncSubscriptionRecurring(base, true, [], today, ids)
+    expect(subscription.recurringId).toBe('r1')
+    expect(recurring).toEqual([expect.objectContaining({ id: 'r1', type: 'expense', amount: 17000, description: '넷플릭스', dayOfMonth: 25, lastAppliedMonth: '2026-10' })])
+  })
+
+  it('treats this month as done when the billing day already passed', () => {
+    const { recurring } = syncSubscriptionRecurring({ ...base, billingDay: 5 }, true, [], today, ids)
+    expect(recurring[0].lastAppliedMonth).toBe('2026-11')
+  })
+
+  it('updates the linked item and removes it when turned off or switched to USD', () => {
+    const linked = syncSubscriptionRecurring(base, true, [], today, ids)
+    const updated = syncSubscriptionRecurring({ ...linked.subscription, amount: 18000 }, true, linked.recurring, today, ids)
+    expect(updated.recurring).toEqual([expect.objectContaining({ id: 'r1', amount: 18000, lastAppliedMonth: '2026-10' })])
+    const usd = syncSubscriptionRecurring({ ...updated.subscription, currency: 'USD' }, true, updated.recurring, today, ids)
+    expect(usd.recurring).toEqual([])
+    expect(usd.subscription.recurringId).toBeUndefined()
   })
 })

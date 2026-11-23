@@ -1,4 +1,5 @@
-import type { Subscription } from '../types'
+import type { RecurringTransaction, Subscription } from '../types'
+import { shiftYM, toYearMonth } from './format'
 import { getDaysUntilMonthDay } from './recurringSchedule'
 
 export function isYearly(s: Pick<Subscription, 'cycle'>): boolean {
@@ -43,4 +44,38 @@ export function getSubscriptionTotals(subscriptions: Subscription[], usdKrwRate?
     else monthlyKrw += krw
   }
   return { monthlyKrw, annualKrw: monthlyKrw * 12, unconvertedUsd: Math.round(unconvertedUsd * 100) / 100 }
+}
+
+/** 매달·원화 구독만 정기 내역으로 자동 기록할 수 있다 (정기 내역은 월간·원화 기준) */
+export function canAutoRecord(s: Pick<Subscription, 'cycle' | 'currency'>): boolean {
+  return !isYearly(s) && s.currency === 'KRW'
+}
+
+/**
+ * 구독의 '자동 기록' 설정에 맞춰 연결된 정기 내역을 만들거나 고치거나 지운다.
+ * 새로 연결할 때 이번 달 결제일이 이미 지났으면 이번 달은 적용된 것으로 둔다 (이미 직접 적었을 수 있어 중복 방지).
+ */
+export function syncSubscriptionRecurring(
+  sub: Subscription,
+  autoRecord: boolean,
+  recurring: RecurringTransaction[],
+  today: Date,
+  newId: () => string,
+): { subscription: Subscription; recurring: RecurringTransaction[] } {
+  const linked = sub.recurringId ? recurring.find((r) => r.id === sub.recurringId) : undefined
+  if (!autoRecord || !canAutoRecord(sub)) {
+    const { recurringId: _removed, ...rest } = sub
+    void _removed
+    return { subscription: rest, recurring: linked ? recurring.filter((r) => r.id !== linked.id) : recurring }
+  }
+  const fields = { type: 'expense' as const, category: sub.category, amount: sub.amount, description: sub.name, dayOfMonth: sub.billingDay }
+  if (linked) {
+    return { subscription: sub, recurring: recurring.map((r) => (r.id === linked.id ? { ...r, ...fields } : r)) }
+  }
+  const thisYM = toYearMonth(today)
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const passed = today.getDate() >= Math.min(sub.billingDay, lastDay)
+  const lastAppliedMonth = passed ? thisYM : shiftYM(thisYM, -1)
+  const created: RecurringTransaction = { id: newId(), ...fields, frequency: 'monthly', lastAppliedMonth, createdAt: Date.now() }
+  return { subscription: { ...sub, recurringId: created.id }, recurring: [...recurring, created] }
 }
