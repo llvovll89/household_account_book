@@ -457,6 +457,16 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       const d = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0)
       return { label: `${d.getMonth() + 1}월`, endDate: toLocalDateStr(d) }
     })
+    // 계좌 잔액을 입력했으면 월말마다 '계좌 잔액 − 대출 남은 원금'으로 그린다
+    if (netWorth.accounts.length > 0) {
+      return months.map(({ label, endDate }) => ({
+        label,
+        value: summarizeNetWorth(
+          getAccountBalances(userPaymentMethods, transactions, endDate),
+          getLoanStatuses(loans, transactions, endDate).map((l) => l.remaining),
+        ).netWorth,
+      }))
+    }
     // 거래를 날짜순 정렬 후 누적 합산 (O(n log n + n))
     const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
     let cumulative = 0
@@ -468,7 +478,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
       }
       return { label, value: cumulative }
     })
-  }, [transactions])
+  }, [transactions, netWorth.accounts.length, userPaymentMethods, loans])
 
   // 구독 다음 청구 예고 (7일 이내)
   const upcomingSubscriptions = useMemo(() => {

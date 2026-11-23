@@ -13,12 +13,19 @@ function principalOf(t: Transaction): number {
   return t.loanPrincipal ?? t.amount
 }
 
-/** 대출별 남은 원금 = 기준일의 남은 원금 − 기준일 다음 날부터 연결된 지출 거래의 원금 */
-export function getLoanStatuses(loans: Loan[], transactions: Transaction[]): LoanStatus[] {
+/**
+ * 대출별 남은 원금 = 기준일의 남은 원금 − 기준일 다음 날부터 연결된 지출 거래의 원금.
+ * atDate를 주면 그날 끝 시점의 남은 원금이다 (기준일보다 앞이면 그 사이 상환을 되돌린다).
+ */
+export function getLoanStatuses(loans: Loan[], transactions: Transaction[], atDate?: string): LoanStatus[] {
   return loans.map((loan) => {
-    const repaid = transactions
-      .filter((t) => t.loanId === loan.id && t.type === 'expense' && t.date > loan.balanceAsOf)
-      .reduce((s, t) => s + principalOf(t), 0)
-    return { loan, repaid, remaining: Math.max(0, loan.balance - repaid) }
+    let repaid = 0
+    let undone = 0
+    for (const t of transactions) {
+      if (t.loanId !== loan.id || t.type !== 'expense') continue
+      if (t.date > loan.balanceAsOf && (atDate === undefined || t.date <= atDate)) repaid += principalOf(t)
+      else if (atDate !== undefined && t.date > atDate && t.date <= loan.balanceAsOf) undone += principalOf(t)
+    }
+    return { loan, repaid, remaining: Math.max(0, loan.balance - repaid + undone) }
   })
 }
