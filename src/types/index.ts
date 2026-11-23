@@ -43,6 +43,8 @@ export interface Transaction {
   receiptImageUrl?: string  // 영수증 이미지 URL
   loanPrincipal?: number
   loanInterest?: number
+  /** 원금 상환이 들어간 대출 (Loan.id) */
+  loanId?: string
 }
 
 export interface Memo {
@@ -181,7 +183,17 @@ export interface AutoCategoryRule {
   enabled: boolean
 }
 
+/** 대출. balance는 balanceAsOf 시점의 남은 원금 */
+export interface Loan {
+  id: string
+  name: string
+  balance: number
+  balanceAsOf: string
+  createdAt: number
+}
+
 export type DashboardWidgetId =
+  | 'loans'
   | 'month-close-helper'
   | 'subscription-alert'
   | 'recurring-pending'

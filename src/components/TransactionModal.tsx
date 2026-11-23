@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useEffectEvent } from 'react'
 import { useModalClose } from '../hooks/useModalClose'
 import { X, Plus, CalendarRange, BookmarkPlus, Bookmark, ArrowDownLeft, ArrowUpRight, Banknote, CreditCard, Wallet, Landmark, Search } from 'lucide-react'
-import type { AutoCategoryRule, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
+import type { AutoCategoryRule, Loan, Transaction, TransactionType, PaymentMethod, UserPaymentMethod, TransactionTemplate } from '../types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, CATEGORY_COLOR, PAYMENT_METHODS, PAYMENT_METHOD_LABEL } from '../types'
 import FancyDatePicker from './FancyDatePicker'
 import { uploadReceiptImage } from '../lib/receiptStorage'
@@ -84,6 +84,8 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
   const [loanPrincipal, setLoanPrincipal] = useState(transaction?.loanPrincipal?.toString() ?? '')
   const [loanInterest, setLoanInterest] = useState(transaction?.loanInterest?.toString() ?? '')
   const [splitLoan, setSplitLoan] = useState(transaction?.loanPrincipal !== undefined)
+  const [loanId, setLoanId] = useState(transaction?.loanId ?? '')
+  const [loans, setLoans] = useState<Loan[]>([])
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false)
   const discardConfirmedRef = useRef(false)
   const keepEditingRef = useRef<HTMLButtonElement>(null)
@@ -98,6 +100,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       || (splitLoan !== (transaction.loanPrincipal !== undefined))
       || (paymentMethod === 'credit' && creditBillingDayInput !== originalCreditDayRef.current)
       || loanPrincipal !== (transaction.loanPrincipal?.toString() ?? '')
+      || loanId !== (transaction.loanId ?? '')
       || loanInterest !== (transaction.loanInterest?.toString() ?? '')
     : !!(amount || description.trim() || receiptFile))
   const { closing, handleClose, modalRef } = useModalClose(onClose, {
@@ -217,6 +220,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
         const firstCredit = settings.userPaymentMethods.find((m) => m.type === 'credit')
         const defaultDay = firstCredit?.billingDay ?? settings.cardBillingDay ?? 25
         setCardBillingDay(defaultDay)
+        setLoans(settings.loans ?? [])
         if (!transaction && !paymentMethodInitialized.current) setCreditBillingDayInput(String(defaultDay))
       }
     })
@@ -259,6 +263,7 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
       item.loanPrincipal = Number(loanPrincipal.replaceAll(',', ''))
       item.loanInterest = Number(loanInterest.replaceAll(',', ''))
     }
+    if (type === 'expense' && category === '대출' && loanId && loans.some((l) => l.id === loanId)) item.loanId = loanId
     if (type === 'expense' && isCreditPaymentMethod(paymentMethod) && billingPreview) {
       item.creditBillingDay = billingPreview.effectiveBillingDay
     }
@@ -888,6 +893,17 @@ export default function TransactionModal({ transaction, onSave, onClose, customE
             </div>
 
             {type === 'expense' && category === '대출' && <div className="loan-split bg-raised rounded-2xl p-4">
+              {loans.length > 0 && <div className="mb-3" role="group" aria-label="상환한 대출">
+                <p className="text-xs text-muted mb-2">어느 대출을 갚았나요? (선택)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[{ id: '', name: '선택 안 함' }, ...loans].map((l) => (
+                    <button key={l.id || 'none'} type="button" aria-pressed={loanId === l.id} onClick={() => setLoanId(l.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${loanId === l.id ? 'bg-tone-blue/20 text-accent' : 'bg-surface text-muted hover:text-fg'}`}>
+                      {l.name}
+                    </button>
+                  ))}
+                </div>
+              </div>}
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={splitLoan} onChange={e => setSplitLoan(e.target.checked)} />원금·이자 구분 (선택)</label>
               {splitLoan && <div className="grid grid-cols-2 gap-3 mt-3">
                 <label className="text-xs">원금 (원)<input aria-describedby="loan-split-help" inputMode="numeric" value={loanPrincipal} onChange={e => setLoanPrincipal(e.target.value.replace(/[^0-9]/g, ''))} /></label>

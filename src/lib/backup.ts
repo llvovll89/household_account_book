@@ -50,7 +50,7 @@ const type = choice('income', 'expense')
 const day = range(1, 31)
 const payment = { paymentMethod: optional(choice('cash', 'check', 'credit', 'card', 'transfer')), paymentMethodId: optional(text) }
 const baseEntry = { id: nonempty, type, amount: money, category: nonempty, description: text, createdAt: money, ...payment }
-const transaction = object({ ...baseEntry, date, dateEnd: optional(emptyOr(date)), tags: optional(list(text)), creditBillingDay: optional(day), receiptImageUrl: optional(url), loanPrincipal: optional(money), loanInterest: optional(money) })
+const transaction = object({ ...baseEntry, date, dateEnd: optional(emptyOr(date)), tags: optional(list(text)), creditBillingDay: optional(day), receiptImageUrl: optional(url), loanPrincipal: optional(money), loanInterest: optional(money), loanId: optional(text) })
 const memo = object({ id: nonempty, title: text, content: text, pinned: bool, createdAt: money, updatedAt: money, date: optional(emptyOr(date)), dateEnd: optional(emptyOr(date)), category: optional(text) })
 const budget = object({ category: nonempty, limit: money, carryover: optional(bool), yearMonth: optional(month) })
 const recurring = object({ ...baseEntry, frequency: optional(choice('monthly', 'weekly', 'biweekly')), dayOfMonth: day, weekday: optional(range(0, 6)), lastAppliedMonth: emptyOr(month), lastAppliedDate: optional(emptyOr(date)), creditBillingDay: optional(day) })
@@ -63,7 +63,8 @@ const settings = object({
   transactionTemplates: list(object({ ...baseEntry, label: nonempty }), byId),
   swipeSensitivity: optional(choice('low', 'medium', 'high')),
   autoCategoryRules: list(object({ id: nonempty, keyword: nonempty, category: nonempty, type, enabled: bool }), byId),
-  hiddenWidgets: list(choice('month-close-helper', 'subscription-alert', 'recurring-pending', 'sparkline-summary', 'today-spending', 'health-score', 'spending-pace', 'weekly-comparison', 'timeofday-spending', 'top3-expenses', 'payday-countdown', 'net-worth', 'goal-daily-needed', 'spending-spike', 'spending-savings')),
+  hiddenWidgets: list(choice('month-close-helper', 'subscription-alert', 'recurring-pending', 'sparkline-summary', 'today-spending', 'health-score', 'spending-pace', 'weekly-comparison', 'timeofday-spending', 'top3-expenses', 'payday-countdown', 'net-worth', 'goal-daily-needed', 'spending-spike', 'spending-savings', 'loans')),
+  loans: optional(list(object({ id: nonempty, name: nonempty, balance: money, balanceAsOf: date, createdAt: money }), byId)),
 })
 const snapshot = object({ transactions: list(transaction, byId), memos: list(memo, byId), budgets: list(budget, v => { const b = v as { category: string; yearMonth?: string }; return JSON.stringify([b.category, b.yearMonth ?? '']) }), recurring: list(recurring, byId), subscriptions: list(subscription, byId), goals: list(goal, byId), settings })
 

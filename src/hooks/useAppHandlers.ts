@@ -84,6 +84,7 @@ export function useAppHandlers({
             if (!items[0].paymentMethodId) delete updated.paymentMethodId
             if (!items[0].creditBillingDay) delete updated.creditBillingDay
             if (!items[0].dateEnd) delete updated.dateEnd
+            if (!items[0].loanId) delete updated.loanId
             return updated
           })
           const extra = items.slice(1).map((d) => ({ ...d, id: generateId(), createdAt: Date.now() }))
