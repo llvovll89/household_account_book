@@ -10,6 +10,7 @@ import RecurringModal from './RecurringModal'
 import EmptyState from './ui/EmptyState'
 import { formatRecurringSchedule, getDaysUntilMonthDay, isRecurringPendingForMonth } from '../lib/recurringSchedule'
 import { forecastMonthEndExpense } from '../lib/monthEndForecast'
+import { getAccountBalances } from '../lib/accountBalances'
 import { loadSettings, saveSettings } from '../lib/storage'
 import { useMonthlyData } from '../lib/useMonthlyData'
 import SparklineCard from './charts/SparklineCard'
@@ -410,13 +411,18 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
     // 2) 저축 목표 달성 금액 합계
     const goalsSaved = goals.reduce((s, g) => s + (g.currentAmount ?? 0), 0)
 
+    // 3) 시작 잔액을 입력한 계좌가 있으면 실제 잔액 합계를 대표값으로 쓴다
+    const accounts = getAccountBalances(userPaymentMethods, transactions)
+    const accountTotal = accounts.reduce((s, a) => s + a.balance, 0)
+
     return {
       totalBalance,
       goalsSaved,
-      total: totalBalance,
+      accounts,
+      total: accounts.length > 0 ? accountTotal : totalBalance,
       goalCount: goals.length,
     }
-  }, [transactions, goals])
+  }, [transactions, goals, userPaymentMethods])
 
   // 월별 순자산 추이 (전체 거래 기준 누적) — 단일 패스로 6개 월말 잔액 계산
   const netWorthTrend = useMemo(() => {
@@ -1996,7 +2002,7 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
         <div className="bg-surface rounded-3xl px-5 py-3.5">
           <div className="flex items-center gap-2 mb-2.5">
             <PieChart size={14} className="text-accent" />
-            <span className="text-[13px] font-bold text-muted">순자산 현황</span>
+            <span className="text-[13px] font-bold text-muted">{netWorth.accounts.length > 0 ? '계좌 잔액 합계' : '순자산 현황'}</span>
           </div>
           <div className="flex items-end gap-2 mb-2.5">
             <p className={`text-[22px] font-extrabold num tracking-tight ${netWorth.total >= 0 ? 'text-white' : 'text-expense'}`}>
@@ -2013,9 +2019,23 @@ export default function MonthlyDashboard({ transactions, budgets, recurring, goa
               )
             })()}
           </div>
+          {netWorth.accounts.length > 0 ? (
+            <ul className="space-y-1.5 mb-2.5" aria-label="계좌별 잔액">
+              {netWorth.accounts.map(({ method, balance }) => (
+                <li key={method.id} className="flex items-center justify-between bg-raised rounded-xl px-3 py-2">
+                  <span className="text-[12px] font-semibold text-fg truncate">{method.label}</span>
+                  <span className={`text-[13px] font-extrabold num ${balance >= 0 ? 'text-fg' : 'text-expense'}`}>{balance < 0 ? '-' : ''}{fmt(Math.abs(balance))}원</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <button type="button" onClick={onOpenPaymentMethodsModal} className="w-full text-left text-[11px] text-muted mb-2.5 hover:text-fg transition-colors">
+              결제수단 관리에서 계좌의 현재 잔액을 입력하면 실제 잔액을 보여드려요 →
+            </button>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-raised rounded-2xl px-3 py-2.5">
-              <p className="text-[10px] text-muted font-semibold mb-1">누적 잔액</p>
+              <p className="text-[10px] text-muted font-semibold mb-1">누적 수입−지출</p>
               <p className={`text-[13px] font-extrabold num ${netWorth.totalBalance >= 0 ? 'text-income' : 'text-expense'}`}>
                 {netWorth.totalBalance >= 0 ? '+' : ''}{fmtShort(netWorth.totalBalance)}
               </p>

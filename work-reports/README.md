@@ -48,3 +48,4 @@
 | 2026-11-23 | [목표 자동 집계 로직 lib 분리](2026-11-23-11-goals-lib.md) | #49 |
 | 2026-11-23 | [Firestore·Storage 지연 로드 (시작 번들 −27%)](2026-11-23-12-lazy-firestore.md) | #50 |
 | 2026-11-23 | [interface.css hex 브리지 규칙 정리](2026-11-23-13-remove-hex-bridge.md) | #51 |
+| 2026-11-23 | [계좌별 실제 잔액](2026-11-23-14-account-balances.md) | #52 |

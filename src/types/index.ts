@@ -6,6 +6,10 @@ export interface UserPaymentMethod {
   type: 'cash' | 'check' | 'credit' | 'transfer'
   label: string
   billingDay?: number  // credit 타입만 사용
+  /** 기준일(balanceAsOf) 시점의 실제 잔액. 신용카드를 뺀 현금·체크·계좌만 사용 */
+  openingBalance?: number
+  /** 시작 잔액을 입력한 날 (YYYY-MM-DD). 이날까지의 거래는 시작 잔액에 이미 반영된 것으로 본다 */
+  balanceAsOf?: string
 }
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string; emoji: string }[] = [
