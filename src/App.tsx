@@ -69,6 +69,7 @@ import BrandMark from "./components/ui/BrandMark";
 import ThemeToggle from "./components/layout/ThemeToggle";
 import BottomNavigation from "./components/layout/BottomNavigation";
 import WorkspaceSkeleton from "./components/layout/WorkspaceSkeleton";
+import { NotificationCenter } from "./components/NotificationCenter";
 import InstallOffer from "./components/InstallOffer";
 
 const TransactionModal = lazy(() => import("./components/TransactionModal"));
@@ -1575,6 +1576,13 @@ export default function App() {
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
+                                <NotificationCenter
+                                    transactions={transactions}
+                                    budgets={budgets}
+                                    recurring={recurring}
+                                    subscriptions={subscriptions}
+                                    userPaymentMethods={userPaymentMethods}
+                                />
                                 <div className="relative" ref={userMenuRef}>
                                     <button
                                         onClick={() =>
